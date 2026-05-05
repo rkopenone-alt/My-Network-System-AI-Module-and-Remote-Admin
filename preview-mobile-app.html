@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rescue System - Public SOS Mobile App</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
+
+        :root {
+            --bg: #f8fafc;
+            --primary: #0284c7;
+            --primary-light: #e0f2fe;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --text-dark: #0f172a;
+            --text-light: #64748b;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Roboto', sans-serif;
+            background-color: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .mobile-section {
+            width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .phone-mockup {
+            width: 350px;
+            height: 700px;
+            background: #cbd5e1;
+            border-radius: 50px;
+            padding: 12px;
+            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.7);
+            position: relative;
+            border: 4px solid #64748b;
+        }
+
+        .phone-inner {
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            border-radius: 38px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            color: var(--text-dark);
+            transition: all 0.4s ease;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .screen {
+            display: none;
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Screen 1 Styles */
+        .primary-bg {
+            background-color: var(--primary-light);
+        }
+
+        .logo-circle {
+            width: 100px;
+            height: 100px;
+            background: white;
+            border-radius: 50%;
+            margin: 25px auto;
+            padding: 10px;
+            border: 3px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.2);
+        }
+
+        .header-title {
+            text-align: center;
+            font-size: 26px;
+            font-weight: 900;
+            line-height: 1.2;
+            color: var(--text-dark);
+            margin-bottom: 5px;
+        }
+
+        .sub-title {
+            text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .label {
+            color: var(--text-light);
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 8px;
+            display: block;
+            text-transform: uppercase;
+        }
+
+        .input {
+            width: 100%;
+            padding: 14px 15px;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            font-weight: 600;
+            font-size: 15px;
+            background: white;
+            color: var(--text-dark);
+        }
+
+        .input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .login-btn {
+            background: var(--secondary);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            width: 100%;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+            margin-bottom: 10px;
+        }
+
+        .alert-btn {
+            background: #f1f5f9;
+            color: var(--text-dark);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            font-weight: 700;
+            width: 100%;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        /* Screen 2 Styles */
+        .white-bg {
+            background: #ffffff;
+        }
+
+        .red-label {
+            background: var(--primary);
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 15px;
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(2, 132, 199, 0.2);
+        }
+
+        .row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            border: 2px solid #e2e8f0;
+            background: white;
+            color: var(--text-dark);
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            flex: 1;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mode-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3);
+        }
+
+        .needs-box {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 15px 15px 10px;
+            margin-top: 10px;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+        }
+
+        .needs-title {
+            background: #0f172a;
+            color: white;
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 5px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .need-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f1f5f9;
+            padding: 6px 0;
+        }
+
+        .need-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .need-row span {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 14px;
+        }
+
+        .counter {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 4px 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .counter button {
+            border: none;
+            background: none;
+            color: var(--primary);
+            font-weight: 900;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0 5px;
+        }
+
+        .counter span {
+            color: var(--text-dark);
+            font-size: 14px;
+            font-weight: 700;
+            min-width: 45px;
+            text-align: center;
+        }
+
+        .people-box {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            gap: 15px;
+            background: #f8fafc;
+            padding: 10px 15px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .adults-count {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .next-step-btn {
+            background: var(--text-dark);
+            color: white;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            width: 100%;
+            cursor: pointer;
+            margin: 15px auto 0;
+            font-size: 15px;
+        }
+
+        /* Screen 3 Styles */
+        .med-bg {
+            background: #f8fafc;
+        }
+
+        .med-circle {
+            background: white;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 10px auto 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .med-header {
+            color: var(--text-dark);
+            text-align: center;
+            font-weight: 900;
+            font-size: 18px;
+            margin-bottom: 25px;
+        }
+
+        .med-btn {
+            background: white;
+            color: var(--danger);
+            border: 2px solid #fca5a5;
+            border-radius: 12px;
+            padding: 15px;
+            font-size: 14px;
+            font-weight: 700;
+            flex: 1;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            transition: 0.2s;
+        }
+
+        .med-btn:hover {
+            background: #fef2f2;
+            border-color: var(--danger);
+        }
+
+        .med-btn.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+        }
+
+        .toast-notif {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1e293b;
+            color: white;
+            padding: 14px 20px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            width: 85%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .toast-notif.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .sos-btn-big {
+            background: var(--danger);
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            margin: 40px auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+            border: 6px solid #fca5a5;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.1s;
+        }
+
+        .sos-btn-big span {
+            font-size: 40px;
+            font-weight: 900;
+            letter-spacing: 1px;
+        }
+
+        .timer-container {
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 12px 25px;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+        }
+
+        .timer-val {
+            color: var(--danger);
+            font-size: 22px;
+            font-weight: 900;
+        }
+
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--text-dark);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+        }
+    </style>
+    <style>
+        /* LIGHT THEME OVERRIDES */
+        body,
+        html {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+            font-size: 105% !important;
+            background: #e2e8f0 !important;
+        }
+
+        .phone-mockup {
+            background: #ffffff !important;
+            border-color: #94a3b8 !important;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .header-title,
+        .label,
+        .needs-title,
+        .need-row span,
+        .counter span,
+        .people-box div,
+        .timer-val {
+            color: #0f172a !important;
+        }
+
+        .needs-title {
+            background: #e2e8f0 !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
+        }
+
+        .input,
+        .login-btn,
+        .next-step-btn,
+        .alert-btn,
+        .mode-btn {
+            font-size: 110% !important;
+            font-weight: 800 !important;
+        }
+
+        .login-btn,
+        .next-step-btn {
+            background: #0ea5e9 !important;
+            box-shadow: 0 4px 6px rgba(14, 165, 233, 0.3) !important;
+        }
+
+        h1 {
+            color: #0f172a !important;
+        }
+
+        p {
+            color: #475569 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="mobile-section">
+        <div style="text-align: center; margin-bottom: 25px">
+            <h1 style="margin: 0; font-size: 28px; font-weight: 900; color: #fff;">Public SOS Mobile App</h1>
+            <p style="margin: 5px 0 0 0; font-size: 15px; color: #94a3b8; font-weight: 600">Standalone Preview - Clean
+                Edition</p>
+        </div>
+
+        <div class="phone-mockup">
+            <div class="phone-inner" id="inner">
+
+                <!-- Screen 1: LOGIN -->
+                <div class="screen primary-bg active" id="screen1">
+                    <div class="logo-circle">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Ashoka_Chakra.svg/1024px-Ashoka_Chakra.svg.png"
+                            style="width: 80%">
+                    </div>
+                    <div class="header-title">Citizen Rescue App</div>
+                    <div class="sub-title">Secure Portal</div>
+
+                    <div style="margin-top: 40px; flex: 1">
+                        <label class="label">User Name / Mobile</label>
+                        <input type="text" class="input" placeholder="Name: XXXX" id="username" value="IND_USER_99">
+                        <label class="label">Password</label>
+                        <input type="password" class="input" placeholder="Password: *****" value="12345">
+
+                        <div style="margin-top: 30px;">
+                            <button class="login-btn" onclick="goTo(2)">Secure Login System</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Screen 2: REQUIREMENTS -->
+                <div class="screen white-bg" id="screen2">
+                    <div class="row" style="margin-bottom: 15px;">
+                        <button class="mode-btn active" onclick="setMode(event, 'AIR')"><div style="font-size:20px; margin-bottom:2px;">🚁</div><div style="font-size:11px;">Air Support</div></button>
+                        <button class="mode-btn" onclick="setMode(event, 'Boat')"><div style="font-size:20px; margin-bottom:2px;">🚤</div><div style="font-size:11px;">Naval/Boat</div></button>
+                        <button class="mode-btn" onclick="setMode(event, 'Road')"><div style="font-size:20px; margin-bottom:2px;">🚑</div><div style="font-size:11px;">Road Transport</div></button>
+                    </div></div>
+
+                    <div
+                        style="color: var(--text-dark); font-weight: 700; font-size: 14px; margin: 20px 0 10px; text-align: center">
+                        ATTACH INCIDENT MEDIA</div>
+                    <div class="row">
+                        <div id="voiceBtn" onclick="toggleAttachment('voice')"
+                            style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 20px; border-radius: 12px; font-size: 20px; cursor: pointer; position: relative;">
+                            🎤<div id="voiceBadge"
+                                style="display: none; position: absolute; top: -4px; right: -4px; background: var(--secondary); width: 14px; height: 14px; border-radius: 50%; border: 2px solid white;">
+                            </div>
+                        </div>
+                        <div id="cameraBtn" onclick="toggleAttachment('camera')"
+                            style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 20px; border-radius: 12px; font-size: 20px; cursor: pointer; position: relative;">
+                            📷<div id="cameraBadge"
+                                style="display: none; position: absolute; top: -4px; right: -4px; background: var(--secondary); width: 14px; height: 14px; border-radius: 50%; border: 2px solid white;">
+                            </div>
+                        </div>
+                        <div id="noteBtn" onclick="toggleAttachment('note')"
+                            style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 20px; border-radius: 12px; font-size: 20px; cursor: pointer; position: relative;">
+                            📝<div id="noteBadge"
+                                style="display: none; position: absolute; top: -4px; right: -4px; background: var(--secondary); width: 14px; height: 14px; border-radius: 50%; border: 2px solid white;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="needs-box">
+                        <div class="needs-title">Supply Configuration</div>
+                        <div class="need-row"><span>Food Rations</span>
+                            <div class="counter"><button onclick="update(0, -1)">-</button><span id="n0">6</span><button
+                                    onclick="update(0, 1)">+</button></div>
+                        </div>
+                        <div class="need-row"><span>Medical Tablets</span>
+                            <div class="counter"><button onclick="update(1, -1)">-</button><span id="n1">2</span><button
+                                    onclick="update(1, 1)">+</button></div>
+                        </div>
+                        <div class="need-row"><span>Asthma Kit</span>
+                            <div class="counter"><button onclick="update(2, -1)">-</button><span id="n2">1</span><button
+                                    onclick="update(2, 1)">+</button></div>
+                        </div>
+                        <div class="need-row"><span>Sanitary Kit</span>
+                            <div class="counter"><button onclick="update(3, -1)">-</button><span id="n3">2</span><button
+                                    onclick="update(3, 1)">+</button></div>
+                        </div>
+                    </div>
+
+                    <div class="people-box">
+                        <div style="color: var(--text-dark); font-size: 14px; font-weight: 700; flex: 1;">Total Affected
+                            Civilians:</div>
+                        <div class="adults-count">
+                            <input type="number" id="peopleCount" value="5"
+                                style="width: 100%; height: 25px; background: none; border: none; color: var(--primary); text-align: center; font-size: 22px; font-weight: 900; outline: none; padding:0;">
+                            <div
+                                style="font-size: 10px; font-weight: 700; color: var(--text-light); text-transform: uppercase;">
+                                Heads</div>
+                        </div>
+                    </div>
+
+                    <button class="next-step-btn" onclick="goTo(3)">Confirm Details</button>
+                </div>
+
+                <!-- Navigation Header for Screen 3 -->
+                <div class="nav-bar" id="navBar" style="display:none;">
+                    <button class="nav-btn" onclick="goTo(2)">🡨</button>
+                    <h3 style="margin:0; font-size: 15px; font-weight: 800; color: var(--text-dark);">Emergency Trigger
+                    </h3>
+                    <div style="width:20px;"></div>
+                </div>
+
+                <div id="toastNotification" class="toast-notif">
+                    <span id="toastIcon">⏳</span>
+                    <span id="toastMsg">Connecting to server...</span>
+                </div>
+
+                <!-- Screen 3: TRIGGER -->
+                <div class="screen med-bg" id="screen3" style="padding-top: 10px;">
+                    <div style="text-align: center;">
+                        <div class="med-circle">🚑</div>
+                        <div class="med-header">Priority Medical Bypass</div>
+                    </div>
+
+                    <div class="row">
+                        <button class="med-btn" onclick="sendMockPriority('Pregnancy Support')"><span
+                                style="font-size:24px;">🤰</span> Pregnancy</button>
+                        <button class="med-btn" onclick="sendMockPriority('Medical Support')"><span
+                                style="font-size:24px;">💉</span> Critical<br>Injury</button>
+                    </div>
+
+                    <div
+                        style="text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 20px 0;">
+                        <div style="font-weight: 700; color: var(--text-light); font-size: 14px; letter-spacing: 1px;">
+                            PRESS AND HOLD TO DISPATCH</div>
+                        <button class="sos-btn-big" id="sosBtn" onclick="triggerMockSOS()">
+                            <span>SOS</span>
+                        </button>
+
+                        <div class="timer-container" style="margin-top: 10px;">
+                            <span style="font-weight: 600; font-size: 13px; color: var(--text-light); text-transform: uppercase;">Next Sync Slot: </span>
+                            <span class="timer-val" id="countdown">14:59</span>
+                        </div>
+
+                        <!-- Mission Status -->  
+                        <div id="missionStatus" style="display:none; margin-top:15px; padding:12px 15px; border-radius:12px; background:#f0fdf4; border:1px solid #86efac; text-align:center;">
+                            <div style="font-size:11px; font-weight:700; color:#16a34a; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Mission Status</div>
+                            <div id="missionStatusText" style="font-size:13px; font-weight:700; color:#15803d;">Monitoring...</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let countdown = 15 * 60;
+        let needs = [6, 2, 1, 2];
+        let transportMode = 'AIR';
+        let attachments = { voice: false, camera: false, note: false };
+        let selectedEmergencyType = null;
+        let isSosLocked = false;
+
+        function goTo(num) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen' + num).classList.add('active');
+
+            const inner = document.getElementById('inner');
+            document.getElementById('navBar').style.display = 'none';
+
+            if (num === 3) {
+                document.getElementById('navBar').style.display = 'flex';
+                document.querySelector('#screen3').style.paddingTop = '10px';
+            }
+        }
+
+        function setMode(e, mode) {
+            transportMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+        }
+
+        function toggleAttachment(type) {
+            attachments[type] = !attachments[type];
+            const btn = document.getElementById(type + 'Btn');
+            const badge = document.getElementById(type + 'Badge');
+            if (attachments[type]) {
+                btn.style.borderColor = '#10b981';
+                badge.style.display = 'block';
+            } else {
+                btn.style.borderColor = '#e2e8f0';
+                badge.style.display = 'none';
+            }
+        }
+
+        function update(idx, delta) {
+            needs[idx] = Math.max(0, needs[idx] + delta);
+            document.getElementById('n' + idx).innerText = needs[idx];
+        }
+
+        function showToast(msg, icon = '⏳', duration = 3000) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMsg').innerText = msg;
+            document.getElementById('toastIcon').innerText = icon;
+            toast.classList.add('show');
+            if (duration) {
+                setTimeout(() => toast.classList.remove('show'), duration);
+            }
+        }
+
+        async function triggerMockSOS() {
+            if (isSosLocked) {
+                showToast("Please wait for the current time slot to clear.", "⚠️", 3000);
+                return;
+            }
+            const sosBtn = document.getElementById('sosBtn');
+            sosBtn.style.transform = 'scale(0.9)';
+
+            showToast("Connecting to server...", "⏳", 0);
+
+            try {
+                const phone = document.getElementById('username').value;
+                const reqType = selectedEmergencyType === 'Pregnancy Support' ? 'pregnancy' : (selectedEmergencyType === 'Medical Support' ? 'medical' : null);
+                
+                const adultsCount = document.getElementById('peopleCount').value;
+                const userProvidedDetails = {
+                    message: selectedEmergencyType || 'Manual SOS',
+                    transport: transportMode,
+                    needs: { food: needs[0], medical: needs[1], asthma: needs[2], sanitary: needs[3] },
+                    attachments: attachments,
+                    peopleCount: adultsCount
+                };
+                const detailsStr = JSON.stringify(userProvidedDetails);
+
+                if (reqType) {
+                    await fetch('http://localhost:3001/api/rescue-requests', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            phone: phone, device_id: 'IND_USER_99', type: reqType,
+                            lat: 13.085, lng: 80.272, details: detailsStr,
+                            urgency: 'critical', sector: 'Current Location'
+                        })
+                    });
+                }
+
+                await fetch('http://localhost:3001/api/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        phone, deviceId: 'IND_USER_99', action: 'sos_trigger', lat: 13.085, lng: 80.272, 
+                        details: detailsStr, 
+                        sosAlert: { lat: 13.085, lng: 80.272, details: userProvidedDetails, isPriority: reqType ? 1 : 0 } 
+                    })
+                });
+
+                sosBtn.style.transform = 'scale(1)';
+                showToast("Your infos are collected and alloted soon for their rescue or food distribution.", "✅", 4000);
+                isSosLocked = true;
+
+                selectedEmergencyType = null;
+                document.querySelectorAll('.med-btn').forEach(b => b.classList.remove('active'));
+
+            } catch (e) {
+                console.error('Failed to trigger SOS', e);
+                sosBtn.style.transform = 'scale(1)';
+                showToast("Connection failed. Retrying...", "❌", 3000);
+            }
+        }
+
+        function sendMockPriority(typeText) {
+            const btn = event.currentTarget;
+
+            if (selectedEmergencyType === typeText) {
+                selectedEmergencyType = null;
+                btn.classList.remove('active');
+            } else {
+                selectedEmergencyType = typeText;
+                document.querySelectorAll('.med-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+        }
+
+        setInterval(() => {
+            countdown--;
+            if (countdown <= 0) {
+                countdown = 15 * 60;
+                isSosLocked = false;
+            }
+            const m = Math.floor(countdown / 60);
+            const s = countdown % 60;
+            document.getElementById('countdown').innerText = m + ":" + (s < 10 ? '0' : '') + s;
+        }, 1000);
+
+        // Initialize WebSocket and Sync
+        window.onload = () => {
+            const ws = new WebSocket('ws://' + window.location.hostname + ':3001');
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                // Listen for accepted/completed broadcasts for our requests
+                if (data.type === 'RESCUE_REQUEST_ACCEPTED' || data.type === 'RESCUE_REQUEST_COMPLETED') {
+                    const phone = document.getElementById('username').value;
+                    const r = data.data;
+                    if (r && (r.phone === phone || r.device_id === phone || r.device_id === 'IND_USER_99')) {
+                        updateMissionStatus(data.type === 'RESCUE_REQUEST_COMPLETED' ? 'completed' : 'accepted', r);
+                    }
+                }
+            };
+
+            // Start background sync every 10s
+            setInterval(async () => {
+                const phone = document.getElementById('username').value;
+                if (!phone) return;
+                try {
+                    const res = await fetch('http://localhost:3001/api/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone, deviceId: phone })
+                    });
+                    const data = await res.json();
+                    // Show latest notification
+                    if (data.notifications && data.notifications.length > 0) {
+                        showToast(data.notifications[0].message, '🔔', 5000);
+                    }
+                    // Update mission status panel
+                    if (data.my_requests && data.my_requests.length > 0) {
+                        const latest = data.my_requests[0];
+                        updateMissionStatus(latest.status, latest);
+                    }
+                } catch (e) { /* silent */ }
+            }, 10000);
+        };
+
+        function updateMissionStatus(status, req) {
+            const panel = document.getElementById('missionStatus');
+            const txt = document.getElementById('missionStatusText');
+            if (!panel || !txt) return;
+            panel.style.display = 'block';
+            const icons = { pending: '⏳', accepted: '🚁', in_progress: '🚑', completed: '✅', declined: '❌' };
+            const labels = { pending: 'Request Received — Awaiting Dispatch', accepted: 'Team Dispatched — Help is Coming!', in_progress: 'Rescue Team En Route', completed: 'Mission Complete — You Are Safe!', declined: 'Request Declined — Please Retry' };
+            const colors = { pending: '#f59e0b', accepted: '#3b82f6', in_progress: '#8b5cf6', completed: '#16a34a', declined: '#ef4444' };
+            const c = colors[status] || '#64748b';
+            panel.style.borderColor = c;
+            panel.style.background = c + '15';
+            panel.querySelector('div').style.color = c;
+            txt.style.color = c;
+            txt.innerText = `${icons[status] || '•'} ${labels[status] || status.toUpperCase()}`;
+            if (status === 'completed') showToast('✅ Mission Complete! You are safe.', '✅', 6000);
+            if (status === 'accepted') showToast('🚁 Help is on the way!', '🚁', 5000);
+        }
+    </script>
+</body>
+
+</html>

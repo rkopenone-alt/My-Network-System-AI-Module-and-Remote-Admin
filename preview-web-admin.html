@@ -1,0 +1,3512 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rescue Command Center - Professional Dashboard</title>
+    <!-- Leaflet & Icons -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+        :root {
+            --bg-body: #f1f5f9;
+            --bg-panel: #ffffff;
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius: 10px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+
+            --critical: #ef4444;
+            /* Red */
+            --pending: #eab308;
+            /* Yellow */
+            --completed: #22c55e;
+            /* Green */
+            --special: #a855f7;
+            /* Purple */
+            --medical: #f97316;
+            /* Orange for Medical */
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Navigation */
+        .top-nav {
+            background: var(--bg-panel);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 32px;
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+        }
+
+        .nav-brand {
+            font-size: 18px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-tab {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-tab:hover {
+            background: var(--bg-body);
+            color: var(--text-main);
+        }
+
+        .nav-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Main App Area */
+        #appWrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Dashboard Layout - 3 Columns */
+        .dash-layout {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            overflow-y: auto;
+        }
+
+        /* Left Panel - 22% */
+        .left-panel {
+            width: 22%;
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Center Panel - 60% */
+        .center-panel {
+            width: 60%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Right Panel - 18% */
+        .right-panel {
+            width: 18%;
+            border-left: 1px solid var(--border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Member Master DB Split Layout */
+        .db-split-layout {
+            display: flex;
+            height: calc(100vh - 64px);
+            overflow: hidden;
+            background: var(--bg-body);
+        }
+
+        .db-sidebar {
+            width: 30%;
+            background: white;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .group-tile {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            margin-bottom: 8px;
+        }
+
+        .group-tile:hover {
+            background: var(--bg-alt);
+        }
+
+        .group-tile.active {
+            background: rgba(37, 99, 235, 0.05);
+            border-color: var(--accent);
+        }
+
+        .group-id {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-alt);
+            color: var(--text-muted);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .group-tile.active .group-id {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .group-info {
+            flex: 1;
+        }
+
+        .group-name {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .group-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .db-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .db-list-item {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: 0.2s;
+            position: relative;
+        }
+
+        .db-list-item:hover {
+            background: #f8fafc;
+        }
+
+        .db-list-item.active {
+            background: #eff6ff;
+        }
+
+        .db-list-item.active::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--accent);
+        }
+
+        .db-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .db-content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* Panel Common Styles */
+        .section-title {
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        /* Forms & Inputs */
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'Inter';
+            font-size: 14px;
+            color: var(--text-main);
+            transition: 0.2s;
+            background: var(--bg-body);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-body);
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+        }
+
+        /* Left Panel Specifics */
+        .zone-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .zone-controls .btn {
+            flex: 1;
+            padding: 8px;
+            font-size: 13px;
+        }
+
+        .zone-controls .btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Center Panel Specifics */
+        #map {
+            flex: 1;
+            background: #e2e8f0;
+            z-index: 1;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .map-overlay-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 1000;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Command List Below Map */
+        .command-list-area {
+            height: 250px;
+            background: var(--bg-panel);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cmd-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: #f8fafc;
+        }
+
+        .cmd-tab {
+            padding: 12px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+        }
+
+        .cmd-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: white;
+        }
+
+        .cmd-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            padding: 12px 16px;
+            background: #f8fafc;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: var(--bg-body);
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tag-red {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .tag-yellow {
+            background: #fef9c3;
+            color: #a16207;
+        }
+
+        .tag-green {
+            background: #dcfce3;
+            color: #15803d;
+        }
+
+        .tag-purple {
+            background: #f3e8ff;
+            color: #7e22ce;
+        }
+
+        .tag-gray {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        /* Right Panel Specifics */
+        .notif-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .notif-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .notif-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .notif-content {
+            flex: 1;
+        }
+
+        .notif-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 2px;
+        }
+
+        .notif-count {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .actionable-item {
+            background: white;
+            border-color: #fca5a5;
+        }
+
+        .actionable-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .actionable-actions .btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            flex: 1;
+        }
+
+        .op-update-row {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .op-update-row:hover {
+            border-color: var(--accent);
+            background: #f8fafc;
+        }
+
+        .op-up-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .op-up-title {
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .op-up-count {
+            font-size: 12px;
+            font-weight: 700;
+            background: var(--bg-body);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .progress-bg {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .op-up-stats {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Custom Leaflet Markers */
+        .custom-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .marker-sos {
+            background: var(--critical);
+            color: white;
+        }
+
+        .marker-food {
+            background: var(--pending);
+            color: white;
+        }
+
+        .marker-medical {
+            background: var(--medical);
+            color: white;
+        }
+
+        .marker-pregnancy {
+            background: var(--special);
+            color: white;
+        }
+
+        .marker-rescue {
+            background: var(--critical);
+            color: white;
+            border-radius: 6px;
+            transform: rotate(45deg);
+        }
+
+        .marker-rescue i {
+            transform: rotate(-45deg);
+        }
+
+        .cluster-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: white;
+            font-weight: 800;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            border: 3px solid;
+        }
+
+        .op-zone-tooltip {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            color: #ef4444;
+            font-weight: 800;
+            font-size: 16px;
+            text-shadow: 0 0 5px white, 0 0 5px white;
+        }
+
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal {
+            background: white;
+            width: 500px;
+            max-width: 90%;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 4px;
+        }
+
+        .modal-close:hover {
+            color: var(--text-main);
+        }
+
+        .modal-body {
+            padding: 24px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            background: #f8fafc;
+        }
+
+        /* Non-Dashboard Pages */
+        .page-content {
+            display: none;
+            padding: 32px;
+            flex: 1;
+            overflow-y: auto;
+            background: var(--bg-body);
+        }
+
+        .page-header {
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .filters-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            align-items: flex-end;
+        }
+
+        .filters-bar .input-group {
+            margin: 0;
+            flex: 1;
+        }
+
+        .action-icon {
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            background: var(--bg-body);
+            color: var(--text-muted);
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: 0.2s;
+        }
+
+        .action-icon:hover {
+            background: white;
+            border-color: var(--border);
+            color: var(--accent);
+        }
+
+        .action-icon.danger:hover {
+            color: var(--critical);
+        }
+
+        /* Grid Layouts for Modules */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        /* Utility */
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .text-sm {
+            font-size: 12px;
+        }
+
+        .mt-4 {
+            margin-top: 16px;
+        }
+
+        /* Operational Hub Layout */
+        #operationalHub {
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg-body);
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 9999;
+        }
+
+        .hub-side-panel {
+            width: 30% !important;
+            min-width: 360px !important;
+            height: 100vh !important;
+            background: white !important;
+            border-right: 1px solid var(--border) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            padding: 80px 48px !important;
+            box-shadow: 20px 0 40px rgba(0, 0, 0, 0.02) !important;
+            z-index: 10;
+            border-radius: 0 !important;
+        }
+
+        .hub-main-content {
+            flex: 1 !important;
+            height: 100vh !important;
+            display: flex !important;
+            flex-direction: column !important;
+            background: var(--bg-body) !important;
+            overflow-y: auto !important;
+        }
+
+        .hub-content-inner {
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 80px 60px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- OPERATIONS LANDING PAGE -->
+    <div id="operationalHub">
+        <!-- Left Side: Brand & Identity (30%) -->
+        <div class="hub-side-panel">
+            <div>
+                <!-- Brand Header -->
+                <div style="margin-bottom: 48px;">
+                    <div
+                        style="width: 80px; height: 80px; background: #eff6ff; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1);">
+                        <img id="landingLogoImg" src="" style="display:none; max-width: 50px; max-height: 50px;">
+                        <i id="landingLogoIcon" data-lucide="shield"
+                            style="color:var(--accent); width: 40px; height: 40px;"></i>
+                    </div>
+                    <h1 id="landingTitle"
+                        style="margin: 0; font-size: 36px; font-weight: 900; color: var(--primary); letter-spacing: -1.5px; line-height: 1; margin-bottom: 12px;">
+                        Rescue<br>Command Center
+                    </h1>
+                    <div
+                        style="width: 40px; height: 4px; background: var(--accent); border-radius: 2px; margin-bottom: 16px;">
+                    </div>
+                    <p
+                        style="color: var(--text-muted); font-size: 16px; font-weight: 500; line-height: 1.5; margin: 0;">
+                        Secure Unified Interface for<br>Tactical Emergency Response
+                    </p>
+                </div>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div style="border-top: 1px solid var(--border); padding-top: 32px;">
+                <button class="btn btn-outline btn-block"
+                    style="justify-content: flex-start; padding: 18px 24px; border-radius: 16px; background: #f8fafc; border: 1px solid var(--border); transition: all 0.3s;"
+                    onclick="openMainFeedSettingsModal()"
+                    onmouseover="this.style.borderColor='var(--accent)'; this.style.background='white'; this.style.transform='translateY(-2px)';"
+                    onmouseout="this.style.borderColor='var(--border)'; this.style.background='#f8fafc'; this.style.transform='translateY(0)';">
+                    <i data-lucide="settings"
+                        style="width: 22px; height: 22px; color: var(--accent); margin-right: 12px;"></i>
+                    <span style="font-weight: 700; color: var(--text-main); font-size: 15px;">System
+                        Configuration</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Side: Operations Management (70%) -->
+        <div class="hub-main-content">
+            <div class="hub-content-inner">
+                <!-- Header -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;">
+                    <div>
+                        <div
+                            style="display: flex; align-items: center; gap: 8px; color: var(--accent); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
+                            <span
+                                style="width: 8px; height: 8px; background: var(--accent); border-radius: 50%; display: inline-block;"></span>
+                            Operational Hub
+                        </div>
+                        <h2
+                            style="margin: 0; font-size: 32px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px;">
+                            Rescue Missions</h2>
+                        <p style="color: var(--text-muted); font-size: 15px; margin: 8px 0 0 0;">Deploy and coordinate
+                            response units in real-time.</p>
+                    </div>
+                    <button class="btn btn-primary"
+                        style="padding: 16px 32px; border-radius: 16px; font-size: 16px; font-weight: 700; box-shadow: 0 15px 25px -5px rgba(37, 99, 235, 0.3); transition: all 0.3s;"
+                        onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 20px 30px -5px rgba(37, 99, 235, 0.4)';"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 15px 25px -5px rgba(37, 99, 235, 0.3)';"
+                        onclick="openCreateOpModal()">
+                        <i data-lucide="plus-circle" style="width:20px; height:20px; margin-right: 8px;"></i> Start New
+                        Operation
+                    </button>
+                </div>
+
+                <!-- Table Card -->
+                <div class="card"
+                    style="padding: 0; border-radius: 20px; border: 1px solid rgba(255,255,255,0.8); overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.03);">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead style="background: white; border-bottom: 1px solid var(--border);">
+                            <tr>
+                                <th
+                                    style="padding: 20px 24px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                                    Serial No</th>
+                                <th
+                                    style="padding: 20px 24px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                                    Operation Name</th>
+                                <th
+                                    style="padding: 20px 24px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                                    Initiation Date</th>
+                                <th
+                                    style="padding: 20px 24px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                                    Mission Status</th>
+                                <th
+                                    style="padding: 20px 24px; text-align: right; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                                    Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="opsListBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Footer Hint -->
+                <div
+                    style="margin-top: 32px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--text-muted); font-size: 13px;">
+                    <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                    Select an active operation to access the tactical command dashboard.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="top-nav" style="display: none;">
+        <div style="display:flex; flex-direction:column; align-items:flex-start; width: 300px;">
+            <div class="nav-brand" style="margin-right: 0; padding-bottom:8px; font-size: 20px;">
+                <i data-lucide="shield" style="color:var(--accent); width:24px; height:24px;"></i>
+                <span id="navBrandTitle">COMMAND CENTER</span>
+            </div>
+            <button class="btn btn-outline"
+                style="padding: 4px 10px; font-size: 12px; border:1px solid var(--border); background:var(--bg-body); color: var(--text-muted); height:auto;"
+                onclick="returnToOpsHub()">
+                <i data-lucide="arrow-left" style="width:14px;"></i> Back to Operations Hub
+            </button>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:center; flex:1;">
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchPage('dash', this)"><i data-lucide="layout-dashboard"
+                        style="width:16px;"></i> Main Dashboard</button>
+                <button class="nav-tab" onclick="switchPage('members', this)"><i data-lucide="users"
+                        style="width:16px;"></i> Member and Groups</button>
+                <button class="nav-tab" onclick="switchPage('public', this)"><i data-lucide="users"
+                        style="width:16px;"></i> Public List</button>
+                <button class="nav-tab" onclick="switchPage('history', this)"><i data-lucide="history"
+                        style="width:16px;"></i> Action History Log</button>
+                <button class="nav-tab" onclick="switchPage('config', this)"><i data-lucide="settings"
+                        style="width:16px;"></i> Config</button>
+            </div>
+        </div>
+        <div style="width: 300px;"></div>
+    </header>
+
+    <div id="appWrapper" style="display: none;">
+        <!-- 1. MAIN DASHBOARD PAGE (3-COLUMN LAYOUT) -->
+        <div id="page-dash" class="dash-layout">
+
+            <!-- LEFT PANEL: CONTROL CENTER (22%) -->
+            <aside class="panel left-panel">
+                <!-- Zone Targeting -->
+                <div>
+                    <div class="section-title"><i data-lucide="crosshair" style="width:14px;"></i> Interactive Zone
+                        Targeting</div>
+                    <div class="zone-controls">
+                        <button class="btn btn-outline" id="btnRad" onclick="setDrawMode('radius')">Radius Drag</button>
+                        <button class="btn btn-outline" id="btnArea" onclick="setDrawMode('area')">Area Drag</button>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Distance (km)</label>
+                        <input type="number" id="distanceInput" class="form-control" placeholder="e.g. 2.5" step="0.1">
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="deployTracker()"><i data-lucide="map-pin"
+                            style="width:16px;"></i> Deploy Zone Tracker</button>
+                </div>
+
+                <hr style="border:0; border-top:1px solid var(--border); margin:0;">
+
+                <!-- Active Command Input -->
+                <div id="commandFormPanel">
+                    <div class="section-title" id="cmdPanelTitle"><i data-lucide="send" style="width:14px;"></i> Active Command Input</div>
+
+                    <!-- Task Priority Toggle -->
+                    <div class="input-group">
+                        <label class="input-label">Task Priority</label>
+                        <div style="display:flex;gap:8px;margin-bottom:2px;">
+                            <button id="btnNormal" onclick="setTaskPriority('normal')" class="btn btn-outline" style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">📋 Normal</button>
+                            <button id="btnCritical" onclick="setTaskPriority('critical')" class="btn btn-outline" style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">🚨 Critical Response</button>
+                        </div>
+                    </div>
+
+                    <!-- Critical warning banner (hidden by default) -->
+                    <div id="criticalWarningBanner" style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#b91c1c;line-height:1.5;">
+                        ⚠️ <strong>HIGH PRIORITY ALERT:</strong> This will trigger an urgent approval popup on the rescuer's device requiring immediate Accept or Decline response.
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Command Type</label>
+                        <select id="cmdType" class="form-control">
+                            <option value="sos">SOS Response</option>
+                            <option value="food">Food Distribution</option>
+                            <option value="medical">Medical Supply</option>
+                            <option value="pregnancy">Pregnancy Evac</option>
+                            <option value="rescue">Rescue Operation</option>
+                            <option value="critical">🚨 Critical Response</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Assign To</label>
+                        <div style="display:flex;gap:8px;margin-bottom:8px;">
+                            <button id="btnTargetGroup" onclick="setTargetType('group')" class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;font-weight:700;">👥 Group</button>
+                            <button id="btnTargetIndividual" onclick="setTargetType('individual')" class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;font-weight:700;">👤 Individual</button>
+                        </div>
+                        
+                        <div id="targetGroupSelect">
+                            <select id="cmdTeam" class="form-control">
+                                <option value="alpha">Alpha Squad (12)</option>
+                                <option value="bravo">Bravo Medics (5)</option>
+                                <option value="charlie">Charlie Rescuers (8)</option>
+                            </select>
+                        </div>
+                        <div id="targetIndividualSelect" style="display:none;">
+                            <select id="cmdIndividual" class="form-control">
+                                <option value="">-- Select Rescuer --</option>
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Target Area Name</label>
+                        <input type="text" id="cmdAreaName" class="form-control"
+                            placeholder="E.g., Sector 4, High Street...">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Map Coordinates</label>
+                        <input type="text" id="cmdCoords" class="form-control" placeholder="Auto-filled from map..."
+                            readonly style="background:#f8fafc;">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Command Details</label>
+                        <textarea id="cmdDetails" class="form-control"
+                            placeholder="Enter operational instructions..."></textarea>
+                    </div>
+                    <button id="createCmdBtn" class="btn btn-primary btn-block" onclick="createCommand()"><i data-lucide="plus-circle"
+                            style="width:16px;"></i> Create Command</button>
+                </div>
+
+                <!-- Command Details Panel -->
+                <div id="commandDetailsPanel" style="display:none; flex-direction: column;">
+                    <div class="section-title"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <span><i data-lucide="info" style="width:14px;"></i> Selected Command Details</span>
+                        <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;"
+                            onclick="closeTaskDetails()">
+                            <i data-lucide="x" style="width: 12px;"></i> Close
+                        </button>
+                    </div>
+                    <div class="card"
+                        style="margin:0; border-top: 4px solid var(--primary); background: var(--bg-body);">
+                        <div id="tdId" style="font-weight: 900; font-size: 16px; color: var(--primary);"></div>
+                        <div id="tdStatus" style="margin: 12px 0;"></div>
+                        <div id="tdDesc"
+                            style="font-size: 14px; color: var(--text-main); margin-bottom: 16px; line-height: 1.5; font-weight: 500;">
+                        </div>
+                        <div
+                            style="background: var(--bg-panel); padding: 12px; border-radius: 6px; font-size: 13px; border: 1px solid var(--border); margin-bottom: 16px;">
+                            <div id="tdMeta" style="color: var(--text-muted); font-weight: 500; line-height: 1.6;">
+                            </div>
+                        </div>
+                        <button class="btn btn-outline btn-block" onclick="openReassignModalFromDetails()" style="color: var(--primary); border-color: var(--primary);">
+                            <i data-lucide="refresh-cw" style="width:14px; margin-right:4px;"></i> Reassign Task
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- CENTER PANEL: MAP & COMMANDS (60%) -->
+            <main class="center-panel">
+                <!-- Map Area -->
+                <div id="map"></div>
+                <button class="map-overlay-btn" onclick="toggleCurrentZone()"><i data-lucide="focus"
+                        style="width:16px;"></i> Current Zone</button>
+
+
+
+                <!-- Command List Area -->
+                <div class="command-list-area">
+                    <div class="cmd-tabs">
+                        <div class="cmd-tab active" onclick="switchCmdTab('live', this)">Live Commands</div>
+                        <div class="cmd-tab" onclick="switchCmdTab('completed', this)">Completed Commands</div>
+                    </div>
+                    <div class="cmd-content" id="cmd-live">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>ID</th>
+                                    <th>Task / Description</th>
+                                    <th>Type</th>
+                                    <th>Zone</th>
+                                    <th>Assigned Team</th>
+                                    <th>Req. Time</th>
+                                    <th>Cmd Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="liveCmdBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="cmd-content" id="cmd-completed" style="display:none;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>ID</th>
+                                    <th>Task / Description</th>
+                                    <th>Type</th>
+                                    <th>Zone</th>
+                                    <th>Assigned Team</th>
+                                    <th>Req. Time</th>
+                                    <th>Cmd Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="compCmdBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+
+            <!-- RIGHT PANEL: INTELLIGENCE (18%) -->
+            <aside class="panel right-panel">
+                <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                    <div class="section-title" style="flex-shrink: 0;"><i data-lucide="bell" style="width:14px;"></i>
+                        New Notifications</div>
+
+                    <div class="notif-group" id="rescueRequestsList"
+                        style="flex: 1; overflow-y: auto; margin-bottom: 12px; padding-right: 4px;">
+                        <!-- Actionable (Critical) - Populated dynamically via JS -->
+                        <div class="notif-item actionable-item" style="align-items: flex-start;">
+                            <div class="notif-icon"
+                                style="background:#f3e8ff; color:var(--special); font-weight:900; font-size:12px;">01
+                            </div>
+                            <div class="notif-content">
+                                <div class="notif-title" style="color:var(--special);">Pregnancy Rescue</div>
+                                <div class="notif-count text-sm text-muted" style="margin-bottom:6px;">Sector 4, urgency
+                                    high</div>
+                                <div class="actionable-actions">
+                                    <button class="btn btn-primary"
+                                        onclick="openAssignModal('req-1', 'Pregnancy Rescue', 'Sector 4', 'high')">Accept</button>
+                                    <button class="btn btn-outline" onclick="alert('Declined')">Decline</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="notif-item actionable-item" style="align-items: flex-start; border-color:#fca5a5;">
+                            <div class="notif-icon"
+                                style="background:#fee2e2; color:var(--critical); font-weight:900; font-size:12px;">02
+                            </div>
+                            <div class="notif-content">
+                                <div class="notif-title" style="color:var(--critical);">Medical Rescue</div>
+                                <div class="notif-count text-sm text-muted" style="margin-bottom:6px;">Block 7, critical
+                                    injury</div>
+                                <div class="actionable-actions">
+                                    <button class="btn btn-primary"
+                                        onclick="openAssignModal('req-2', 'Medical Rescue', 'Block 7', 'critical')">Accept</button>
+                                    <button class="btn btn-outline" onclick="alert('Declined')">Decline</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Compact SOS & Food Icons at bottom of notification list -->
+                    <div style="display: flex; gap: 8px; margin-bottom: 24px; flex-shrink: 0;">
+                        <div class="notif-item" id="sosNotifCard" onclick="openOpDetails('SOS Calls')"
+                            style="flex:1; padding: 8px; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;"
+                            onmouseover="this.style.background='#fff0f2'" onmouseout="this.style.background='white'">
+                            <div style="position:relative;">
+                                <i data-lucide="radio" style="width:24px; color:var(--critical);"></i>
+                                <span id="sosCallsBadge"
+                                    style="position:absolute; top:-6px; right:-8px; background:var(--critical); color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:10px;">12</span>
+                            </div>
+                            <div style="font-size:11px; font-weight:700; margin-top:4px; color:var(--text-main);">SOS
+                                Calls</div>
+                        </div>
+                        <div class="notif-item" id="foodNotifCard" onclick="openOpDetails('Food Dist.')"
+                            style="flex:1; padding: 8px; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;"
+                            onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background='white'">
+                            <div style="position:relative;">
+                                <i data-lucide="package" style="width:24px; color:var(--pending);"></i>
+                                <span id="foodDistBadge"
+                                    style="position:absolute; top:-6px; right:-8px; background:var(--pending); color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:10px;">5</span>
+                            </div>
+                            <div style="font-size:11px; font-weight:700; margin-top:4px; color:var(--text-main);">Food
+                                Dist.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="flex-shrink: 0;">
+                    <div class="section-title"><i data-lucide="bar-chart-2" style="width:14px;"></i> Operation Updates
+                    </div>
+
+                    <div class="card" style="padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+                        <div class="flex-between" id="sosUpdateRow" style="cursor: pointer;"
+                            onclick="openOpDetails('SOS Calls')">
+                            <span style="font-size:12px; font-weight:700; display:flex; align-items:center; gap:4px;">
+                                <div style="width:8px; height:8px; border-radius:50%; background:var(--critical);">
+                                </div> SOS: <span id="opSosCount">12</span>
+                            </span>
+                            <div style="flex:1; margin:0 8px; height:4px; background:var(--border); border-radius:2px;">
+                                <div id="opSosBar"
+                                    style="width:75%; height:100%; background:var(--critical); border-radius:2px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-between" id="foodUpdateRow" style="cursor: pointer;"
+                            onclick="openOpDetails('Food Dist.')">
+                            <span style="font-size:12px; font-weight:700; display:flex; align-items:center; gap:4px;">
+                                <div style="width:8px; height:8px; border-radius:50%; background:var(--pending);"></div>
+                                Food: <span id="opFoodCount">5</span>
+                            </span>
+                            <div style="flex:1; margin:0 8px; height:4px; background:var(--border); border-radius:2px;">
+                                <div id="opFoodBar"
+                                    style="width:40%; height:100%; background:var(--pending); border-radius:2px;"></div>
+                            </div>
+                        </div>
+                        <div class="flex-between" id="medUpdateRow" style="cursor: pointer;"
+                            onclick="openOpDetails('Medical')">
+                            <span style="font-size:12px; font-weight:700; display:flex; align-items:center; gap:4px;">
+                                <div style="width:8px; height:8px; border-radius:50%; background:var(--medical);"></div>
+                                Med: <span id="opMedCount">4</span>
+                            </span>
+                            <div style="flex:1; margin:0 8px; height:4px; background:var(--border); border-radius:2px;">
+                                <div id="opMedBar"
+                                    style="width:100%; height:100%; background:var(--medical); border-radius:2px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- 2. MEMBER MASTER DB PAGE -->
+        <div id="page-members" class="page-content" style="padding:0;">
+            <div class="db-split-layout">
+                <!-- Left Sidebar: Groups (30%) -->
+                <aside class="db-sidebar">
+                    <div class="db-sidebar-header" style="margin-bottom: 16px;">
+                        <h3 style="margin:0; font-size:18px; color:var(--text-main);"><i data-lucide="layers"
+                                style="width:18px;"></i> Groups</h3>
+                    </div>
+
+                    <button class="btn btn-primary btn-block"
+                        style="margin-bottom: 20px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);"
+                        onclick="openModal('createGroupModal')">
+                        <i data-lucide="plus-circle" style="width:18px;"></i> Create New Group
+                    </button>
+
+                    <div class="db-sidebar-content" id="groupSidebarList">
+                        <!-- Populated dynamically -->
+                    </div>
+                </aside>
+
+                <!-- Right Panel: Members (70%) -->
+                <main class="db-main">
+                    <div class="db-header">
+                        <h2 style="margin:0; font-size: 18px;">Members: <span id="currentGroupName"
+                                style="color:var(--accent);">Alpha Squad</span></h2>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn btn-outline" onclick="openAssignExistingModal()">
+                                <i data-lucide="users" style="width:16px;"></i> Assign Existing
+                            </button>
+                            <button class="btn btn-primary" onclick="openMemberModal()">
+                                <i data-lucide="user-plus" style="width:16px;"></i> Add New
+                            </button>
+                        </div>
+                    </div>
+                    <div class="db-content-area">
+                        <!-- Filters -->
+                        <div class="card" style="margin-bottom: 20px;">
+                            <div class="filters-bar" style="margin:0; border:none; padding:0; gap:12px;">
+                                <div class="input-group" style="flex:2; margin-bottom:0;">
+                                    <input type="text" class="form-control"
+                                        placeholder="Search members by name, role or ID...">
+                                </div>
+                                <div class="input-group" style="flex:1; margin-bottom:0;">
+                                    <select class="form-control">
+                                        <option>All Roles</option>
+                                        <option>Lead Rescuer</option>
+                                        <option>Rescuer</option>
+                                        <option>Medic</option>
+                                        <option>Volunteer</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-outline"><i data-lucide="filter"
+                                        style="width:16px;"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Members Table -->
+                        <div class="card" style="padding:0; overflow:hidden;">
+                            <table style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>Photo</th>
+                                        <th>Name</th>
+                                        <th>ID</th>
+                                        <th>Role</th>
+                                        <th>Groups</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="memberTableBody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <!-- 3. PUBLIC LIST PAGE -->
+        <div id="page-public" class="page-content" style="padding:0;">
+            <div class="db-split-layout">
+                <main class="db-main" style="padding: 24px; max-width: 1200px; margin: 0 auto;">
+                    <div class="db-header" style="border:none; padding:0 0 20px 0;">
+                        <h2 style="margin:0; font-size: 18px;">Public Users Directory</h2>
+                        <button class="btn btn-primary" onclick="openPublicModal()">
+                            <i data-lucide="user-plus" style="width:16px;"></i> Add New Public User
+                        </button>
+                    </div>
+                    <div class="card" style="padding:0; overflow:hidden;">
+                        <table style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Photo</th>
+                                    <th>Nick Name #</th>
+                                    <th>Name</th>
+                                    <th>Mobile Number</th>
+                                    <th>Password</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="publicTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <!-- 4. ACTION HISTORY LOG PAGE -->
+        <div id="page-history" class="page-content">
+            <div class="page-header">
+                <h2 class="page-title"><i data-lucide="history" style="color:var(--accent);"></i> Action History Log
+                </h2>
+                <button class="btn btn-outline"><i data-lucide="download" style="width:16px;"></i> Export CSV</button>
+            </div>
+
+            <div class="filters-bar">
+                <div class="input-group">
+                    <label class="input-label">Zone</label>
+                    <select class="form-control">
+                        <option>All Zones</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Type</label>
+                    <select class="form-control">
+                        <option>All Types</option>
+                        <option>SOS</option>
+                        <option>Food</option>
+                        <option>Medical</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Time</label>
+                    <input type="date" class="form-control">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Status</label>
+                    <select class="form-control">
+                        <option>All</option>
+                        <option>Completed</option>
+                        <option>Ongoing</option>
+                        <option>Cancelled</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card" style="padding:0; overflow:hidden;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>S.No</th>
+                            <th>Log ID</th>
+                            <th>Command / Action</th>
+                            <th>Type</th>
+                            <th>Zone</th>
+                            <th>Team</th>
+                            <th>Req. Time</th>
+                            <th>Cmd Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTbody">
+                        <!-- JS populated -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PLACEHOLDERS FOR SYNC / CONFIG -->
+        <div id="page-sync" class="page-content">
+            <div class="page-header">
+                <h2 class="page-title"><i data-lucide="refresh-cw"></i> Data Sync</h2>
+            </div>
+            <div class="card" style="text-align:center; padding: 60px 20px;">
+                <i data-lucide="hard-drive"
+                    style="width:48px; height:48px; color:var(--text-muted); margin-bottom:16px;"></i>
+                <h3 style="margin-top:0;">Hardware Link Idle</h3>
+                <p style="color:var(--text-muted);">Ensure physical NIB device is docked before initiating transfer.</p>
+                <button class="btn btn-primary mt-4"><i data-lucide="zap" style="width:16px;"></i> Force Sync
+                    Handshake</button>
+            </div>
+        </div>
+
+        <div id="page-config" class="page-content">
+            <div class="page-header">
+                <h2 class="page-title"><i data-lucide="settings"></i> System Configuration</h2>
+            </div>
+            <div class="card">
+                <h3 style="margin-top:0;">Map Settings</h3>
+                <p style="color:var(--text-muted);font-size:13px;">Manage offline map packages.</p>
+                <div class="input-group" style="margin-bottom: 12px;">
+                    <label class="input-label">Area / City Name</label>
+                    <input type="text" id="dlMapArea" class="form-control" placeholder="e.g. Chennai">
+                </div>
+                <button class="btn btn-outline" onclick="openDownloadMapModal()"><i data-lucide="download"
+                        style="width:16px;"></i> Select Region & Download</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+
+    <!-- Main Feed Settings Modal -->
+    <div class="modal-overlay" id="mainFeedSettingsModal" style="z-index: 10000;">
+        <div class="modal" style="width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title" style="display:flex; align-items:center; gap:8px;">
+                    <i data-lucide="sliders" style="width:18px; color:var(--accent);"></i> Main Feed Settings
+                </h3>
+                <button class="modal-close" onclick="closeModal('mainFeedSettingsModal')"><i
+                        data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--text-muted); font-size:13px; margin:0 0 16px 0;">Configure the core identity and
+                    command authority for the operational feed.</p>
+                <div class="grid-2" style="margin-bottom:12px;">
+                    <div class="input-group" style="margin-bottom:0;">
+                        <label class="input-label">System Name</label>
+                        <input type="text" id="sysNameInput" class="form-control" value="Rescue Command Center">
+                    </div>
+                    <div class="input-group" style="margin-bottom:0;">
+                        <label class="input-label">Commander Head Name</label>
+                        <input type="text" class="form-control" placeholder="e.g. Commander John Doe">
+                    </div>
+                </div>
+                <div class="input-group" style="margin-bottom:16px;">
+                    <label class="input-label">System Logo (URL or Upload)</label>
+                    <div style="display:flex; gap:12px;">
+                        <input type="text" id="sysLogoInput" class="form-control"
+                            placeholder="https://example.com/logo.png" style="flex:1;">
+                        <input type="file" id="logoUploadInput" accept="image/*" style="display:none;"
+                            onchange="handleLogoUpload(event)">
+                        <button class="btn btn-outline" style="white-space:nowrap;"
+                            onclick="document.getElementById('logoUploadInput').click()"><i data-lucide="upload"
+                                style="width:16px;"></i> Upload Image</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('mainFeedSettingsModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveMainFeedSettings()"><i data-lucide="save"
+                        style="width:16px;"></i> Save Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Group Modal -->
+    <div class="modal-overlay" id="createGroupModal" style="z-index: 10000;">
+        <div class="modal" style="width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Create New Group</h3>
+                <button class="modal-close" onclick="closeModal('createGroupModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label class="input-label">Group Serial (S.No)</label>
+                        <input type="text" class="form-control" placeholder="e.g. 04" id="newGroupSerial">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Group Name</label>
+                        <input type="text" class="form-control" placeholder="e.g. Delta Rescuers" id="newGroupName">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label class="input-label">Group Role / Type</label>
+                        <select id="newGroupRole" class="form-control">
+                            <option value="rescue">Rescue Squad</option>
+                            <option value="medical">Medical Team</option>
+                            <option value="support">Support / Logistics</option>
+                            <option value="command">Command Center</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Operational Zone</label>
+                        <input type="text" class="form-control" id="newGroupZone" placeholder="e.g. Sector 5 West">
+                    </div>
+                </div>
+                <div class="input-group" style="margin-bottom:0;">
+                    <label class="input-label">Initial Description</label>
+                    <textarea class="form-control" id="newGroupDesc" style="height:80px;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('createGroupModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="createNewGroup()">Create Group</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div class="modal-overlay" id="addMemberModal" style="z-index: 10000;">
+        <div class="modal" style="width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Member</h3>
+                <button class="modal-close" onclick="closeModal('addMemberModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">Full Name</label>
+                    <input type="text" id="newMemName" class="form-control" placeholder="e.g. Rahul Sharma">
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label class="input-label">Role</label>
+                        <select id="newMemRole" class="form-control">
+                            <option value="Lead Rescuer">Lead Rescuer</option>
+                            <option value="Rescuer">Rescuer</option>
+                            <option value="Medic">Medic</option>
+                            <option value="Pilot">Pilot</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Member ID (Device ID)</label>
+                        <input type="text" id="newMemId" class="form-control" placeholder="RES-XXXX">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label class="input-label">Phone Number</label>
+                        <input type="text" id="newMemPhone" class="form-control" placeholder="+91 XXXXX XXXXX">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Password</label>
+                        <input type="text" id="newMemPassword" class="form-control" placeholder="Set Password">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Member Photo</label>
+                    <input type="file" id="newMemPhoto" class="form-control" accept="image/*">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Assign to Groups</label>
+                    <div id="addMemberGroupsList"
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 200px; overflow-y: auto; padding: 10px; background: var(--bg-alt); border-radius: 8px; border: 1px solid var(--border);">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('addMemberModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveMember()">Save Member</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Member Modal -->
+    <div class="modal-overlay" id="editMemberModal" style="z-index: 10000;">
+        <div class="modal" style="width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Member</h3>
+                <button class="modal-close" onclick="closeModal('editMemberModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editMemDbId">
+                <div class="input-group">
+                    <label class="input-label">Full Name</label>
+                    <input type="text" id="editMemName" class="form-control">
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label class="input-label">Role</label>
+                        <select id="editMemRole" class="form-control">
+                            <option value="Lead Rescuer">Lead Rescuer</option>
+                            <option value="Rescuer">Rescuer</option>
+                            <option value="Medic">Medic</option>
+                            <option value="Pilot">Pilot</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Member ID (Device ID)</label>
+                        <input type="text" id="editMemId" class="form-control">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label class="input-label">Phone Number</label>
+                        <input type="text" id="editMemPhone" class="form-control">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Password</label>
+                        <input type="text" id="editMemPassword" class="form-control" placeholder="Change Password">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Member Photo</label>
+                    <input type="file" id="editMemPhoto" class="form-control" accept="image/*">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Update Group Assignments</label>
+                    <div id="editMemberGroupsList"
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 200px; overflow-y: auto; padding: 10px; background: var(--bg-alt); border-radius: 8px; border: 1px solid var(--border);">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('editMemberModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="updateMember()">Update Member</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign Existing Members Modal -->
+    <div class="modal-overlay" id="assignExistingModal" style="z-index: 10000;">
+        <div class="modal" style="width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Assign Members to <span id="assignTargetGroupName"
+                        style="color:var(--accent);"></span></h3>
+                <button class="modal-close" onclick="closeModal('assignExistingModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">Select Members to Add</label>
+                    <div id="availableMembersList"
+                        style="display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto; padding: 10px; background: var(--bg-alt); border-radius: 8px; border: 1px solid var(--border);">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('assignExistingModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="assignExistingMembers()">Add Selected Members</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Operation Modal -->
+    <div class="modal-overlay" id="createOpModal" style="z-index: 10000;">
+        <div class="modal" style="width: 700px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Create New Operation</h3>
+                <button class="modal-close" onclick="closeModal('createOpModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="grid-2" style="margin-bottom: 16px;">
+                    <div class="input-group" style="margin-bottom:0;">
+                        <label class="input-label">Serial Number</label>
+                        <input type="text" id="opSerial" class="form-control" readonly
+                            style="background:#f8fafc; font-weight:700;">
+                    </div>
+                    <div class="input-group" style="margin-bottom:0;">
+                        <label class="input-label">Creation Time</label>
+                        <input type="text" id="opTime" class="form-control" readonly style="background:#f8fafc;">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Name of Operation</label>
+                    <input type="text" id="newOpName" class="form-control" placeholder="e.g. Cyclone Relief Phase 1">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Define Operation Zone (Macro Range)</label>
+                    <div class="zone-controls" style="margin-bottom:8px;">
+                        <button class="btn btn-outline active" id="btnOpRad" onclick="setOpDrawMode('radius')">Radius
+                            Drag</button>
+                        <button class="btn btn-outline" id="btnOpArea" onclick="setOpDrawMode('area')">Area
+                            Drag</button>
+                    </div>
+                    <div id="opMap"
+                        style="height: 300px; border-radius: 6px; border: 1px solid var(--border); background: #e2e8f0; position:relative; z-index:1; margin-bottom:8px;">
+                    </div>
+                    <input type="text" id="opZoneText" class="form-control"
+                        placeholder="Zone coordinates will appear here..." readonly
+                        style="background:#f8fafc; font-size:12px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('createOpModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveOperation()">Save & Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download Map Modal -->
+    <div class="modal-overlay" id="downloadMapModal" style="z-index: 10000;">
+        <div class="modal" style="width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Select Region to Download</h3>
+                <button class="modal-close" onclick="closeModal('downloadMapModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px;">Draw a rectangle on the map to
+                    select the exact offline region you wish to download.</p>
+                <div id="dlMap"
+                    style="height: 300px; border-radius: 6px; border: 1px solid var(--border); background: #e2e8f0; position:relative; z-index:1; margin-bottom:16px;">
+                </div>
+                <div class="input-group" style="margin-bottom:0;">
+                    <label class="input-label">Selected Coordinates</label>
+                    <input type="text" id="dlMapCoords" class="form-control" readonly
+                        placeholder="Waiting for selection..." style="background:#f8fafc; font-size:12px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('downloadMapModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="startMapDownload()">Start Download</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operation Details Modal -->
+    <div class="modal-overlay" id="opDetailsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="opModalTitle">Operation Details</h3>
+                <button class="modal-close" onclick="closeModal('opDetailsModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="grid-2">
+                    <div>
+                        <div class="input-label">Assigned Teams</div>
+                        <div class="card" style="padding:12px; font-weight:600; font-size:13px;">Alpha Squad, Delta
+                            Rescuers</div>
+                    </div>
+                    <div>
+                        <div class="input-label">Zone Distribution</div>
+                        <div class="card" style="padding:12px; font-weight:600; font-size:13px;">Sector 4 (60%), Sector
+                            2 (40%)</div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="input-label">Task Breakdown</div>
+                    <table
+                        style="border:1px solid var(--border); border-radius:6px; overflow:hidden; width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr
+                                style="background: var(--bg-alt); border-bottom: 1px solid var(--border); text-align: left; font-size: 11px; color: var(--text-muted); text-transform: uppercase;">
+                                <th style="padding: 8px;">#</th>
+                                <th style="padding: 8px;">Task Description</th>
+                                <th style="padding: 8px;">Request Time</th>
+                                <th style="padding: 8px;">Command Time</th>
+                                <th style="padding: 8px; text-align: right;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 8px; font-weight: 800; color: var(--text-muted);">01</td>
+                                <td style="padding: 8px; font-weight:600;">Evacuation Route Clearance</td>
+                                <td style="padding: 8px; font-size: 12px; color: var(--text-muted);">10:12</td>
+                                <td style="padding: 8px; font-size: 12px; color: var(--text-muted);">10:15</td>
+                                <td style="padding: 8px; text-align: right;"><span
+                                        class="tag tag-green">Completed</span></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; font-weight: 800; color: var(--text-muted);">02</td>
+                                <td style="padding: 8px; font-weight:600;">Supply Airdrop coordination</td>
+                                <td style="padding: 8px; font-size: 12px; color: var(--text-muted);">10:30</td>
+                                <td style="padding: 8px; font-size: 12px; color: var(--text-muted);">10:35</td>
+                                <td style="padding: 8px; text-align: right;"><span class="tag tag-yellow">Ongoing</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('opDetailsModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign Rescue Operation Modal -->
+    <div class="modal-overlay" id="assignModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Assign Rescue Operation</h3>
+                <button class="modal-close" onclick="closeModal('assignModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="card"
+                    style="padding:12px; margin-bottom:16px; background:#f8fafc; border:1px solid var(--border);">
+                    <div style="font-weight:700; margin-bottom:4px;" id="assignReqTitle">Pregnancy Rescue</div>
+                    <div style="font-size:12px; color:var(--text-muted);" id="assignReqDetails">Sector 4, urgency high
+                    </div>
+                    <input type="hidden" id="assignReqId" value="">
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">Assign to Individual Person</label>
+                    <select class="form-control" id="assignPersonSelect">
+                        <option value="">-- Select Person --</option>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div
+                    style="text-align:center; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:12px;">
+                    OR</div>
+
+                <div class="input-group">
+                    <label class="input-label">Assign to Group</label>
+                    <select class="form-control" id="assignGroupSelect">
+                        <option value="">-- Select Group --</option>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('assignModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="dispatchAssignment()">Dispatch</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Public User Modal -->
+    <div class="modal-overlay" id="addPublicModal" style="z-index: 10000;">
+        <div class="modal" style="width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Public User</h3>
+                <button class="modal-close" onclick="closeModal('addPublicModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label class="input-label">Full Name</label>
+                        <input type="text" id="newPubName" class="form-control" placeholder="e.g. Ramesh Kumar">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Nick Name # (Serial)</label>
+                        <input type="text" id="newPubSerial" class="form-control" placeholder="e.g. PUB-01">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label class="input-label">Mobile Number</label>
+                        <input type="text" id="newPubPhone" class="form-control" placeholder="919876543210">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Password</label>
+                        <input type="text" id="newPubPassword" class="form-control" placeholder="Set Password">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Public User Photo</label>
+                    <input type="file" id="newPubPhoto" class="form-control" accept="image/*">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('addPublicModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="savePublicUser()">Save User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Public User Modal -->
+    <div class="modal-overlay" id="editPublicModal" style="z-index: 10000;">
+        <div class="modal" style="width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Public User</h3>
+                <button class="modal-close" onclick="closeModal('editPublicModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editPubId">
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label class="input-label">Full Name</label>
+                        <input type="text" id="editPubName" class="form-control">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Nick Name # (Serial)</label>
+                        <input type="text" id="editPubSerial" class="form-control">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label class="input-label">Mobile Number</label>
+                        <input type="text" id="editPubPhone" class="form-control">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Password</label>
+                        <input type="text" id="editPubPassword" class="form-control">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Public User Photo</label>
+                    <input type="file" id="editPubPhoto" class="form-control" accept="image/*">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('editPublicModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="updatePublicUser()">Update User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script>
+        lucide.createIcons();
+
+        // 0. Landing Page Logic
+        let operations = [
+            { id: 'OP-01', name: 'Flood Relief Sector 4', date: '2026-05-03', status: 'Active', zoneData: { type: 'radius', latlng: { lat: 13.0827, lng: 80.2707 }, radius: 4000 } }
+        ];
+
+        let opMapInstance;
+        let opDrawnLayer;
+        let opDrawMode = 'radius';
+        let opIsDrawing = false;
+        let opStartPoint = null;
+
+        function initOpMap() {
+            if (opMapInstance) return;
+            opMapInstance = L.map('opMap', { zoomControl: false }).setView([13.0827, 80.2707], 12);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(opMapInstance);
+            L.control.zoom({ position: 'bottomright' }).addTo(opMapInstance);
+            opMapInstance.on('mousedown', onOpMapClick);
+        }
+
+        function renderOpsList() {
+            let html = '';
+            operations.forEach(op => {
+                html += `<tr>
+                    <td style="font-weight:700;">${op.id}</td>
+                    <td>${op.name}</td>
+                    <td>${op.date}</td>
+                    <td><span class="tag tag-green">${op.status}</span></td>
+                    <td style="text-align:right;"><button class="btn btn-primary" onclick="enterDashboard('${op.id}')">Select Operation <i data-lucide="arrow-right" style="width:14px; margin-left:4px;"></i></button></td>
+                </tr>`;
+            });
+            document.getElementById('opsListBody').innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function returnToOpsHub() {
+            document.getElementById('operationalHub').style.display = 'flex';
+            document.querySelector('.top-nav').style.display = 'none';
+            document.getElementById('appWrapper').style.display = 'none';
+        }
+
+        function openMainFeedSettingsModal() {
+            document.getElementById('mainFeedSettingsModal').style.display = 'flex';
+        }
+
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('sysLogoInput').value = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveMainFeedSettings() {
+            const newName = document.getElementById('sysNameInput').value;
+            const newLogo = document.getElementById('sysLogoInput').value;
+
+            if (newName) {
+                document.getElementById('landingTitle').innerText = newName;
+                document.getElementById('navBrandTitle').innerText = newName.toUpperCase();
+            }
+
+            if (newLogo) {
+                document.getElementById('landingLogoImg').src = newLogo;
+                document.getElementById('landingLogoImg').style.display = 'block';
+                document.getElementById('landingLogoIcon').style.display = 'none';
+            } else {
+                document.getElementById('landingLogoImg').style.display = 'none';
+                document.getElementById('landingLogoIcon').style.display = 'inline-block';
+            }
+
+            closeModal('mainFeedSettingsModal');
+            alert('System profile saved successfully.');
+        }
+
+        function openCreateOpModal() {
+            document.getElementById('createOpModal').style.display = 'flex';
+            document.getElementById('newOpName').value = '';
+            document.getElementById('opZoneText').value = '';
+
+            // Generate Serial and Time
+            let newId = `OP-${String(operations.length + 1).padStart(2, '0')}`;
+            let d = new Date();
+            document.getElementById('opSerial').value = newId;
+            document.getElementById('opTime').value = d.toLocaleString();
+
+            if (opDrawnLayer && opMapInstance) opMapInstance.removeLayer(opDrawnLayer);
+            opDrawnLayer = null;
+            setTimeout(() => {
+                initOpMap();
+                opMapInstance.invalidateSize();
+            }, 100);
+        }
+
+        function setOpDrawMode(mode) {
+            opDrawMode = mode;
+            document.getElementById('btnOpRad').classList.remove('active');
+            document.getElementById('btnOpArea').classList.remove('active');
+            document.getElementById(mode === 'radius' ? 'btnOpRad' : 'btnOpArea').classList.add('active');
+            if (opMapInstance) opMapInstance.getContainer().style.cursor = 'crosshair';
+        }
+
+        function onOpMapClick(e) {
+            if (opIsDrawing) return;
+            opMapInstance.dragging.disable();
+            opIsDrawing = true;
+            opStartPoint = e.latlng;
+            if (opDrawnLayer) opMapInstance.removeLayer(opDrawnLayer);
+
+            let style = { color: '#ef4444', weight: 2, fillOpacity: 0.1, dashArray: '5, 5' };
+            if (opDrawMode === 'radius') {
+                opDrawnLayer = L.circle(opStartPoint, { ...style, radius: 0 }).addTo(opMapInstance);
+            } else {
+                opDrawnLayer = L.rectangle([opStartPoint, opStartPoint], style).addTo(opMapInstance);
+            }
+            opDrawnLayer.bindTooltip("Operation Zone", { permanent: true, direction: "center", className: 'op-zone-tooltip' }).openTooltip();
+
+            opMapInstance.on('mousemove', onOpMapMove);
+            opMapInstance.on('mouseup', onOpMapUp);
+        }
+
+        function onOpMapMove(e) {
+            if (!opIsDrawing) return;
+            if (opDrawMode === 'radius') {
+                opDrawnLayer.setRadius(opMapInstance.distance(opStartPoint, e.latlng));
+            } else {
+                opDrawnLayer.setBounds([opStartPoint, e.latlng]);
+            }
+        }
+
+        function onOpMapUp(e) {
+            opIsDrawing = false;
+            opMapInstance.dragging.enable();
+            opMapInstance.off('mousemove', onOpMapMove);
+            opMapInstance.off('mouseup', onOpMapUp);
+            opMapInstance.getContainer().style.cursor = '';
+
+            if (opDrawnLayer) {
+                let bounds = opDrawnLayer.getBounds();
+                let center = bounds.getCenter();
+                let radStr = opDrawMode === 'radius' ? ` (Radius: ${(opDrawnLayer.getRadius() / 1000).toFixed(2)}km)` : '';
+                document.getElementById('opZoneText').value = `Center: Lat ${center.lat.toFixed(4)}, Lng ${center.lng.toFixed(4)}${radStr}`;
+            }
+        }
+
+        function saveOperation() {
+            let name = document.getElementById('newOpName').value;
+            if (!name) { alert("Please enter an operation name."); return; }
+            if (!opDrawnLayer) { alert("Please mark the operation zone on the map."); return; }
+
+            let zoneData = null;
+            if (opDrawMode === 'radius') {
+                zoneData = { type: 'radius', latlng: opDrawnLayer.getLatLng(), radius: opDrawnLayer.getRadius() };
+            } else {
+                zoneData = { type: 'area', bounds: opDrawnLayer.getBounds() };
+            }
+
+            let d = new Date();
+            let ds = d.toISOString().split('T')[0];
+            let newId = `OP-${String(operations.length + 1).padStart(2, '0')}`;
+            operations.unshift({ id: newId, name: name, date: ds, status: 'Active', zoneData: zoneData });
+            renderOpsList();
+            closeModal('createOpModal');
+        }
+
+        let activeMacroZoneLayer = null;
+
+        function enterDashboard(opId) {
+            document.getElementById('operationalHub').style.display = 'none';
+            document.querySelector('.top-nav').style.display = 'flex';
+            document.getElementById('appWrapper').style.display = 'flex';
+
+            setTimeout(() => {
+                map.invalidateSize();
+                let op = operations.find(o => o.id === opId);
+                if (op && op.zoneData) {
+                    if (activeMacroZoneLayer) map.removeLayer(activeMacroZoneLayer);
+
+                    let style = { color: '#ef4444', weight: 3, fillOpacity: 0.05, dashArray: '5, 5', interactive: false };
+                    if (op.zoneData.type === 'radius') {
+                        activeMacroZoneLayer = L.circle(op.zoneData.latlng, { ...style, radius: op.zoneData.radius }).addTo(map);
+                    } else {
+                        activeMacroZoneLayer = L.rectangle(op.zoneData.bounds, style).addTo(map);
+                    }
+                    activeMacroZoneLayer.bindTooltip(`Operation Zone: ${op.name}`, { permanent: true, direction: "center", className: 'op-zone-tooltip' }).openTooltip();
+                    map.flyToBounds(activeMacroZoneLayer.getBounds(), { padding: [50, 50], duration: 1 });
+                }
+            }, 200);
+        }
+
+        // Download Map Logic
+        let dlMapInstance = null;
+        let dlDrawnLayer = null;
+        let dlIsDrawing = false;
+        let dlStartPoint = null;
+
+        function initDlMap() {
+            if (dlMapInstance) return;
+            dlMapInstance = L.map('dlMap', { zoomControl: false }).setView([13.0827, 80.2707], 12);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(dlMapInstance);
+            L.control.zoom({ position: 'bottomright' }).addTo(dlMapInstance);
+
+            dlMapInstance.on('mousedown', (e) => {
+                if (dlIsDrawing) return;
+                dlMapInstance.dragging.disable();
+                dlIsDrawing = true;
+                dlStartPoint = e.latlng;
+                if (dlDrawnLayer) dlMapInstance.removeLayer(dlDrawnLayer);
+                dlDrawnLayer = L.rectangle([dlStartPoint, dlStartPoint], { color: '#10b981', weight: 2, fillOpacity: 0.1, dashArray: '5, 5' }).addTo(dlMapInstance);
+                dlMapInstance.on('mousemove', onDlMapMove);
+                dlMapInstance.on('mouseup', onDlMapUp);
+            });
+        }
+
+        function onDlMapMove(e) {
+            if (!dlIsDrawing) return;
+            dlDrawnLayer.setBounds([dlStartPoint, e.latlng]);
+        }
+
+        function onDlMapUp(e) {
+            dlIsDrawing = false;
+            dlMapInstance.dragging.enable();
+            dlMapInstance.off('mousemove', onDlMapMove);
+            dlMapInstance.off('mouseup', onDlMapUp);
+            if (dlDrawnLayer) {
+                let bounds = dlDrawnLayer.getBounds();
+                document.getElementById('dlMapCoords').value = `NE: ${bounds.getNorthEast().lat.toFixed(4)}, ${bounds.getNorthEast().lng.toFixed(4)} | SW: ${bounds.getSouthWest().lat.toFixed(4)}, ${bounds.getSouthWest().lng.toFixed(4)}`;
+            }
+        }
+
+        function openDownloadMapModal() {
+            document.getElementById('downloadMapModal').style.display = 'flex';
+            document.getElementById('dlMapCoords').value = '';
+            let area = document.getElementById('dlMapArea').value;
+
+            if (dlDrawnLayer && dlMapInstance) dlMapInstance.removeLayer(dlDrawnLayer);
+            dlDrawnLayer = null;
+            setTimeout(() => {
+                initDlMap();
+                dlMapInstance.invalidateSize();
+            }, 100);
+        }
+
+        function startMapDownload() {
+            if (!dlDrawnLayer) {
+                alert("Please select a region on the map first.");
+                return;
+            }
+            alert("Download initiated for selected region. Check progress in system tray.");
+            closeModal('downloadMapModal');
+        }
+
+        // 1. Navigation
+        function switchPage(pageId, btnEl) {
+            document.querySelectorAll('.page-content, .dash-layout').forEach(el => el.style.display = 'none');
+            document.getElementById('page-' + pageId).style.display = pageId === 'dash' ? 'flex' : 'block';
+
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+
+            if (pageId === 'dash' && map) {
+                setTimeout(() => map.invalidateSize(), 100);
+            }
+        }
+
+        // 2. Command Tabs
+        function switchCmdTab(tab, btnEl) {
+            document.getElementById('cmd-live').style.display = 'none';
+            document.getElementById('cmd-completed').style.display = 'none';
+            document.getElementById('cmd-' + tab).style.display = 'block';
+
+            document.querySelectorAll('.cmd-tab').forEach(el => el.classList.remove('active'));
+            btnEl.classList.add('active');
+        }
+
+        // 3. Modals
+        function openOpDetails(title) {
+            document.getElementById('opModalTitle').innerText = title + ' Details';
+            document.getElementById('opDetailsModal').style.display = 'flex';
+        }
+        function openGroupModal() {
+            document.getElementById('createGroupModal').style.display = 'flex';
+        }
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // 4. Map & Interactions
+        let map;
+        let drawnLayer;
+        let drawMode = null; // null until user selects radius or area
+        let zoneOverlay;
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false }).setView([13.0827, 80.2707], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            // Add dynamic tactical markers
+            let mapMarkersData = [
+                { lat: 13.085, lng: 80.27, type: 'sos', icon: 'radio', details: 'Critical SOS: Stranded family on roof, immediate evac needed.' },
+                { lat: 13.090, lng: 80.26, type: 'medical', icon: 'cross', details: 'Medical Emergency: Elderly patient with cardiac arrest.' },
+                { lat: 13.075, lng: 80.28, type: 'food', icon: 'package', details: 'Food Request: 50 meal packets needed for relief camp.' },
+                { lat: 13.095, lng: 80.275, type: 'pregnancy', icon: 'activity', details: 'Pregnancy Evac: Labor initiated, urgent medical transport.' },
+                { lat: 13.068, lng: 80.278, type: 'rescue', icon: 'triangle', details: 'Rescue Operation: Structural collapse, 2 trapped civilians.' }
+            ];
+
+            mapMarkersData.forEach(m => {
+                let isHex = m.type === 'rescue';
+                addMarker(m.lat, m.lng, m.type, `<i data-lucide="${m.icon}" style="width:16px;height:16px;${isHex ? 'fill:white' : ''}"></i>`, m.details);
+            });
+
+            // Add a cluster example
+            let clusterIcon = L.divIcon({
+                className: 'cluster-marker',
+                html: '5',
+                iconSize: [38, 38],
+                iconAnchor: [19, 19]
+            });
+            let cl = L.marker([13.08, 80.28], { icon: clusterIcon }).addTo(map);
+            cl._icon.style.borderColor = 'var(--pending)';
+            cl._icon.style.color = 'var(--pending)';
+            cl.bindPopup('<div style="font-family:Inter;font-size:13px;font-weight:700;">5 Pending Requests in Cluster</div>');
+
+            // Map interaction for drawing
+            map.on('mousedown', onMapClick);
+
+            setTimeout(() => lucide.createIcons(), 100);
+        }
+
+        function addMarker(lat, lng, type, iconHtml, details) {
+            let icon = L.divIcon({
+                className: `custom-marker marker-${type}`,
+                html: iconHtml,
+                iconSize: type === 'rescue' ? [32, 32] : [28, 28],
+                iconAnchor: [16, 16]
+            });
+            let marker = L.marker([lat, lng], { icon: icon }).addTo(map);
+            if (details) {
+                let colorVar = type === 'sos' || type === 'rescue' ? 'critical' : type === 'food' ? 'pending' : type === 'medical' ? 'medical' : 'special';
+                marker.bindPopup(`<div style="font-family:'Inter'; font-size:13px;"><strong style="text-transform:uppercase; color:var(--${colorVar});">${type} Alert</strong><div style="margin-top:4px;">${details}</div></div>`);
+            }
+        }
+
+        function setDrawMode(mode) {
+            drawMode = mode;
+            document.getElementById('btnRad').classList.remove('active');
+            document.getElementById('btnArea').classList.remove('active');
+            document.getElementById(mode === 'radius' ? 'btnRad' : 'btnArea').classList.add('active');
+            map.getContainer().style.cursor = 'crosshair';
+        }
+
+        let isDrawing = false;
+        let startPoint = null;
+
+        function onMapClick(e) {
+            if (!drawMode) return; // Prevent unaware clicks if no tool is selected
+            if (isDrawing) return;
+            map.dragging.disable();
+            isDrawing = true;
+            startPoint = e.latlng;
+            if (drawnLayer) map.removeLayer(drawnLayer);
+
+            let style = { color: '#3b82f6', weight: 2, fillOpacity: 0.1, dashArray: '5, 5' };
+            if (drawMode === 'radius') {
+                drawnLayer = L.circle(startPoint, { ...style, radius: 0 }).addTo(map);
+            } else {
+                drawnLayer = L.rectangle([startPoint, startPoint], style).addTo(map);
+            }
+
+            drawnLayer.bindTooltip("Task Zone", { permanent: true, direction: "center", className: 'zone-tooltip' }).openTooltip();
+
+            map.on('mousemove', onMapMove);
+            map.on('mouseup', onMapUp);
+        }
+
+        function onMapMove(e) {
+            if (!isDrawing) return;
+            if (drawMode === 'radius') {
+                let r = map.distance(startPoint, e.latlng);
+                drawnLayer.setRadius(r);
+                document.getElementById('distanceInput').value = (r / 1000).toFixed(2);
+            } else {
+                drawnLayer.setBounds([startPoint, e.latlng]);
+                document.getElementById('distanceInput').value = (map.distance(startPoint, e.latlng) / 1000).toFixed(2);
+            }
+        }
+
+        function onMapUp(e) {
+            isDrawing = false;
+            map.dragging.enable();
+            map.off('mousemove', onMapMove);
+            map.off('mouseup', onMapUp);
+            map.getContainer().style.cursor = '';
+
+            // Auto-fill Command Input
+            if (drawnLayer) {
+                let bounds = drawnLayer.getBounds();
+                let center = bounds.getCenter();
+                document.getElementById('cmdCoords').value = `Lat: ${center.lat.toFixed(3)}, Lng: ${center.lng.toFixed(3)}`;
+            }
+
+            // Keep draw mode active so subsequent clicks draw a new zone
+            // until the user presses Escape or explicitly changes the tool.
+            map.getContainer().style.cursor = 'crosshair';
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                if (drawnLayer) {
+                    map.removeLayer(drawnLayer);
+                    drawnLayer = null;
+                }
+                document.getElementById('cmdCoords').value = '';
+                document.getElementById('distanceInput').value = '';
+                isDrawing = false;
+            }
+        });
+
+        function deployTracker() {
+            if (drawnLayer) {
+                drawnLayer.setStyle({ dashArray: null, color: '#2563eb', fillOpacity: 0.08 });
+                alert('Zone Tracker Deployed!');
+            } else {
+                alert('Please draw a zone on the map first.');
+            }
+        }
+
+        function toggleCurrentZone() {
+            if (drawnLayer) {
+                map.flyToBounds(drawnLayer.getBounds(), { duration: 1 });
+            } else if (activeMacroZoneLayer) {
+                map.flyToBounds(activeMacroZoneLayer.getBounds(), { padding: [50, 50], duration: 1 });
+            }
+        }
+
+        // 5. Command Logic
+        let cmds = [
+            { id: 'CMD-101', desc: 'Evacuate 3 stranded on roof', type: 'rescue', zone: '<b>Sector 4</b><br><small style="color:var(--text-muted);font-size:11px;">Lat: 13.085, Lng: 80.270</small>', team: 'Alpha Squad', time: '10:15', status: 'Ongoing', layerData: { type: 'radius', latlng: [13.085, 80.270], radius: 1000 } },
+            { id: 'CMD-102', desc: 'Drop MREs and Water', type: 'food', zone: '<b>Sector 2</b><br><small style="color:var(--text-muted);font-size:11px;">Lat: 13.075, Lng: 80.280</small>', team: 'Bravo Medics', time: '09:30', status: 'Completed', layerData: { type: 'radius', latlng: [13.075, 80.280], radius: 600 } }
+        ];
+
+        let selectedCmdLayer = null;
+        function selectTask(id) {
+            let cmd = cmds.find(c => c.id === id);
+            if (!cmd) return;
+
+            // Show details panel, hide form
+            document.getElementById('commandFormPanel').style.display = 'none';
+            document.getElementById('commandDetailsPanel').style.display = 'flex';
+
+            document.getElementById('tdId').innerText = `${cmd.id} • ${cmd.type.toUpperCase()}`;
+            document.getElementById('tdDesc').innerText = cmd.desc;
+            document.getElementById('tdMeta').innerHTML = `<b>Assigned Team:</b> ${cmd.team} <br><br> <b>Target Zone:</b><br> ${cmd.zone}`;
+            document.getElementById('tdStatus').innerHTML = `<span class="tag ${getTagForStatus(cmd.status)}">${cmd.status}</span>`;
+
+            // Draw map area in blue
+            if (selectedCmdLayer) map.removeLayer(selectedCmdLayer);
+
+            if (cmd.layerData) {
+                let style = { color: '#2563eb', weight: 3, fillOpacity: 0.15, dashArray: null };
+                if (cmd.layerData.type === 'radius') {
+                    selectedCmdLayer = L.circle(cmd.layerData.latlng, { ...style, radius: cmd.layerData.radius }).addTo(map);
+                } else {
+                    selectedCmdLayer = L.rectangle(cmd.layerData.bounds, style).addTo(map);
+                }
+                map.flyToBounds(selectedCmdLayer.getBounds(), { padding: [50, 50], duration: 1 });
+            }
+        }
+
+        function closeTaskDetails() {
+            document.getElementById('commandDetailsPanel').style.display = 'none';
+            document.getElementById('commandFormPanel').style.display = 'block';
+            if (selectedCmdLayer) {
+                map.removeLayer(selectedCmdLayer);
+                selectedCmdLayer = null;
+            }
+        }
+
+        function getTagForType(type) {
+            const m = { sos: 'tag-red', food: 'tag-yellow', medical: 'tag-purple', pregnancy: 'tag-special', rescue: 'tag-red' };
+            return m[type] || 'tag-gray';
+        }
+        function getTagForStatus(status) {
+            if (status === 'Ongoing') return 'tag-yellow';
+            if (status === 'Completed') return 'tag-green';
+            return 'tag-gray';
+        }
+
+        function renderCmds() {
+            let liveHtml = '';
+            let compHtml = '';
+            let histHtml = '';
+
+            cmds.forEach((c, index) => {
+                let sNo = String(index + 1).padStart(2, '0');
+                let isReassignable = c.status !== 'Completed';
+                
+                let row = `<tr onclick="selectTask('${c.id}')" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                    <td style="font-weight: 800; color: var(--text-muted);">${sNo}</td>
+                    <td style="font-weight:700;">${c.id}</td>
+                    <td>${c.desc}</td>
+                    <td><span class="tag ${getTagForType(c.type)}">${c.type}</span></td>
+                    <td>${c.zone}</td>
+                    <td>${c.team}</td>
+                    <td style="color:var(--text-muted); font-size: 12px;">${c.reqTime || c.time}</td>
+                    <td style="color:var(--text-muted); font-size: 12px;">${c.cmdTime || c.time}</td>
+                    <td><span class="tag ${getTagForStatus(c.status)}">${c.status}</span></td>
+                    <td>
+                        ${isReassignable ? `<button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Reassign</button>` : '-'}
+                    </td>
+                </tr>`;
+                if (c.status === 'Ongoing' || c.status === 'Critical' || c.status === 'Pending' || c.status === 'Accepted' || c.status === 'Declined') liveHtml += row;
+                else compHtml += row;
+                histHtml += row;
+            });
+            
+            const liveHeader = `<tr>
+                <th style="width: 40px;">S.NO</th>
+                <th style="width: 80px;">ID</th>
+                <th>TASK / DESCRIPTION</th>
+                <th style="width: 100px;">TYPE</th>
+                <th>ZONE / AREA</th>
+                <th>ASSIGNED TO</th>
+                <th style="width: 80px;">REQ</th>
+                <th style="width: 80px;">CMD</th>
+                <th style="width: 100px;">STATUS</th>
+                <th style="width: 100px;">ACTION</th>
+            </tr>`;
+            
+            document.getElementById('liveCmdBody').parentElement.querySelector('thead').innerHTML = liveHeader;
+            document.getElementById('liveCmdBody').innerHTML = liveHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No live commands</td></tr>';
+            document.getElementById('compCmdBody').innerHTML = compHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No completed commands</td></tr>';
+            document.getElementById('historyTbody').innerHTML = histHtml;
+        }
+
+        // Track selected task priority
+        let currentTaskPriority = 'normal';
+
+        function setTaskPriority(priority) {
+            currentTaskPriority = priority;
+            const panel = document.getElementById('commandFormPanel');
+            const banner = document.getElementById('criticalWarningBanner');
+            const btn = document.getElementById('createCmdBtn');
+            const titleEl = document.getElementById('cmdPanelTitle');
+            const btnNormal = document.getElementById('btnNormal');
+            const btnCritical = document.getElementById('btnCritical');
+
+            if (!panel || !banner || !btn || !titleEl || !btnNormal || !btnCritical) return;
+
+            if (priority === 'critical') {
+                // Activate critical UI
+                panel.style.border = '2px solid #ef4444';
+                panel.style.background = 'rgba(239,68,68,0.03)';
+                panel.style.borderRadius = '8px';
+                panel.style.padding = '12px';
+                banner.style.display = 'block';
+                btn.style.background = '#ef4444';
+                btn.style.borderColor = '#ef4444';
+                btn.innerHTML = '<i data-lucide="alert-triangle" style="width:16px;"></i> 🚨 Dispatch Critical Alert';
+                titleEl.style.color = '#ef4444';
+                btnCritical.style.background = '#ef4444';
+                btnCritical.style.color = '#fff';
+                btnCritical.style.borderColor = '#ef4444';
+                btnNormal.style.background = '';
+                btnNormal.style.color = '';
+                btnNormal.style.borderColor = '';
+                // Auto-select critical in the dropdown
+                document.getElementById('cmdType').value = 'critical';
+            } else {
+                // Reset to normal
+                panel.style.border = '';
+                panel.style.background = '';
+                panel.style.borderRadius = '';
+                panel.style.padding = '';
+                banner.style.display = 'none';
+                btn.style.background = '';
+                btn.style.borderColor = '';
+                btn.innerHTML = '<i data-lucide="plus-circle" style="width:16px;"></i> Create Command';
+                titleEl.style.color = '';
+                btnNormal.style.background = 'var(--accent)';
+                btnNormal.style.color = '#fff';
+                btnNormal.style.borderColor = 'var(--accent)';
+                btnCritical.style.background = '';
+                btnCritical.style.color = '';
+                btnCritical.style.borderColor = '';
+                // Reset dropdown
+                document.getElementById('cmdType').value = 'sos';
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // Keep priority in sync when dropdown changes manually
+        document.addEventListener('DOMContentLoaded', () => {
+            const typeSelect = document.getElementById('cmdType');
+            if (typeSelect) {
+                typeSelect.addEventListener('change', function() {
+                    if (this.value === 'critical') setTaskPriority('critical');
+                    else if (currentTaskPriority === 'critical') setTaskPriority('normal');
+                });
+            }
+            // Default: highlight Normal button
+            setTaskPriority('normal');
+        });
+
+        // Target Type Handling
+        let currentTargetType = 'group';
+        function setTargetType(type) {
+            currentTargetType = type;
+            const btnGroup = document.getElementById('btnTargetGroup');
+            const btnIndiv = document.getElementById('btnTargetIndividual');
+            const selectGroup = document.getElementById('targetGroupSelect');
+            const selectIndiv = document.getElementById('targetIndividualSelect');
+
+            if (type === 'group') {
+                btnGroup.className = 'btn btn-primary';
+                btnIndiv.className = 'btn btn-outline';
+                selectGroup.style.display = 'block';
+                selectIndiv.style.display = 'none';
+            } else {
+                btnIndiv.className = 'btn btn-primary';
+                btnGroup.className = 'btn btn-outline';
+                selectGroup.style.display = 'none';
+                selectIndiv.style.display = 'block';
+                populateIndividualSelect('cmdIndividual');
+            }
+        }
+
+        function populateIndividualSelect(elementId) {
+            const select = document.getElementById(elementId);
+            if (!select) return;
+            // Clear except first option
+            select.innerHTML = '<option value="">-- Select Rescuer --</option>';
+            
+            // Use currentUsers if available, or fetch from API
+            if (window.currentUsers && window.currentUsers.length > 0) {
+                window.currentUsers.forEach(u => {
+                    if (u.role === 'Rescuer' || u.role === 'Lead Rescuer') {
+                        const opt = document.createElement('option');
+                        opt.value = u.id;
+                        opt.textContent = `${u.name} (${u.phone})`;
+                        select.appendChild(opt);
+                    }
+                });
+            } else {
+                // Fallback: fetch users
+                fetch(`${API_BASE}/users`).then(r => r.json()).then(users => {
+                    window.currentUsers = users;
+                    populateIndividualSelect(elementId);
+                });
+            }
+        }
+
+        // Reassign Logic
+        let reassigningCmdId = null;
+        function openReassignModal(id) {
+            reassigningCmdId = id;
+            const cmd = cmds.find(c => c.id === id);
+            if (!cmd) return;
+
+            // Use the existing assignModal UI but customize it
+            const modal = document.getElementById('assignModal');
+            document.querySelector('#assignModal .modal-title').innerText = `Reassign Command: ${id}`;
+            document.getElementById('assignReqTitle').innerText = cmd.desc;
+            document.getElementById('assignReqDetails').innerText = `Currently assigned to: ${cmd.team}`;
+            
+            // Clear selections
+            document.getElementById('assignPersonSelect').value = '';
+            document.getElementById('assignGroupSelect').value = '';
+            
+            // Populate person select if not done
+            populateIndividualSelect('assignPersonSelect');
+
+            // Change button click handler temporarily
+            const dispatchBtn = document.querySelector('#assignModal .btn-primary');
+            dispatchBtn.setAttribute('onclick', 'confirmReassignment()');
+            
+            openModal('assignModal');
+        }
+
+        function openReassignModalFromDetails() {
+            const id = document.getElementById('tdId').innerText.split(' • ')[0];
+            openReassignModal(id);
+        }
+
+        async function confirmReassignment() {
+            const personId = document.getElementById('assignPersonSelect').value;
+            const groupId = document.getElementById('assignGroupSelect').value;
+
+            if (!personId && !groupId) {
+                alert("Please select either a Person or a Group");
+                return;
+            }
+
+            const targetName = personId ? document.querySelector(`#assignPersonSelect option[value="${personId}"]`).textContent : 
+                                       document.querySelector(`#assignGroupSelect option[value="${groupId}"]`).textContent;
+
+            try {
+                const response = await fetch(`${API_BASE}/commands/${reassigningCmdId}/reassign`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        target_user_id: personId || null,
+                        group_id: groupId || null
+                    })
+                });
+
+                if (response.ok) {
+                    // Update local state
+                    const cmdIndex = cmds.findIndex(c => c.id === reassigningCmdId);
+                    if (cmdIndex !== -1) {
+                        cmds[cmdIndex].team = targetName;
+                        cmds[cmdIndex].status = 'Pending';
+                        renderCmds();
+                    }
+                    closeModal('assignModal');
+                    showAdminToast(`Task ${reassigningCmdId} reassigned to ${targetName}`);
+                }
+            } catch (e) {
+                console.error("Reassign failed", e);
+            } finally {
+                // Restore original handler for other uses of this modal
+                const dispatchBtn = document.querySelector('#assignModal .btn-primary');
+                dispatchBtn.setAttribute('onclick', 'dispatchAssignment()');
+            }
+        }
+
+        function createCommand() {
+            let type = document.getElementById('cmdType').value;
+            // If priority toggle says critical, override type
+            if (currentTaskPriority === 'critical') type = 'critical';
+            let team = '';
+            let teamId = null;
+            let rescuerPhone = null;
+
+            if (currentTargetType === 'group') {
+                let teamEl = document.getElementById('cmdTeam');
+                team = teamEl.options[teamEl.selectedIndex].text;
+                teamId = teamEl.value;
+            } else {
+                let indivEl = document.getElementById('cmdIndividual');
+                team = '👤 ' + indivEl.options[indivEl.selectedIndex].text;
+                rescuerPhone = indivEl.value;
+                if (!rescuerPhone) { alert('Please select a rescuer'); return; }
+            }
+            let areaName = document.getElementById('cmdAreaName').value || 'Manual Zone';
+            let coords = document.getElementById('cmdCoords').value || '';
+            let zoneHtml = coords ? `<b>${areaName}</b><br><small style="color:var(--text-muted);font-size:11px;">${coords}</small>` : `<b>${areaName}</b>`;
+            let desc = document.getElementById('cmdDetails').value;
+
+            if (!desc) { alert('Please enter command details'); return; }
+
+            // === Critical Response: Show high-priority approval popup ===
+            if (type === 'critical') {
+                showCriticalApprovalPopup({
+                    type, desc, teamId, team, areaName, coords, zoneHtml
+                });
+                return;
+            }
+
+            let cmdLayerData = null;
+            if (drawnLayer) {
+                if (drawMode === 'radius') {
+                    cmdLayerData = { type: 'radius', latlng: drawnLayer.getLatLng(), radius: drawnLayer.getRadius() };
+                } else {
+                    cmdLayerData = { type: 'area', bounds: drawnLayer.getBounds() };
+                }
+                map.removeLayer(drawnLayer);
+                drawnLayer = null;
+                document.getElementById('distanceInput').value = '';
+                document.getElementById('cmdCoords').value = '';
+            }
+
+            let d = new Date();
+            let t = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            const localId = `CMD-${100 + cmds.length + 1}`;
+
+            cmds.unshift({ id: localId, desc: desc, type: type, zone: zoneHtml, team: team, time: t, status: 'Ongoing', layerData: cmdLayerData });
+            renderCmds();
+
+            document.getElementById('cmdDetails').value = '';
+            document.getElementById('cmdAreaName').value = '';
+            switchCmdTab('live', document.querySelector('.cmd-tab:nth-child(1)'));
+
+            // Persist command to backend
+            fetch(`${API_BASE}/commands`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    group_id: teamId || null,
+                    target_user_id: rescuerPhone || null,
+                    command_type: type,
+                    command_payload: { message: desc, zone: areaName, coords, layerData: cmdLayerData },
+                    actor: 'Commander'
+                })
+            }).catch(e => console.warn('Command persist failed (offline?):', e));
+
+            renderCmds();
+        }
+
+        // === Critical Response Approval Popup ===
+        function showCriticalApprovalPopup(params) {
+            // Remove any existing popup
+            const existing = document.getElementById('criticalApprovalOverlay');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'criticalApprovalOverlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.25s ease;';
+
+            overlay.innerHTML = `
+                <div style="background:#fff;width:480px;max-width:94vw;border-radius:16px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.5);animation:slideUp 0.3s ease;">
+                    <!-- Red header bar -->
+                    <div style="background:#ef4444;padding:20px 24px;display:flex;align-items:center;gap:14px;">
+                        <span style="font-size:36px;">🚨</span>
+                        <div>
+                            <div style="color:#fff;font-size:18px;font-weight:900;letter-spacing:0.5px;">CRITICAL RESPONSE DISPATCH</div>
+                            <div style="color:rgba(255,255,255,0.8);font-size:13px;font-weight:600;">HIGH PRIORITY — REQUIRES IMMEDIATE ACTION</div>
+                        </div>
+                    </div>
+                    <!-- Body -->
+                    <div style="padding:24px;">
+                        <div style="background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin-bottom:20px;">
+                            <div style="font-size:11px;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Mission Brief</div>
+                            <div style="font-size:15px;color:#1e293b;font-weight:500;line-height:1.6;">${params.desc}</div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                            <div style="background:#f8fafc;border-radius:8px;padding:12px;">
+                                <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px;">ASSIGNED TO</div>
+                                <div style="font-size:14px;font-weight:700;color:#1e293b;">👥 ${params.team}</div>
+                            </div>
+                            <div style="background:#f8fafc;border-radius:8px;padding:12px;">
+                                <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px;">TARGET ZONE</div>
+                                <div style="font-size:14px;font-weight:700;color:#1e293b;">📍 ${params.areaName}</div>
+                            </div>
+                        </div>
+                        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:20px;font-size:12px;color:#92400e;">
+                            ⚡ Dispatching this alert will send an <strong>urgent notification</strong> to all assigned rescuers requiring immediate Accept or Decline. The admin will be notified in real-time.
+                        </div>
+                        <div style="display:flex;gap:12px;">
+                            <button onclick="document.getElementById('criticalApprovalOverlay').remove();" style="flex:1;padding:14px;background:#f1f5f9;border:2px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:800;color:#64748b;cursor:pointer;">✗ Cancel</button>
+                            <button onclick="confirmCriticalDispatch(${JSON.stringify(params).replace(/"/g,'&quot;')})" style="flex:1;padding:14px;background:#ef4444;border:none;border-radius:10px;font-size:15px;font-weight:900;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(239,68,68,0.4);">🚨 CONFIRM DISPATCH</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function confirmCriticalDispatch(params) {
+            document.getElementById('criticalApprovalOverlay').remove();
+
+            let d = new Date();
+            let t = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            const localId = `CMD-${100 + cmds.length + 1}`;
+
+            cmds.unshift({ id: localId, desc: '🚨 ' + params.desc, type: 'critical', zone: params.zoneHtml, team: params.team, time: t, status: 'Critical', layerData: null });
+            renderCmds();
+
+            document.getElementById('cmdDetails').value = '';
+            document.getElementById('cmdAreaName').value = '';
+            setTaskPriority('normal');
+            switchCmdTab('live', document.querySelector('.cmd-tab:nth-child(1)'));
+
+            // Persist to backend
+            fetch(`${API_BASE}/commands`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    group_id: params.teamId || null,
+                    rescuer_phone: params.rescuerPhone || null,
+                    command_type: 'critical',
+                    command_payload: { message: params.desc, zone: params.areaName, coords: params.coords },
+                    actor: 'Commander'
+                })
+            }).catch(e => console.warn('Critical dispatch persist failed:', e));
+
+            showAdminToast('🚨 Critical Response dispatched! Rescuers have been alerted.');
+        }
+
+        // ─── Admin Toast Notification ───────────────────────────────────────────────
+        function showAdminToast(msg) {
+            let toast = document.getElementById('adminToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'adminToast';
+                toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1e293b;color:#fff;padding:14px 20px;border-radius:12px;font-size:14px;font-weight:600;z-index:99999;box-shadow:0 8px 25px rgba(0,0,0,0.3);transition:all 0.4s;opacity:0;transform:translateY(20px);max-width:360px;line-height:1.4;';
+                document.body.appendChild(toast);
+            }
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+            }, 5000);
+        }
+
+        // ─── Rescue Requests Logic ──────────────────────────────────────────────────
+        let rescueRequests = [];
+        let ws;
+
+        function initWebSocket() {
+            ws = new WebSocket('ws://' + window.location.hostname + ':3001');
+            ws.onopen = () => console.log('[Admin WS] Connected to backend');
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'NEW_RESCUE_REQUEST') {
+                    fetchRescueRequests();
+                    fetchDashboardStats();
+                    showAdminToast(`🆘 New ${data.data?.type?.toUpperCase() || 'rescue'} request from ${data.data?.sector || 'field'}`);
+                } else if (data.type === 'RESCUE_REQUEST_ACCEPTED' || data.type === 'RESCUE_REQUEST_DECLINED') {
+                    fetchRescueRequests();
+                    fetchDashboardStats();
+                } else if (data.type === 'RESCUE_REQUEST_COMPLETED') {
+                    fetchRescueRequests();
+                    fetchDashboardStats();
+                    showAdminToast(`✅ Mission complete: ${data.data?.sector || 'request'} marked done by rescuer`);
+                    // Mark command as completed in local list
+                    const reqId = data.data?.id;
+                    if (reqId) {
+                        cmds.forEach(c => { if (c.rescueReqId === reqId) c.status = 'Completed'; });
+                        renderCmds();
+                    }
+                } else if (data.type === 'SOS_ALERT') {
+                    showAdminToast(`🚨 SOS Alert: ${data.data?.details?.message || 'Incoming alert'}`);
+                    fetchDashboardStats();
+                } else if (data.type === 'RESCUER_UPDATE') {
+                    // Update rescuer marker on map if available
+                    const d = data.data;
+                    if (d && d.lat && d.lng && rescuerMarkers) {
+                        if (rescuerMarkers[d.deviceId]) {
+                            rescuerMarkers[d.deviceId].setLatLng([d.lat, d.lng]);
+                        }
+                    }
+                } else if (data.type === 'NEW_COMMAND') {
+                    fetchDashboardStats();
+                }
+            };
+            ws.onclose = () => setTimeout(initWebSocket, 5000); // auto-reconnect
+        }
+
+        async function fetchRescueRequests() {
+            try {
+                const res = await fetch('http://localhost:3001/api/rescue-requests?status=pending');
+                rescueRequests = await res.json();
+                renderRescueRequests();
+            } catch (e) {
+                console.error("Error fetching rescue requests", e);
+            }
+        }
+
+        function renderRescueRequests() {
+            const list = document.getElementById('rescueRequestsList');
+            if (!list) return;
+
+            list.innerHTML = '';
+
+            if (rescueRequests.length === 0) {
+                list.innerHTML = '<div style="padding:12px; text-align:center; color:var(--text-muted); font-size:12px;">No pending requests</div>';
+                return;
+            }
+
+            rescueRequests.forEach((req, index) => {
+                const isMedical = req.type === 'medical';
+                const color = isMedical ? 'var(--critical)' : 'var(--special)';
+                const bg = isMedical ? '#fee2e2' : '#f3e8ff';
+                const title = isMedical ? 'Medical Rescue' : 'Pregnancy Rescue';
+                const num = String(index + 1).padStart(2, '0');
+
+                const user = currentUsers.find(u => u.device_id === req.device_id || u.phone === req.device_id);
+                const nickName = user ? (user.serial_number || user.name) : (req.device_id || 'Unknown');
+
+                list.innerHTML += `
+                    <div class="notif-item actionable-item" style="align-items: flex-start; ${isMedical ? 'border-color:#fca5a5;' : ''}">
+                        <div class="notif-icon" style="background:${bg}; color:${color}; font-weight:900; font-size:12px;">${num}</div>
+                        <div class="notif-content">
+                            <div class="notif-title" style="color:${color};">${title}</div>
+                            <div class="notif-count text-sm text-muted" style="margin-bottom:6px;"><b>Person:</b> <span style="color:var(--accent); font-weight:700;">${nickName}</span> &bull; <b>Location:</b> ${req.sector} &bull; Urgency: ${req.urgency}</div>
+                            <div class="actionable-actions">
+                                <button class="btn btn-primary" onclick="openAssignModal('${req.id}', '${title}', '${req.sector}', '${req.urgency}', '${num}')">Accept</button>
+                                <button class="btn btn-outline" onclick="declineRescueRequest('${req.id}')">Decline</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function populateAssignDropdowns() {
+            try {
+                const [usersRes, groupsRes] = await Promise.all([
+                    fetch('http://localhost:3001/api/users'),
+                    fetch('http://localhost:3001/api/groups')
+                ]);
+                const users = await usersRes.json();
+                const groups = await groupsRes.json();
+
+                const pSelect = document.getElementById('assignPersonSelect');
+                pSelect.innerHTML = '<option value="">-- Select Person --</option>';
+                users.forEach(u => pSelect.innerHTML += `<option value="${u.id}">${u.name} (${u.role})</option>`);
+
+                const gSelect = document.getElementById('assignGroupSelect');
+                gSelect.innerHTML = '<option value="">-- Select Group --</option>';
+                groups.forEach(g => gSelect.innerHTML += `<option value="${g.id}">${g.group_name} (${g.zone})</option>`);
+            } catch (e) {
+                console.error("Error populating dropdowns", e);
+            }
+        }
+
+        function openAssignModal(id, title, sector, urgency, num = '00') {
+            document.getElementById('assignReqId').value = id;
+            document.getElementById('assignReqTitle').innerHTML = `<span style="background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; color: var(--text-muted); margin-right: 6px;">${num}</span> ${title}`;
+            document.getElementById('assignReqDetails').innerText = `${sector}, urgency ${urgency}`;
+            populateAssignDropdowns();
+            document.getElementById('assignModal').style.display = 'flex';
+        }
+
+        async function dispatchAssignment() {
+            const reqId = document.getElementById('assignReqId').value;
+            const personId = document.getElementById('assignPersonSelect').value;
+            const groupId = document.getElementById('assignGroupSelect').value;
+
+            if (!personId && !groupId) {
+                alert("Please select either a Person or a Group");
+                return;
+            }
+
+            try {
+                await fetch(`http://localhost:3001/api/rescue-requests/${reqId}/accept`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        assigned_user_id: personId || null,
+                        assigned_group_id: groupId || null
+                    })
+                });
+                closeModal('assignModal');
+                fetchRescueRequests();
+            } catch (e) {
+                console.error("Error dispatching assignment", e);
+            }
+        }
+
+        async function declineRescueRequest(id) {
+            try {
+                await fetch(`http://localhost:3001/api/rescue-requests/${id}/decline`, { method: 'PUT' });
+                fetchRescueRequests();
+            } catch (e) {
+                console.error("Error declining", e);
+            }
+        }
+
+        async function fetchDashboardStats() {
+            try {
+                const res = await fetch('http://localhost:3001/api/dashboard-stats');
+                const stats = await res.json();
+
+                // Update Badge Counts
+                document.getElementById('sosCallsBadge').innerText = stats.sos.total;
+                document.getElementById('foodDistBadge').innerText = stats.food.total;
+
+                // Update Progress Bars & Counts
+                document.getElementById('opSosCount').innerText = stats.sos.total;
+                const sosPct = stats.sos.total > 0 ? (stats.sos.completed / stats.sos.total) * 100 : 0;
+                document.getElementById('opSosBar').style.width = sosPct + '%';
+
+                document.getElementById('opFoodCount').innerText = stats.food.total;
+                const foodPct = stats.food.total > 0 ? (stats.food.completed / stats.food.total) * 100 : 0;
+                document.getElementById('opFoodBar').style.width = foodPct + '%';
+
+                document.getElementById('opMedCount').innerText = stats.medical.total;
+                const medPct = stats.medical.total > 0 ? (stats.medical.completed / stats.medical.total) * 100 : 0;
+                document.getElementById('opMedBar').style.width = medPct + '%';
+
+            } catch (e) {
+                console.error("Error fetching dashboard stats", e);
+            }
+        }
+
+        const API_BASE = 'http://localhost:3001/api';
+
+        // ─── Member DB Logic ────────────────────────────────────────────────────────
+        let currentGroups = [];
+        let currentUsers = [];
+        let selectedGroupId = null;
+
+        async function fetchGroups() {
+            try {
+                const res = await fetch(`${API_BASE}/groups`);
+                currentGroups = await res.json();
+                renderGroupSidebar();
+                updateModalGroupLists();
+
+                if (!selectedGroupId && currentGroups.length > 0) {
+                    switchGroup(currentGroups[0].id);
+                }
+            } catch (e) { console.error("Error fetching groups", e); }
+        }
+
+        async function fetchUsers() {
+            try {
+                const res = await fetch(`${API_BASE}/users`);
+                currentUsers = await res.json();
+                if (selectedGroupId) {
+                    renderMembers(selectedGroupId);
+                }
+                renderPublicUsers();
+            } catch (e) { console.error("Error fetching users", e); }
+        }
+
+        function renderPublicUsers() {
+            const tbody = document.getElementById('publicTableBody');
+            if (!tbody) return;
+            const publicUsers = currentUsers.filter(u => u.role === 'public');
+            tbody.innerHTML = publicUsers.map((m, index) => `
+                <tr>
+                    <td style="font-weight: 800; color: var(--text-muted);">${String(index + 1).padStart(2, '0')}</td>
+                    <td>
+                        <img src="${m.photo_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.name) + '&background=random'}" 
+                             style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid var(--border);" />
+                    </td>
+                    <td style="font-weight:700; color:var(--accent);">${m.serial_number || 'N/A'}</td>
+                    <td><div style="font-weight:600;">${m.name}</div></td>
+                    <td>${m.phone || 'N/A'}</td>
+                    <td>${m.password || '<span style="color:var(--text-muted)">Not set</span>'}</td>
+                    <td><span class="tag ${m.status === 'active' ? 'tag-green' : 'tag-gray'}">${m.status}</span></td>
+                    <td style="text-align:right;">
+                        <button class="action-icon" onclick="openEditPublicModal(${m.id})" title="Edit"><i data-lucide="edit-2" style="width:14px;"></i></button>
+                        <button class="action-icon danger" onclick="deleteMember(${m.id})" title="Delete"><i data-lucide="trash-2" style="width:14px;"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderGroupSidebar() {
+            const list = document.getElementById('groupSidebarList');
+            if (!list) return;
+
+            list.innerHTML = currentGroups.slice(0, 5).map((g, index) => {
+                const sNo = String(index + 1).padStart(2, '0');
+                const isActive = selectedGroupId === g.id ? 'active' : '';
+                return `
+                    <div class="group-tile ${isActive}" onclick="switchGroup(${g.id}, this)">
+                        <div class="group-id">${sNo}</div>
+                        <div class="group-info">
+                            <div class="group-name">${g.group_name}</div>
+                            <div class="group-meta">${g.actual_count || 0} Members • ${g.role_type}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateModalGroupLists() {
+            const addList = document.getElementById('addMemberGroupsList');
+            const editList = document.getElementById('editMemberGroupsList');
+
+            const html = currentGroups.map(g => `
+                <label style="display:flex; gap:8px; align-items:center; font-size:12px;">
+                    <input type="checkbox" name="groupSelect" value="${g.id}"> ${g.group_name}
+                </label>
+            `).join('');
+
+            if (addList) addList.innerHTML = html;
+            if (editList) editList.innerHTML = html;
+        }
+
+        const fileToBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        function switchGroup(groupId, el) {
+            selectedGroupId = groupId;
+            document.querySelectorAll('.group-tile').forEach(tile => tile.classList.remove('active'));
+
+            if (el) el.classList.add('active');
+
+            const group = currentGroups.find(g => g.id === groupId);
+            if (group) {
+                document.getElementById('currentGroupName').innerText = group.group_name;
+                renderMembers(groupId);
+            }
+        }
+
+        function renderMembers(groupId) {
+            const tbody = document.getElementById('memberTableBody');
+            if (!tbody) return;
+
+            const members = currentUsers.filter(u => u.groups && u.groups.some(g => g.id === groupId));
+
+            tbody.innerHTML = members.map((m, index) => `
+                <tr>
+                    <td style="font-weight: 800; color: var(--text-muted);">${String(index + 1).padStart(2, '0')}</td>
+                    <td>
+                        <img src="${m.photo_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.name) + '&background=random'}" 
+                             style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid var(--border);" />
+                    </td>
+                    <td><div style="font-weight:600;">${m.name}</div></td>
+                    <td>${m.phone || m.device_id || 'N/A'}</td>
+                    <td><span class="tag tag-gray">${m.role}</span></td>
+                    <td>
+                        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                            ${m.groups.map(g => `<span class="tag tag-blue" style="font-size:10px; padding:2px 6px; background:#eff6ff; color:#2563eb; border:1px solid #dbeafe;">${g.group_name}</span>`).join('')}
+                        </div>
+                    </td>
+                    <td><span class="tag ${m.status === 'active' ? 'tag-green' : 'tag-gray'}">${m.status}</span></td>
+                    <td style="text-align:right;">
+                        <button class="action-icon" onclick="openEditMemberModal(${m.id})" title="Edit"><i data-lucide="edit-2" style="width:14px;"></i></button>
+                        <button class="action-icon danger" onclick="deleteMember(${m.id})" title="Delete"><i data-lucide="trash-2" style="width:14px;"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function createNewGroup() {
+            const name = document.getElementById('newGroupName').value;
+            const role = document.getElementById('newGroupRole').value;
+            const desc = document.getElementById('newGroupDesc').value;
+
+            if (!name) return alert("Group name is required");
+
+            try {
+                await fetch(`${API_BASE}/groups`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ group_name: name, role_type: role, description: desc })
+                });
+                closeModal('createGroupModal');
+                fetchGroups();
+            } catch (e) { console.error(e); }
+        }
+
+        function openAssignExistingModal() {
+            const group = currentGroups.find(g => g.id === selectedGroupId);
+            if (!group) return;
+
+            document.getElementById('assignTargetGroupName').innerText = group.group_name;
+            const list = document.getElementById('availableMembersList');
+
+            // Show members NOT in this group
+            const available = currentUsers.filter(u => !u.groups || !u.groups.some(g => g.id === selectedGroupId));
+
+            list.innerHTML = available.map(m => `
+                <label style="display:flex; gap:10px; align-items:center; padding:8px; border-bottom:1px solid var(--border); cursor:pointer;">
+                    <input type="checkbox" name="assignUserSelect" value="${m.id}">
+                    <div style="flex:1;">
+                        <div style="font-weight:600; font-size:14px;">${m.name}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">${m.role} • ${m.device_id}</div>
+                    </div>
+                </label>
+            `).join('');
+
+            if (available.length === 0) {
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">No unassigned members available</div>';
+            }
+
+            document.getElementById('assignExistingModal').style.display = 'flex';
+        }
+
+        async function assignExistingMembers() {
+            const userIds = Array.from(document.querySelectorAll('#availableMembersList input[name="assignUserSelect"]:checked')).map(c => parseInt(c.value));
+
+            if (userIds.length === 0) return closeModal('assignExistingModal');
+
+            try {
+                for (const userId of userIds) {
+                    await fetch(`${API_BASE}/groups/${selectedGroupId}/members`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: userId })
+                    });
+                }
+                closeModal('assignExistingModal');
+                fetchUsers();
+                fetchGroups();
+            } catch (e) { console.error(e); }
+        }
+
+        function openMemberModal() {
+            document.getElementById('addMemberModal').style.display = 'flex';
+            const checks = document.querySelectorAll('#addMemberGroupsList input[name="groupSelect"]');
+            checks.forEach(c => c.checked = (parseInt(c.value) === selectedGroupId));
+        }
+
+        async function saveMember() {
+            const name = document.getElementById('newMemName').value;
+            const id = document.getElementById('newMemId').value;
+            const role = document.getElementById('newMemRole').value;
+            const phone = document.getElementById('newMemPhone').value;
+            const password = document.getElementById('newMemPassword').value;
+            const groupIds = Array.from(document.querySelectorAll('#addMemberGroupsList input[name="groupSelect"]:checked')).map(c => parseInt(c.value));
+            const photoInput = document.getElementById('newMemPhoto');
+
+            if (!name || !id) return alert("Name and ID are required");
+
+            let photoUrl = null;
+            if (photoInput.files && photoInput.files[0]) {
+                photoUrl = await fileToBase64(photoInput.files[0]);
+            }
+
+            try {
+                await fetch(`${API_BASE}/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, role, phone, device_id: id, group_ids: groupIds, photo_url: photoUrl, password })
+                });
+                closeModal('addMemberModal');
+                photoInput.value = ''; // Reset file input
+                document.getElementById('newMemPassword').value = '';
+                fetchUsers();
+                fetchGroups();
+            } catch (e) { console.error(e); }
+        }
+
+        function openEditMemberModal(userId) {
+            const user = currentUsers.find(u => u.id === userId);
+            if (!user) return;
+
+            document.getElementById('editMemDbId').value = user.id;
+            document.getElementById('editMemName').value = user.name;
+            document.getElementById('editMemId').value = user.device_id;
+            document.getElementById('editMemRole').value = user.role;
+            document.getElementById('editMemPhone').value = user.phone || '';
+            document.getElementById('editMemPassword').value = user.password || '';
+
+            const checks = document.querySelectorAll('#editMemberGroupsList input[name="groupSelect"]');
+            const userGroupIds = user.groups.map(g => g.id);
+            checks.forEach(c => c.checked = userGroupIds.includes(parseInt(c.value)));
+
+            document.getElementById('editMemberModal').style.display = 'flex';
+        }
+
+        async function updateMember() {
+            const dbId = document.getElementById('editMemDbId').value;
+            const name = document.getElementById('editMemName').value;
+            const id = document.getElementById('editMemId').value;
+            const role = document.getElementById('editMemRole').value;
+            const phone = document.getElementById('editMemPhone').value;
+            const password = document.getElementById('editMemPassword').value;
+            const groupIds = Array.from(document.querySelectorAll('#editMemberGroupsList input[name="groupSelect"]:checked')).map(c => parseInt(c.value));
+            const photoInput = document.getElementById('editMemPhoto');
+
+            let photoUrl = currentUsers.find(u => u.id === parseInt(dbId))?.photo_url || null;
+            if (photoInput.files && photoInput.files[0]) {
+                photoUrl = await fileToBase64(photoInput.files[0]);
+            }
+
+            try {
+                await fetch(`${API_BASE}/users/${dbId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, role, phone, device_id: id, status: 'active', group_ids: groupIds, photo_url: photoUrl, password })
+                });
+                closeModal('editMemberModal');
+                photoInput.value = ''; // Reset file input
+                fetchUsers();
+                fetchGroups();
+            } catch (e) { console.error(e); }
+        }
+
+        async function deleteMember(id) {
+            if (!confirm("Are you sure you want to delete this user?")) return;
+            try {
+                await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
+                fetchUsers();
+                fetchGroups();
+            } catch (e) { console.error(e); }
+        }
+
+        // --- PUBLIC USERS LOGIC ---
+        function openPublicModal() {
+            document.getElementById('newPubName').value = '';
+            document.getElementById('newPubSerial').value = 'PUB-' + String(currentUsers.filter(u => u.role === 'public').length + 1).padStart(2, '0');
+            document.getElementById('newPubPhone').value = '';
+            document.getElementById('newPubPassword').value = '';
+            document.getElementById('newPubPhoto').value = '';
+            openModal('addPublicModal');
+        }
+
+        async function savePublicUser() {
+            const name = document.getElementById('newPubName').value;
+            const serial_number = document.getElementById('newPubSerial').value;
+            const phone = document.getElementById('newPubPhone').value;
+            const password = document.getElementById('newPubPassword').value;
+            const photoInput = document.getElementById('newPubPhoto');
+
+            if (!name || !phone) return alert("Name and Mobile Number are required");
+
+            let photoUrl = null;
+            if (photoInput.files && photoInput.files[0]) {
+                photoUrl = await fileToBase64(photoInput.files[0]);
+            }
+
+            try {
+                await fetch(`${API_BASE}/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, role: 'public', phone, device_id: phone, photo_url: photoUrl, password, serial_number })
+                });
+                closeModal('addPublicModal');
+                fetchUsers();
+            } catch (e) { console.error(e); }
+        }
+
+        function openEditPublicModal(userId) {
+            const user = currentUsers.find(u => u.id === userId);
+            if (!user) return;
+
+            document.getElementById('editPubId').value = user.id;
+            document.getElementById('editPubName').value = user.name;
+            document.getElementById('editPubSerial').value = user.serial_number || '';
+            document.getElementById('editPubPhone').value = user.phone || '';
+            document.getElementById('editPubPassword').value = user.password || '';
+            document.getElementById('editPubPhoto').value = '';
+
+            openModal('editPublicModal');
+        }
+
+        async function updatePublicUser() {
+            const dbId = document.getElementById('editPubId').value;
+            const name = document.getElementById('editPubName').value;
+            const serial_number = document.getElementById('editPubSerial').value;
+            const phone = document.getElementById('editPubPhone').value;
+            const password = document.getElementById('editPubPassword').value;
+            const photoInput = document.getElementById('editPubPhoto');
+
+            let photoUrl = currentUsers.find(u => u.id === parseInt(dbId))?.photo_url || null;
+            if (photoInput.files && photoInput.files[0]) {
+                photoUrl = await fileToBase64(photoInput.files[0]);
+            }
+
+            try {
+                await fetch(`${API_BASE}/users/${dbId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    // Keeping device_id as phone for public users to maintain sync flow
+                    body: JSON.stringify({ name, role: 'public', phone, device_id: phone, status: 'active', photo_url: photoUrl, password, serial_number })
+                });
+                closeModal('editPublicModal');
+                fetchUsers();
+            } catch (e) { console.error(e); }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex';
+        }
+
+        // Initialize
+        window.onload = () => {
+            initMap();
+            renderCmds();
+            renderOpsList();
+
+            fetchGroups();
+            fetchUsers();
+
+            initWebSocket();
+            fetchRescueRequests();
+            fetchDashboardStats();
+        };
+    </script>
+</body>
+
+</html>

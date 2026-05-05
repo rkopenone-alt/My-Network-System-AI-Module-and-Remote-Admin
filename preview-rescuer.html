@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rescuer Field App - Modernized</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap');
+
+        :root {
+            --primary: #0ea5e9;
+            --secondary: #10b981;
+            --danger: #f43f5e;
+            --warning: #f59e0b;
+            --bg: #020617;
+            --surface: #0f172a;
+            --surface-light: #1e293b;
+            --text: #f8fafc;
+            --light: #94a3b8;
+            --border: #334155;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Outfit', sans-serif;
+            background-color: #010409;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .phone-mockup {
+            width: 360px;
+            height: 740px;
+            background: #000;
+            border-radius: 50px;
+            padding: 12px;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8);
+            border: 1px solid #30363d;
+            position: relative;
+        }
+
+        .phone-inner {
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            border-radius: 38px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Login Screen */
+        .login-bg {
+            background-color: var(--bg);
+            padding: 30px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .logo-circle {
+            width: 90px;
+            height: 90px;
+            background: var(--surface);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--primary);
+            margin-bottom: 25px;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+        }
+
+        .login-title {
+            font-size: 28px;
+            font-weight: 900;
+            color: var(--text-dark);
+            margin-bottom: 5px;
+        }
+
+        .login-sub {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 15px;
+        .login-input {
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            margin-bottom: 18px;
+            font-weight: 600;
+            font-size: 15px;
+            box-sizing: border-box;
+            background: var(--surface);
+            color: var(--text);
+            outline: none;
+        }
+
+        .login-btn {
+            background: var(--primary);
+            color: white;
+            padding: 18px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 800;
+            font-size: 16px;
+            width: 100%;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(14, 165, 233, 0.3);
+            transition: all 0.2s;
+        }
+
+        .login-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* Dashboard Structure */
+        .h-10 { height: 10%; }
+        .h-35 { height: 35%; }
+        .h-15 { height: 15%; }
+        .h-30 { height: 30%; }
+        .h-nav {
+            height: 12%;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding-bottom: 15px;
+        }
+
+        /* Notification Bar */
+        .notif-bar {
+            background: var(--surface);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .notif-bar.alert {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Map Section */
+        #mapSection {
+            width: 92%;
+            margin: 4% auto;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Filter Controls */
+        .filter-section {
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--surface);
+            color: var(--light);
+        }
+
+        .filter-btn.active[data-type="sos"] {
+            background: rgba(244, 63, 94, 0.2);
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .filter-btn.active[data-type="food"] {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+            border-color: var(--warning);
+        }
+
+        .filter-btn.active[data-type="medical"] {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--secondary);
+            border-color: var(--secondary);
+        }
+
+        /* Task List */
+        .task-list {
+            background: var(--bg);
+            overflow-y: auto;
+            padding: 15px;
+            box-sizing: border-box;
+            flex-grow: 1;
+        }
+
+        .task-card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .task-card.active-mission {
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.15);
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .type-badge {
+            background: var(--bg);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 900;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .task-priority {
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            background: var(--surface-light);
+            color: var(--light);
+        }
+
+        .task-priority.critical {
+            background: var(--danger);
+            color: white;
+        }
+
+        .task-body {
+            margin-bottom: 15px;
+        }
+
+        .task-location {
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        .task-message {
+            color: var(--light);
+            font-size: 13px;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .task-meta-row {
+            display: flex;
+            gap: 15px;
+            color: var(--primary);
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-action {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 900;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-accept {
+            background: var(--primary);
+            color: white;
+            flex: 2;
+        }
+
+        .btn-decline {
+            background: var(--surface-light);
+            color: var(--light);
+        }
+
+        .btn-complete {
+            background: var(--secondary);
+            color: white;
+            width: 100%;
+            display: none;
+        }
+
+        .btn-mission-complete {
+            background: var(--danger);
+            color: white;
+            width: 100%;
+        }
+
+        /* History */
+        .history-list {
+            padding: 20px;
+            overflow-y: auto;
+            background: var(--bg);
+            flex-grow: 1;
+            box-sizing: border-box;
+        }
+
+        .history-card {
+        .history-card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .history-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--light);
+            margin-top: 8px;
+        }
+
+        .history-status {
+            font-size: 10px;
+            font-weight: 900;
+            padding: 4px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .history-status.completed {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--secondary);
+        }
+
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            color: var(--light);
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-icon {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Tactical Markers */
+        .tactical-marker {
+            background: var(--surface);
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .tactical-marker.sos { border-color: var(--danger); }
+        .tactical-marker.medical { border-color: var(--secondary); }
+        .tactical-marker.food { border-color: var(--warning); }
+        .tactical-marker.self { border-color: var(--primary); border-width: 3px; }
+
+        /* Critical Overlay */
+        #criticalModal {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 23, 0.95);
+            z-index: 10000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 25px;
+            box-sizing: border-box;
+        }
+
+        .critical-box {
+            background: var(--surface);
+            border-radius: 32px;
+            width: 100%;
+            padding: 30px;
+            border: 2px solid var(--danger);
+            box-shadow: 0 0 30px rgba(244, 63, 94, 0.4);
+            text-align: center;
+        }
+
+        .critical-header {
+            margin-bottom: 20px;
+        }
+
+        .critical-pulse {
+            width: 70px;
+            height: 70px;
+            background: rgba(244, 63, 94, 0.1);
+            border: 1px solid var(--danger);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 32px;
+        }
+
+        .critical-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--danger);
+            letter-spacing: 1px;
+        }
+
+        .critical-msg {
+            font-size: 16px;
+            color: var(--text);
+            font-weight: 700;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .critical-actions {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .btn-crit {
+            flex: 1;
+            padding: 18px;
+            border-radius: 16px;
+            font-weight: 900;
+            font-size: 15px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-crit-accept { background: var(--danger); color: white; flex: 2; }
+        .btn-crit-decline { background: var(--surface-light); color: var(--light); }
+    </style>
+</head>
+
+<body>
+    <div class="phone-mockup">
+        <div class="phone-inner">
+
+            <!-- SCREEN 1: LOGIN -->
+            <div class="screen active login-bg" id="screenLogin">
+                <div class="logo-circle">
+                    <span style="font-size: 40px;">🚁</span>
+                </div>
+                <div class="login-title">Rescue Auth</div>
+                <div class="login-sub">SECURE FIELD ACCESS</div>
+
+                <div style="width: 100%; margin-top: 10px;">
+                    <input type="text" id="inpPhone" class="login-input" placeholder="Mobile Number" value="919876543210">
+                    <input type="password" id="inpPass" class="login-input" placeholder="Password" value="123456">
+                    <button class="login-btn" onclick="doLogin()">AUTHENTICATE</button>
+                </div>
+                <div id="loginError" style="color:var(--danger); font-size:13px; font-weight:900; margin-top:20px; text-align:center; display:none;">
+                    AUTH FAILURE — INVALID CREDENTIALS</div>
+            </div>
+
+            <!-- SCREEN 2: DASHBOARD -->
+            <div class="screen" id="screenDashboard" style="flex-direction: column; display: none;">
+                <div class="notif-bar" id="notifBar" style="height: 70px;">
+                    <div>
+                        <div style="font-size:10px; color:var(--light); text-transform:uppercase; letter-spacing:1.5px; font-weight: 900;">UNIT STATUS</div>
+                        <div id="notifText" style="color: var(--text);">MONITORING ZONES...</div>
+                    </div>
+                    <div id="notifDismiss" style="font-size: 24px; cursor: pointer; color: var(--light); display: none;" onclick="dismissAlert()">×</div>
+                </div>
+
+                <div id="mapSection" style="height: 260px; min-height: 260px;"></div>
+
+                <div class="filter-section">
+                    <button class="filter-btn active" data-type="sos" onclick="toggleFilter('sos')">🚨 SOS</button>
+                    <button class="filter-btn active" data-type="medical" onclick="toggleFilter('medical')">🏥 MED</button>
+                    <button class="filter-btn active" data-type="food" onclick="toggleFilter('food')">🍱 FOOD</button>
+                </div>
+
+                <div class="task-list" id="taskList">
+                    <!-- Tasks populated here via JS -->
+                </div>
+
+                <div class="h-nav">
+                    <div class="nav-item active" onclick="switchTab('Dashboard')">
+                        <div class="nav-icon">📍</div>
+                        <div class="nav-label">Tactical</div>
+                    </div>
+                    <div class="nav-item" onclick="switchTab('History')">
+                        <div class="nav-icon">📋</div>
+                        <div class="nav-label">Log</div>
+                    </div>
+                </div>
+
+                <!-- CRITICAL MODAL -->
+                <div id="criticalModal">
+                    <div class="critical-box">
+                        <div class="critical-header">
+                            <div class="critical-pulse">🚨</div>
+                            <div class="critical-title">CRITICAL DISPATCH</div>
+                        </div>
+                        <div class="critical-msg" id="criticalMsg">Priority emergency mission assigned to your unit. Immediate response required.</div>
+                        <div class="critical-actions">
+                            <button class="btn-crit btn-crit-decline" onclick="handleCritical(false)">IGNORE</button>
+                            <button class="btn-crit btn-crit-accept" onclick="handleCritical(true)">RESPOND</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCREEN 3: HISTORY -->
+            <div class="screen" id="screenHistory" style="flex-direction: column; display: none;">
+                <div class="history-list" id="historyList">
+                    <h2 style="margin: 0 0 20px 0; font-size: 20px; color: var(--text); font-weight: 900;">Mission Log</h2>
+                    <!-- History populated here via JS -->
+                </div>
+
+                <div class="h-nav">
+                    <div class="nav-item" onclick="switchTab('Dashboard')">
+                        <div class="nav-icon">📍</div>
+                        <div class="nav-label">Tactical</div>
+                    </div>
+                    <div class="nav-item active" onclick="switchTab('History')">
+                        <div class="nav-icon">📋</div>
+                        <div class="nav-label">Log</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+   </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // --- State Management ---
+        let currentUser = null;
+        let map = null;
+        let mapMarkers = {}; // Keep track of markers by taskId
+        let routePolyline = null;
+        let rescuerMarker = null;
+
+        let activeFilters = { sos: true, medical: true, food: true, pregnancy: true };
+        let allTasks = []; // Array of task objects
+        let activeNavTask = null;
+
+        const API_URL = 'http://localhost:3001/api';
+        const rescuerPos = { lat: 13.0700, lng: 80.2600 }; // Mock Rescuer Pos
+        let pendingCritical = null;
+
+        // --- Initialization ---
+        window.onload = () => {
+            // Check local storage for persistent session
+            const savedUser = localStorage.getItem('rescueUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                goToScreen('screenDashboard');
+                initMap();
+                fetchTasks();
+                startSyncHeartbeat();
+                connectWebSocket();
+            }
+        };
+
+        async function doLogin() {
+            const phone = document.getElementById('inpPhone').value;
+            const pass = document.getElementById('inpPass').value;
+            // Try backend login first
+            try {
+                const res = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, password: pass })
+                });
+                if (res.ok) {
+                    currentUser = await res.json();
+                } else {
+                    // Backend responded with error, fallback to dummy
+                    currentUser = { id: Date.now(), name: 'Dummy User', role: 'rescuer', phone };
+                }
+            } catch (e) {
+                // Backend unreachable, use dummy login
+                currentUser = { id: Date.now(), name: 'Dummy User', role: 'rescuer', phone };
+            }
+            // Persist session and navigate
+            localStorage.setItem('rescueUser', JSON.stringify(currentUser));
+            goToScreen('screenDashboard');
+            initMap();
+            fetchTasks();
+            startSyncHeartbeat();
+            connectWebSocket();
+        }
+
+        function goToScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function switchTab(tab) {
+            if (tab === 'Dashboard') {
+                goToScreen('screenDashboard');
+                setTimeout(() => map.invalidateSize(), 100);
+            } else {
+                goToScreen('screenHistory');
+                fetchHistory();
+            }
+            // Update nav active states
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        // --- Map & Logic ---
+        function initMap() {
+            if (map) return;
+            map = L.map('mapSection', { zoomControl: false }).setView([13.0827, 80.2707], 12);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+
+            // Draw dummy zone
+            L.rectangle([[13.00, 80.20], [13.15, 80.30]], { color: '#2563eb', weight: 2, fillOpacity: 0.05, dashArray: '5, 5' }).addTo(map);
+
+            // Draw rescuer location with tactical icon
+            const selfIcon = L.divIcon({
+                className: 'tactical-marker self',
+                html: '🚁',
+                iconSize: [40, 40]
+            });
+            rescuerMarker = L.marker([rescuerPos.lat, rescuerPos.lng], { icon: selfIcon }).addTo(map);
+        }
+
+        function toggleFilter(type) {
+            activeFilters[type] = !activeFilters[type];
+            if (type === 'medical') activeFilters['pregnancy'] = activeFilters['medical']; // link them visually
+
+            const btn = document.querySelector(`.filter-btn[data-type="${type}"]`);
+            if (activeFilters[type]) btn.classList.add('active');
+            else btn.classList.remove('active');
+
+            renderTasks();
+            renderMapMarkers();
+        }
+
+        // --- Data Fetching ---
+        async function fetchTasks() {
+            try {
+                // Fetch Rescue Requests (Medical/Food/Pregnancy)
+                const reqRes = await fetch(`${API_URL}/rescue-requests?status=pending`);
+                const requests = await reqRes.json();
+
+                // Fetch SOS Alerts
+                const sosRes = await fetch(`${API_URL}/sos`);
+                const sosAlerts = await sosRes.json();
+
+                allTasks = [];
+
+                requests.forEach(r => {
+                    allTasks.push({
+                        id: `req_${r.id}`, type: r.type, lat: r.lat, lng: r.lng,
+                        sector: r.sector || 'Unknown Zone', urgency: r.urgency, dbId: r.id, source: 'rescue_requests'
+                    });
+                });
+
+                sosAlerts.forEach(s => {
+                    if (s.status === 'completed') return; // skip completed
+                    allTasks.push({
+                        id: `sos_${s.id}`, type: 'sos', lat: s.lat, lng: s.lng,
+                        sector: 'Coordinate Point', urgency: s.is_priority ? 'critical' : 'high', dbId: s.id, source: 'sos_alerts'
+                    });
+                });
+
+                renderTasks();
+                renderMapMarkers();
+            } catch (e) { console.error("Fetch failed", e); }
+        }
+
+        async function fetchHistory() {
+            try {
+                const res = await fetch(`${API_URL}/users/${currentUser.id}/history`);
+                const history = await res.json();
+
+                const list = document.getElementById('historyList');
+                list.innerHTML = `<h2 style="margin: 0 0 15px 0; font-size: 18px; color: var(--text-dark);">Mission Log</h2>`;
+
+                if (history.length === 0) list.innerHTML += `<div style="text-align:center; color:#64748b; font-size:13px; margin-top:20px;">No missions logged.</div>`;
+
+                history.forEach(h => {
+                    list.innerHTML += `
+                        <div class="history-card">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                                <span style="color:var(--text-dark);">${(h.type || 'Task').toUpperCase()} RESCUE</span>
+                                <span class="history-status ${h.status === 'completed' ? 'completed' : 'declined'}">${h.status}</span>
+                            </div>
+                            <div class="history-meta">
+                                <span>📍 ${h.sector}</span>
+                                <span>${new Date(h.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (e) {
+                document.getElementById('historyList').innerHTML += `<div style="text-align:center; color:#64748b; font-size:13px;">Cannot connect to history server.</div>`;
+            }
+        }
+
+        // --- Rendering ---
+        function getDistance(lat1, lon1, lat2, lon2) {
+            // Simple straight line distance mock
+            return ((Math.abs(lat1 - lat2) + Math.abs(lon1 - lon2)) * 111).toFixed(1);
+        }
+
+        function renderTasks() {
+            const list = document.getElementById('taskList');
+            list.innerHTML = '';
+
+            if (activeNavTask) {
+                list.innerHTML = renderTaskCardHTML(activeNavTask, true);
+                return;
+            }
+
+            let count = 0;
+            allTasks.forEach(t => {
+                if (activeFilters[t.type] || (t.type === 'pregnancy' && activeFilters['medical']) || (t.type === 'sos' && activeFilters['sos'])) {
+                    list.innerHTML += renderTaskCardHTML(t, false);
+                    count++;
+                }
+            });
+
+            if (count === 0) {
+                list.innerHTML = `<div style="text-align:center; color:var(--light); font-size:13px; margin-top:40px; font-weight:800; letter-spacing:1px;">SCANNING FOR MISSIONS...</div>`;
+            }
+        }
+
+        function renderTaskCardHTML(t, isActive) {
+            const dist = getDistance(rescuerPos.lat, rescuerPos.lng, t.lat, t.lng);
+            const icon = t.type === 'sos' ? '🚨' : t.type === 'medical' ? '🏥' : t.type === 'pregnancy' ? '🚑' : '🍱';
+            const typeLabel = (t.type || 'TASK').toUpperCase();
+            const urgency = t.urgency || 'high';
+
+            return `
+                <div class="task-card ${isActive ? 'active-mission' : ''}" id="card_${t.id}">
+                    <div class="task-header">
+                        <div class="type-badge">
+                            <span>${icon}</span>
+                            <span>${typeLabel}</span>
+                        </div>
+                        <div class="task-priority ${urgency === 'critical' ? 'critical' : ''}">${urgency}</div>
+                    </div>
+                    <div class="task-body">
+                        <div class="task-location">📍 ${t.sector || 'Coordinate Point'}</div>
+                        <div class="task-message">"Reporting distress at designated coordinates. Responding unit requested."</div>
+                        <div class="task-meta-row">
+                            <span>⏱️ ${dist} KM</span>
+                            <span>🆔 ${t.id.split('_')[1] || t.id}</span>
+                        </div>
+                    </div>
+                    <div class="task-actions">
+                        ${!isActive ? `
+                            <button class="btn-action btn-decline" onclick="declineTask('${t.id}')">IGNORE</button>
+                            <button class="btn-action btn-accept" onclick="acceptTask('${t.id}')">RESPOND</button>
+                        ` : `
+                            <button class="btn-action btn-mission-complete" onclick="completeTask('${t.id}')">COMPLETE MISSION</button>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMapMarkers() {
+            if (!map) return;
+            // Clear existing
+            Object.values(mapMarkers).forEach(m => map.removeLayer(m));
+            mapMarkers = {};
+
+            // If active nav, only show target
+            if (activeNavTask) {
+                drawTargetMarker(activeNavTask);
+                return;
+            }
+
+            allTasks.forEach(t => {
+                if (activeFilters[t.type] || (t.type === 'pregnancy' && activeFilters['medical']) || (t.type === 'sos' && activeFilters['sos'])) {
+                    drawTargetMarker(t);
+                }
+            });
+        }
+
+        function drawTargetMarker(t) {
+            const iconMap = { sos: '🚨', medical: '🏥', pregnancy: '🚑', food: '🍱' };
+            const typeClass = t.type === 'pregnancy' ? 'medical' : t.type;
+            
+            const tactIcon = L.divIcon({
+                className: `tactical-marker ${typeClass}`,
+                html: iconMap[t.type] || '📍',
+                iconSize: [32, 32]
+            });
+
+            const marker = L.marker([t.lat, t.lng], { icon: tactIcon })
+                .bindPopup(`<b>${t.type.toUpperCase()}</b><br>${t.sector}`).addTo(map);
+            mapMarkers[t.id] = marker;
+        }
+
+        // --- Actions ---
+        async function acceptTask(taskId) {
+            const task = allTasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            if (task.source === 'rescue_requests') {
+                try {
+                    await fetch(`${API_URL}/rescue-requests/${task.dbId}/accept`, {
+                        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ assigned_user_id: currentUser.id, assigned_phone: currentUser.phone })
+                    });
+                } catch (e) { }
+            }
+
+            activeNavTask = task;
+
+            // Draw Route
+            if (routePolyline) map.removeLayer(routePolyline);
+            routePolyline = L.polyline([
+                [rescuerPos.lat, rescuerPos.lng],
+                [rescuerPos.lat + (task.lat - rescuerPos.lat) / 2, rescuerPos.lng],
+                [task.lat, task.lng]
+            ], { color: '#ef4444', weight: 4, dashArray: '5, 8' }).addTo(map);
+
+            // Focus Map
+            const bounds = L.latLngBounds([[rescuerPos.lat, rescuerPos.lng], [task.lat, task.lng]]);
+            map.fitBounds(bounds, { padding: [30, 30] });
+
+            // Show Notification
+            showAlert(`Navigating to ${task.type.toUpperCase()} task`, false);
+
+            renderTasks();
+            renderMapMarkers();
+        }
+
+        async function declineTask(taskId) {
+            const task = allTasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            // Optional Backend call
+            if (task.source === 'rescue_requests') {
+                try { await fetch(`${API_URL}/rescue-requests/${task.dbId}/decline`, { method: 'PUT' }); } catch (e) { }
+            }
+
+            // Remove from local list
+            allTasks = allTasks.filter(t => t.id !== taskId);
+            renderTasks();
+            renderMapMarkers();
+        }
+
+        async function completeTask(taskId) {
+            const task = activeNavTask;
+            if (!task) return;
+            
+            try {
+                const endpoint = task.source === 'rescue_requests' ? `/rescue-requests/${task.dbId}/status` : `/sos/${task.dbId}/status`;
+                await fetch(`${API_URL}${endpoint}`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'completed', rescuer_phone: currentUser.phone })
+                });
+            } catch (e) { console.error(e); }
+
+            activeNavTask = null;
+            if (routePolyline) map.removeLayer(routePolyline);
+
+            showAlert("Mission Registered as Completed", false);
+
+            allTasks = allTasks.filter(t => t.id !== taskId);
+            map.setView([13.0827, 80.2707], 12);
+
+            renderTasks();
+            renderMapMarkers();
+        }
+
+        function showAlert(msg, isUrgent = true) {
+            const bar = document.getElementById('notifBar');
+            document.getElementById('notifText').innerText = msg;
+            document.getElementById('notifDismiss').style.display = 'block';
+
+            if (isUrgent) {
+                bar.classList.add('alert');
+            } else {
+                bar.classList.remove('alert');
+                bar.style.borderBottom = '2px solid var(--secondary)';
+                setTimeout(() => {
+                    bar.style.borderBottom = '1px solid var(--border)';
+                    dismissAlert();
+                }, 4000);
+            }
+        }
+
+        function dismissAlert() {
+            const bar = document.getElementById('notifBar');
+            bar.classList.remove('alert');
+            document.getElementById('notifText').innerText = 'MONITORING ZONES...';
+            document.getElementById('notifDismiss').style.display = 'none';
+        }
+
+        // --- Sync Heartbeat ---
+        function startSyncHeartbeat() {
+            const doSync = async () => {
+                if (!currentUser) return;
+                try {
+                    const body = {
+                        phone: currentUser.phone,
+                        deviceId: currentUser.device_id || currentUser.phone,
+                        location: { lat: rescuerPos.lat, lng: rescuerPos.lng, name: currentUser.name }
+                    };
+                    const res = await fetch(`${API_URL}/sync`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    const data = await res.json();
+                        // Show notifications from HQ
+                        if (data.notifications && data.notifications.length > 0) {
+                            const n = data.notifications[0];
+                            if (n.priority === 'critical' || n.action_required === 1) {
+                                showCritical(n);
+                            } else {
+                                showAlert(`📢 HQ: ${n.message}`, false);
+                            }
+                        }
+                        // If new tasks in commands, refresh task list
+                        if (data.commands && data.commands.length > 0) {
+                            fetchTasks();
+                        }
+                    } catch (e) { /* silent */ }
+                };
+                doSync();
+                setInterval(doSync, 10000);
+            }
+
+            function showCritical(notif) {
+                pendingCritical = notif;
+                document.getElementById('criticalMsg').innerText = notif.message;
+                document.getElementById('criticalModal').style.display = 'flex';
+            }
+
+            async function handleCritical(accepted) {
+                if (!pendingCritical) return;
+                const status = accepted ? 'accepted' : 'declined';
+                
+                try {
+                    await fetch(`${API_URL}/commands/${pendingCritical.command_id}/status`, {
+                        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status, rescuer_phone: currentUser.phone })
+                    });
+                } catch(e) {}
+
+                document.getElementById('criticalModal').style.display = 'none';
+                
+                if (accepted) {
+                    showAlert('🚨 Task accepted — Proceeding to mission!', true);
+                    // Refresh and focus
+                    await fetchTasks();
+                    const task = allTasks.find(t => t.dbId == pendingCritical.command_id);
+                    if (task) acceptTask(task.id);
+                }
+                pendingCritical = null;
+            }
+
+        function connectWebSocket() {
+            const ws = new WebSocket('ws://' + window.location.hostname + ':3001');
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'NEW_RESCUE_REQUEST') {
+                    allTasks.unshift({
+                        id: `req_${data.data.id}`, type: data.data.type, lat: data.data.lat, lng: data.data.lng,
+                        sector: data.data.sector || 'Unknown Zone', urgency: data.data.urgency, dbId: data.data.id, source: 'rescue_requests'
+                    });
+                    showAlert(`🚨 NEW TASK: ${data.data.type.toUpperCase()} in ${data.data.sector}`, true);
+                    if (!activeNavTask) { renderTasks(); renderMapMarkers(); }
+                }
+
+                if (data.type === 'SOS_ALERT') {
+                    allTasks.unshift({
+                        id: `sos_${data.data.id}`, type: 'sos', lat: data.data.lat, lng: data.data.lng,
+                        sector: 'Coordinate Point', urgency: data.data.is_priority ? 'critical' : 'high', dbId: data.data.id, source: 'sos_alerts'
+                    });
+                    showAlert(`🚨 EMERGENCY: New SOS Alert Triggered!`, true);
+                    if (!activeNavTask) { renderTasks(); renderMapMarkers(); }
+                }
+            };
+        }
+    </script>
+</body>
+
+</html>

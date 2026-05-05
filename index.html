@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rescue System - Preview Hub</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #0f172a;
+            font-size: 28px;
+            font-weight: 900;
+        }
+
+        p {
+            color: #475569;
+            margin-bottom: 30px;
+            font-weight: 500;
+            font-size: 16px;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            background: #0ea5e9;
+            color: white;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 18px;
+            box-shadow: 0 4px 6px rgba(14, 165, 233, 0.3);
+            transition: 0.2s;
+            box-sizing: border-box;
+        }
+
+        .btn:hover {
+            background: #0284c7;
+            transform: translateY(-2px);
+        }
+
+        .btn.secondary {
+            background: #10b981;
+            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn.secondary:hover {
+            background: #059669;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Rescue System Previews</h1>
+        <p>Select an interface below to open its preview.</p>
+        <a href="preview-web-admin.html" onclick="this.href='preview-web-admin.html?t=' + new Date().getTime()"
+            class="btn" target="_blank">🌐 Open Web Admin Portal</a>
+        <a href="preview-mobile-app.html" class="btn secondary" target="_blank">📱 Open Public SOS App</a>
+        <a href="preview-rescuer.html" class="btn secondary" target="_blank">🚁 Open Rescuer Field App</a>
+    </div>
+</body>
+
+</html>
