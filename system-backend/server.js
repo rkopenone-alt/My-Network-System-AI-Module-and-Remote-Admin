@@ -38,7 +38,17 @@ db.serialize(() => {
         zone_name TEXT DEFAULT 'Zone',
         created_by TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        status TEXT DEFAULT 'active'
+        status TEXT DEFAULT 'active',
+        radius REAL,
+        radius_unit TEXT DEFAULT 'KM'
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS rescuer_task_completions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id INTEGER,
+        rescuer_id INTEGER,
+        completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(task_id, rescuer_id)
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS groups (
@@ -101,6 +111,7 @@ db.serialize(() => {
     )`);
     db.run(`ALTER TABLE command_queue ADD COLUMN target_phone TEXT`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE command_queue ADD COLUMN command_type TEXT DEFAULT 'zone'`, (err) => { /* ignore */ });
+    db.run(`ALTER TABLE command_queue ADD COLUMN priority TEXT DEFAULT 'normal'`, (err) => { /* ignore */ });
 
     db.run(`CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
@@ -197,6 +208,8 @@ db.serialize(() => {
     db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('sos_interval_unit', 'minutes')`);
     db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('sharing_protocol', 'auto')`);
     db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('refresh_interval', '5')`);
+    db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('normal_task_grouping_radius', '2')`);
+    db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('normal_task_grouping_unit', 'KM')`);
 
     // Default operation types
     db.run(`INSERT OR IGNORE INTO operation_types (name, color, icon) VALUES ('Rescue', '#3b82f6', '🛡️')`);
@@ -248,6 +261,72 @@ const logCommand = async (action, actor, target, details) => {
             [action, actor, target, JSON.stringify(details)]);
         broadcast('COMMAND_LOG', { action, actor, target, details, timestamp: new Date().toISOString() });
     } catch (e) { console.error('Log error:', e); }
+};
+
+const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+};
+
+const groupTasks = async () => {
+    const radiusSetting = await get(`SELECT value FROM settings WHERE key = 'normal_task_grouping_radius'`);
+    const unitSetting = await get(`SELECT value FROM settings WHERE key = 'normal_task_grouping_unit'`);
+    const radius = parseFloat(radiusSetting.value);
+    const radiusInKm = unitSetting.value === 'MTR' ? radius / 1000 : radius;
+
+    // Get all pending normal tasks
+    const normalTypes = ['food', 'medical supply', 'other supply', 'supply'];
+    const tasks = await all(`SELECT * FROM rescue_requests WHERE status = 'pending'`);
+    const normalTasks = tasks.filter(t => normalTypes.some(type => t.type.toLowerCase().includes(type)));
+
+    // Deactivate old zones for normal tasks
+    await run(`UPDATE operation_zones SET status = 'inactive' WHERE zone_name LIKE 'Grouped Task Zone%'`);
+
+    const groups = [];
+    normalTasks.forEach(task => {
+        let addedToGroup = false;
+        for (const group of groups) {
+            const dist = getDistance(task.lat, task.lng, group.center.lat, group.center.lng);
+            if (dist <= radiusInKm) {
+                group.tasks.push(task);
+                addedToGroup = true;
+                break;
+            }
+        }
+        if (!addedToGroup) {
+            groups.push({ center: { lat: task.lat, lng: task.lng }, tasks: [task] });
+        }
+    });
+
+    for (const group of groups) {
+        if (group.tasks.length > 0) {
+            const zone_geometry = {
+                type: 'Circle',
+                center: group.center,
+                radius: radiusInKm * 1000 // meters for Leaflet
+            };
+            const zone_name = `Grouped Task Zone (${group.tasks.length} tasks)`;
+            const opType = group.tasks[0].type;
+            
+            const result = await run(
+                `INSERT INTO operation_zones (zone_geometry, operation_type, zone_name, radius, radius_unit) VALUES (?, ?, ?, ?, ?)`,
+                [JSON.stringify(zone_geometry), opType, zone_name, radius, unitSetting.value]
+            );
+            const zoneId = result.lastID;
+
+            for (const task of group.tasks) {
+                await run(`UPDATE rescue_requests SET sector = ? WHERE id = ?`, [zone_name, task.id]);
+            }
+        }
+    }
+    broadcast('RELOAD_MAP', {});
+    await logCommand('TASKS_REGROUPED', 'System', 'All Tasks', { radius, unit: unitSetting.value });
 };
 
 // ─── Zones ────────────────────────────────────────────────────────────────────
@@ -650,6 +729,12 @@ app.post('/api/rescue-requests', async (req, res) => {
             [device_id, 'rescue_ack', `Your priority ${type} rescue request is received. A team will be assigned shortly.`, 0]);
 
         res.json(reqData);
+        
+        // Trigger regrouping after new request for normal tasks
+        const normalTypes = ['food', 'supply', 'medical supply'];
+        if (normalTypes.some(t => (type || '').toLowerCase().includes(t))) {
+            setTimeout(groupTasks, 500);
+        }
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -678,12 +763,14 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
         }
 
         // Determine if this is a critical mission or a normal task
-        // Pregnancy and Medical (emergency) are always critical. Food and general delivery are normal.
-        let commandType = 'critical';
-        if (['food', 'delivery', 'supply'].includes(reqData.type.toLowerCase())) {
-            commandType = 'normal';
-        } else if (reqData.urgency === 'low' || reqData.urgency === 'medium') {
-            commandType = 'normal';
+        // Priority from request or heuristic fallback
+        let commandType = req.body.priority || 'critical';
+        if (!req.body.priority) {
+            if (['food', 'delivery', 'supply'].includes(reqData.type.toLowerCase())) {
+                commandType = 'normal';
+            } else if (reqData.urgency === 'low' || reqData.urgency === 'medium') {
+                commandType = 'normal';
+            }
         }
 
         // AUTO-CREATE COMMAND FOR ACCEPTED REQUEST
@@ -692,17 +779,19 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
             sector: reqData.sector,
             urgency: reqData.urgency,
             rescue_req_id: reqData.id,
+            requester_name: reqData.name,
+            requester_phone: reqData.phone,
             details: reqData.details // Include quantities if available
         });
 
-        await run(`INSERT INTO command_queue (group_id, target_phone, command_type, command_payload, status) VALUES (?, ?, ?, ?, 'accepted')`,
-            [assigned_group_id || null, assignedPhone || assignedDeviceId || null, commandType, cmdPayload]);
+        await run(`INSERT INTO command_queue (group_id, target_phone, command_type, command_payload, status, priority) VALUES (?, ?, ?, ?, 'accepted', ?)`,
+            [assigned_group_id || null, assignedPhone || assignedDeviceId || null, commandType, cmdPayload, commandType]);
 
         // Notify the original requester
         await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
             [reqData.device_id, 'rescue_dispatched', `Update: ${assignedName} has been assigned to your ${reqData.type} request. Stay safe!`, 0]);
 
-        broadcast('RESCUE_REQUEST_ACCEPTED', { ...reqData, assignedName, assigned_phone: assignedPhone });
+        broadcast('RESCUE_REQUEST_ACCEPTED', { ...reqData, assignedName, assigned_phone: assignedPhone, priority: commandType });
         await logCommand('RESCUE_REQUEST_ACCEPTED', 'Commander', `Request ID: ${req.params.id}`, { assigned_user_id, assigned_group_id, commandType });
         res.json(reqData);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -743,6 +832,45 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
 
         broadcast('RESCUE_REQUEST_' + status.toUpperCase(), reqData);
         await logCommand('RESCUE_STATUS_UPDATE', rescuer_phone || 'Rescuer', `Request ID: ${req.params.id}`, { status });
+        
+        // Multi-rescuer completion logic
+        if (status === 'completed') {
+            const rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ?`, [rescuer_phone, rescuer_phone]);
+            if (rescuer) {
+                await run(`INSERT OR IGNORE INTO rescuer_task_completions (task_id, rescuer_id) VALUES (?, ?)`, [req.params.id, rescuer.id]);
+                
+                // Check if all assigned rescuers completed
+                const assignedRescuers = await all(`SELECT user_id FROM group_members WHERE group_id = ?`, [reqData.assigned_group_id]);
+                const completedRescuers = await all(`SELECT rescuer_id FROM rescuer_task_completions WHERE task_id = ?`, [req.params.id]);
+                
+                if (completedRescuers.length < assignedRescuers.length) {
+                    // Not everyone completed yet, revert status to in_progress or similar
+                    await run(`UPDATE rescue_requests SET status = 'in_progress' WHERE id = ?`, [req.params.id]);
+                    broadcast('RESCUE_REQUEST_IN_PROGRESS', { ...reqData, status: 'in_progress', pending_completions: assignedRescuers.length - completedRescuers.length });
+                } else {
+                    // Everyone completed, dissolve zone if it was the last task
+                    const zoneTasks = await all(`SELECT id FROM rescue_requests WHERE sector = ? AND status != 'completed'`, [reqData.sector]);
+                    if (zoneTasks.length === 0) {
+                        await run(`UPDATE operation_zones SET status = 'inactive' WHERE zone_name = ?`, [reqData.sector]);
+                        broadcast('ZONE_DISSOLVED', { zone_name: reqData.sector });
+                        await logCommand('ZONE_DISSOLVED', 'System', reqData.sector, {});
+                    }
+                }
+            }
+        }
+        
+        res.json(reqData);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/rescue-requests/:id/location', async (req, res) => {
+    const { lat, lng } = req.body;
+    if (!lat || !lng) return res.status(400).json({ error: 'Lat and Lng are required' });
+    try {
+        await run(`UPDATE rescue_requests SET lat = ?, lng = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [lat, lng, req.params.id]);
+        const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
+        broadcast('RESCUE_REQUEST_LOCATION_UPDATED', reqData);
+        await logCommand('RESCUE_LOCATION_UPDATE', 'Admin', `Request ID: ${req.params.id}`, { lat, lng });
         res.json(reqData);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -750,9 +878,31 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
 // Get all commands for admin dashboard
 app.get('/api/commands', async (req, res) => {
     try {
-        const commands = await all(`SELECT * FROM command_queue ORDER BY created_at DESC`);
+        // Try to join with rescue_requests to get requester details
+        const commands = await all(`
+            SELECT cq.*, 
+                   rr.id as requester_db_id,
+                   rr.name as requester_name, 
+                   rr.phone as requester_phone, 
+                   rr.details as requester_details,
+                   rr.type as requester_type,
+                   rr.lat as requester_lat,
+                   rr.lng as requester_lng,
+                   rr.urgency as requester_urgency
+            FROM command_queue cq
+            LEFT JOIN rescue_requests rr ON CAST(rr.id AS TEXT) = CAST(json_extract(cq.command_payload, '$.rescue_req_id') AS TEXT)
+            ORDER BY cq.created_at DESC
+        `);
         res.json(commands);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        // Fallback if json_extract is not supported
+        try {
+            const commands = await all(`SELECT * FROM command_queue ORDER BY created_at DESC`);
+            res.json(commands);
+        } catch (innerError) {
+            res.status(500).json({ error: innerError.message });
+        }
+    }
 });
 
 app.put('/api/commands/:id/reassign', async (req, res) => {
@@ -801,8 +951,8 @@ app.post('/api/commands', async (req, res) => {
         }
 
         const result = await run(
-            `INSERT INTO command_queue (group_id, target_phone, command_type, command_payload) VALUES (?, ?, ?, ?)`,
-            [group_id || null, effectivePhone || null, command_type || 'direct', JSON.stringify(command_payload)]
+            `INSERT INTO command_queue (group_id, target_phone, command_type, command_payload, priority) VALUES (?, ?, ?, ?, ?)`,
+            [group_id || null, effectivePhone || null, command_type || 'direct', JSON.stringify(command_payload), req.body.priority || 'normal']
         );
         const cmd = await get(`SELECT * FROM command_queue WHERE id = ?`, [result.lastID]);
 
@@ -865,6 +1015,28 @@ app.put('/api/commands/:id/status', async (req, res) => {
         broadcast('COMMAND_STATUS_UPDATE', cmdData);
         await logCommand('COMMAND_STATUS_UPDATE', rescuer_phone || 'Rescuer', `Command ID: ${req.params.id}`, { status });
         res.json(cmdData);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/commands/:id/location', async (req, res) => {
+    const { lat, lng } = req.body;
+    if (!lat || !lng) return res.status(400).json({ error: 'Lat and Lng are required' });
+    try {
+        const cmd = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
+        if (!cmd) return res.status(404).json({ error: 'Command not found' });
+        
+        const payload = JSON.parse(cmd.command_payload || '{}');
+        payload.lat = lat;
+        payload.lng = lng;
+        payload.coords = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        
+        await run(`UPDATE command_queue SET command_payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, 
+            [JSON.stringify(payload), req.params.id]);
+            
+        const updatedCmd = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
+        broadcast('COMMAND_LOCATION_UPDATED', updatedCmd);
+        await logCommand('COMMAND_LOCATION_UPDATE', 'Admin', `Command ID: ${req.params.id}`, { lat, lng });
+        res.json(updatedCmd);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -969,6 +1141,7 @@ app.post('/api/settings', async (req, res) => {
     try {
         await run(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, String(value)]);
         broadcast('SETTINGS_UPDATED', { key, value });
+        
         res.json({ message: 'Setting updated' });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });

@@ -128,11 +128,69 @@
             width: 90px;
             height: 90px;
             background: var(--surface);
-            border-radius: 24px;
+            .custom-marker {
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 24px;
+            transition: all 0.3s ease;
+        }
+        
+        .marker-inner {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            background: white;
+            position: relative;
+            z-index: 2;
+        }
+
+        .marker-pulse {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(244, 63, 94, 0.4);
+            animation: pulse-red 2s infinite;
+            z-index: 1;
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(1); opacity: 0.8; }
+            70% { transform: scale(2); opacity: 0; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+
+        .marker-label {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 800;
+            white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .zone-tooltip {
+            background: rgba(0,0,0,0.8) !important;
+            border: none !important;
+            color: white !important;
+            font-weight: 800 !important;
+            font-size: 10px !important;
+            border-radius: 4px !important;
+            padding: 2px 6px !important;
+        }
+    margin: 0 auto 24px;
             box-shadow: var(--shadow-lg);
             font-size: 44px;
             border: 2px solid var(--primary-light);
@@ -751,11 +809,58 @@
                 
                 const icon = L.divIcon({
                     className: 'custom-marker',
-                    html: `<div style="background:var(--primary); width:36px; height:36px; border-radius:50%; border:3px solid white; display:flex; align-items:center; justify-content:center; font-size:18px;">🚁</div>`,
-                    iconSize: [40, 40]
+                    html: `
+                        <div style="position:relative; width:40px; height:40px; display:flex; align-items:center; justify-content:center;">
+                            <div class="marker-pulse" style="background:rgba(37, 99, 235, 0.4)"></div>
+                            <div class="marker-inner" style="background:var(--primary); border-color:white; color:white;">
+                                🚁
+                            </div>
+                            <div class="marker-label">${this.user.name}</div>
+                        </div>
+                    `,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
                 });
                 
                 this.rescuerMarker = L.marker([this.pos.lat, this.pos.lng], { icon }).addTo(this.map);
+                
+                this.updateZones();
+                setInterval(() => this.updateZones(), 10000);
+            },
+            
+            zoneLayers: [],
+            async updateZones() {
+                if (!this.map) return;
+                try {
+                    const res = await fetch(`${this.API}/zones`);
+                    const zones = await res.json();
+                    this.zoneLayers.forEach(l => this.map.removeLayer(l));
+                    this.zoneLayers = [];
+                    
+                    zones.forEach(z => {
+                        if (z.status === 'inactive') return;
+                        try {
+                            const geo = JSON.parse(z.zone_geometry);
+                            const isGrouped = z.zone_name.includes('Grouped Task Zone');
+                            let layer;
+                            
+                            if (geo.type === 'Circle' || (geo.center && geo.radius)) {
+                                layer = L.circle([geo.center.lat, geo.center.lng], {
+                                    radius: geo.radius,
+                                    color: isGrouped ? '#3b82f6' : (z.color || '#ef4444'),
+                                    dashArray: isGrouped ? '5, 10' : '0',
+                                    fillOpacity: 0.1,
+                                    weight: 2
+                                }).addTo(this.map);
+                            }
+                            
+                            if (layer) {
+                                layer.bindTooltip(z.zone_name, { permanent: true, direction: 'center', className: 'zone-tooltip' });
+                                this.zoneLayers.push(layer);
+                            }
+                        } catch (e) { }
+                    });
+                } catch (e) { }
             },
             
             showScreen(id) {
@@ -786,21 +891,32 @@
             
             async refresh() {
                 try {
-                    const res = await fetch(`${this.API}/rescue-requests?status=pending`);
-                    const data = await res.json();
-                    this.renderDispatches(data);
+                    const [reqsRes, cmdsRes] = await Promise.all([
+                        fetch(`${this.API}/rescue-requests?status=pending`),
+                        fetch(`${this.API}/commands`)
+                    ]);
+                    
+                    const tasks = await reqsRes.json();
+                    const cmds = await cmdsRes.json();
+                    
+                    this.renderDispatches(tasks, cmds);
                 } catch (e) { console.error(e); }
             },
             
-            renderDispatches(tasks) {
+            renderDispatches(tasks, cmds) {
                 const list = document.getElementById('notifList');
-                if (tasks.length === 0) {
+                if (tasks.length === 0 && cmds.length === 0) {
                     list.innerHTML = '<div style="text-align:center; padding:50px 20px; color:var(--text-muted);"><div style="font-size:40px; margin-bottom:10px;">📡</div><div style="font-size:15px; font-weight:700;">No active dispatches. Scanning...</div></div>';
                     return;
                 }
                 
                 list.innerHTML = '';
+                
+                // Track current active marker IDs to cleanup old ones
+                const activeIds = new Set();
+
                 tasks.forEach(t => {
+                    activeIds.add(`task-${t.id}`);
                     const card = document.createElement('div');
                     card.className = 'notif-card';
                     card.innerHTML = `
@@ -816,24 +932,80 @@
                         </div>
                     `;
                     list.appendChild(card);
-                    this.addTaskMarker(t);
+                    this.addTaskMarker(t, 'task');
+                });
+
+                cmds.forEach(c => {
+                    if (c.status === 'completed' || c.status === 'declined') return;
+                    
+                    let lat, lng, msg;
+                    try {
+                        const p = JSON.parse(c.command_payload);
+                        lat = p.lat; lng = p.lng; msg = p.message;
+                    } catch(e) {}
+
+                    if (lat && lng) {
+                        activeIds.add(`cmd-${c.id}`);
+                        const isCrit = c.priority === 'critical' || c.command_type === 'critical';
+                        const card = document.createElement('div');
+                        card.className = `notif-card ${isCrit ? 'notif-critical' : ''}`;
+                        card.innerHTML = `
+                            <div class="notif-top">
+                                <span class="notif-badge badge-${isCrit ? 'sos' : 'delivery'}">${isCrit ? 'CRITICAL ORDER' : 'HQ COMMAND'}</span>
+                                <span class="notif-time">${new Date(c.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                            </div>
+                            <h4 class="notif-title">${isCrit ? '🚨 EMERGENCY DISPATCH' : '📋 LOGISTICS ORDER'}</h4>
+                            <p class="notif-loc">💬 ${msg || 'Mission update'}</p>
+                            <div class="notif-btns">
+                                <button class="btn-action btn-primary" onclick="core.acceptCommand('${c.id}', ${lat}, ${lng})">${isCrit ? 'ACKNOWLEDGE & START' : 'ACKNOWLEDGE'}</button>
+                            </div>
+                        `;
+                        list.appendChild(card);
+                        this.addTaskMarker({ ...c, type: 'command', priority: c.priority, lat, lng, id: c.id }, 'cmd');
+                    }
+                });
+
+                // Cleanup markers for removed tasks
+                Object.keys(this.taskMarkers).forEach(id => {
+                    if (!activeIds.has(id)) {
+                        this.map.removeLayer(this.taskMarkers[id]);
+                        delete this.taskMarkers[id];
+                    }
                 });
             },
             
-            addTaskMarker(t) {
-                if (this.taskMarkers[t.id]) return;
-                const colors = { sos: '#f43f5e', food: '#f59e0b', medical: '#10b981', pregnancy: '#10b981' };
-                const icons = { sos: '🚨', food: '🍱', medical: '🏥', pregnancy: '🤰' };
+            addTaskMarker(t, prefix = 'task') {
+                const markerId = `${prefix}-${t.id}`;
+                
+                // If marker exists, update location and return
+                if (this.taskMarkers[markerId]) {
+                    this.taskMarkers[markerId].setLatLng([t.lat, t.lng]);
+                    return;
+                }
+
+                const colors = { sos: '#f43f5e', food: '#f59e0b', medical: '#10b981', pregnancy: '#10b981', command: '#ef4444' };
+                const icons = { sos: '🚨', food: '🍱', medical: '🏥', pregnancy: '🤰', command: '🎯' };
+                const label = t.phone || t.device_id || (prefix === 'cmd' ? `CMD-${t.id}` : 'Requester');
+                const isCritical = t.priority === 'critical' || ['sos', 'medical', 'pregnancy', 'command', 'critical'].includes(t.type.toLowerCase());
                 
                 const icon = L.divIcon({
                     className: 'custom-marker',
-                    html: `<div style="background:${colors[t.type] || '#6366f1'}; width:32px; height:32px; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; font-size:14px;">${icons[t.type] || '🛡️'}</div>`,
-                    iconSize: [36, 36]
+                    html: `
+                        <div style="position:relative; width:36px; height:36px; display:flex; align-items:center; justify-content:center;">
+                            ${isCritical ? '<div class="marker-pulse"></div>' : ''}
+                            <div class="marker-inner" style="border-color:${colors[t.type] || '#6366f1'}; color:${colors[t.type] || '#6366f1'}">
+                                ${icons[t.type] || '🛡️'}
+                            </div>
+                            <div class="marker-label">${label}</div>
+                        </div>
+                    `,
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 18]
                 });
                 
                 const m = L.marker([t.lat, t.lng], { icon }).addTo(this.map);
-                m.bindPopup(`<b>${t.type.toUpperCase()}</b><br>${t.sector}`);
-                this.taskMarkers[t.id] = m;
+                m.bindPopup(`<b>${t.type.toUpperCase()}</b><br>${t.sector || 'Mission Point'}<br>Status: ${t.status}`);
+                this.taskMarkers[markerId] = m;
             },
             
             async accept(id, type, sector, lat, lng) {
@@ -853,20 +1025,35 @@
                 }
             },
             
-            startMission(id, type, sector, lat, lng) {
-                this.activeMission = { id, type, sector, lat, lng };
-                
-                document.getElementById('missionBanner').style.display = 'flex';
-                document.getElementById('missType').innerText = `${type.toUpperCase()} MISSION`;
-                document.getElementById('missLoc').innerText = sector;
-                
-                if (this.navPolyline) this.map.removeLayer(this.navPolyline);
-                this.navPolyline = L.polyline([[this.pos.lat, this.pos.lng], [lat, lng]], {
-                    color: 'var(--primary)', weight: 6, opacity: 0.8, dashArray: '10, 15'
-                }).addTo(this.map);
-                
                 this.map.fitBounds(this.navPolyline.getBounds(), { padding: [50, 50] });
                 this.toast('MISSION COMMENCED - NAVIGATING', '🚀');
+            },
+
+            async acceptCommand(id, lat, lng) {
+                this.showLoader(true);
+                try {
+                    await fetch(`${this.API}/commands/${id}/acknowledge`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    this.activeMission = { id: 'CMD-'+id, type: 'command', sector: 'Direct HQ Order', lat, lng };
+                    document.getElementById('missionBanner').style.display = 'flex';
+                    document.getElementById('missType').innerText = `HQ COMMAND`;
+                    document.getElementById('missLoc').innerText = 'Proceed to Target Point';
+                    
+                    if (this.navPolyline) this.map.removeLayer(this.navPolyline);
+                    this.navPolyline = L.polyline([[this.pos.lat, this.pos.lng], [lat, lng]], {
+                        color: '#ef4444', weight: 6, opacity: 0.8, dashArray: '10, 15'
+                    }).addTo(this.map);
+                    
+                    this.map.fitBounds(this.navPolyline.getBounds(), { padding: [50, 50] });
+                    this.toast('COMMAND ACKNOWLEDGED', '🎯');
+                } catch (e) {
+                    console.error(e);
+                } finally {
+                    this.showLoader(false);
+                }
             },
             
             async completeMission() {
@@ -889,10 +1076,22 @@
             },
             
             endMission() {
+                const mission = this.activeMission;
                 document.getElementById('missionBanner').style.display = 'none';
                 if (this.navPolyline) this.map.removeLayer(this.navPolyline);
-                if (this.taskMarkers[this.activeMission.id]) this.map.removeLayer(this.taskMarkers[this.activeMission.id]);
-                delete this.taskMarkers[this.activeMission.id];
+                
+                // Only remove marker if not critical (Requirement 5)
+                const isCritical = ['sos', 'medical', 'pregnancy', 'rescue'].includes(mission.type.toLowerCase());
+                if (!isCritical) {
+                    if (this.taskMarkers[mission.id]) this.map.removeLayer(this.taskMarkers[mission.id]);
+                    delete this.taskMarkers[mission.id];
+                } else {
+                    // Update marker status for visibility
+                    if (this.taskMarkers[mission.id]) {
+                        this.taskMarkers[mission.id].getPopup().setContent(`<b>${mission.type.toUpperCase()}</b><br>${mission.sector}<br>Status: Ongoing (Awaiting completion)`);
+                    }
+                }
+                
                 this.activeMission = null;
                 this.refresh();
                 this.map.setView([this.pos.lat, this.pos.lng], 14);

@@ -646,8 +646,143 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .marker-pulse {
+            position: absolute;
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            background: rgba(239, 68, 68, 0.4);
+            animation: pulse-red 2s infinite;
+            z-index: -1;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+
+            70% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 0;
+            }
+        }
+
+        .marker-label {
+            position: absolute;
+            bottom: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.9);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+
+        .zone-tooltip {
+            background: rgba(15, 23, 42, 0.85) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: white !important;
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 800 !important;
+            font-size: 11px !important;
+            border-radius: 6px !important;
+            padding: 4px 10px !important;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        .marker-inner {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(8px);
+            position: relative;
+            z-index: 2;
+            color: #0f172a;
+        }
+
+        /* Grouped task styling: colored and bordered in transparent */
+        .marker-grouped .marker-inner {
+            background: rgba(59, 130, 246, 0.1) !important;
+            border: 1.5px dashed rgba(59, 130, 246, 0.6) !important;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
+        }
+
+        .marker-critical .marker-inner {
+            border-color: rgba(239, 68, 68, 0.6);
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .marker-food .marker-inner {
+            border-color: rgba(245, 158, 11, 0.5);
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .marker-medical .marker-inner {
+            border-color: rgba(16, 185, 129, 0.5);
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .marker-rescuer .marker-inner {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        .marker-label {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.7);
+            color: #1e293b;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+
+        .zone-tooltip {
+            background: rgba(255, 255, 255, 0.85) !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+            color: #1e293b !important;
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 700 !important;
+            font-size: 10px !important;
+            border-radius: 6px !important;
+            padding: 2px 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+            backdrop-filter: blur(4px);
         }
 
         .marker-sos {
@@ -1068,20 +1203,27 @@
 
                 <!-- Active Command Input -->
                 <div id="commandFormPanel">
-                    <div class="section-title" id="cmdPanelTitle"><i data-lucide="send" style="width:14px;"></i> Active Command Input</div>
+                    <div class="section-title" id="cmdPanelTitle"><i data-lucide="send" style="width:14px;"></i> Active
+                        Command Input</div>
 
                     <!-- Task Priority Toggle -->
                     <div class="input-group">
                         <label class="input-label">Task Priority</label>
                         <div style="display:flex;gap:8px;margin-bottom:2px;">
-                            <button id="btnNormal" onclick="setTaskPriority('normal')" class="btn btn-outline" style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">📋 Normal</button>
-                            <button id="btnCritical" onclick="setTaskPriority('critical')" class="btn btn-outline" style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">🚨 Critical Response</button>
+                            <button id="btnNormal" onclick="setTaskPriority('normal')" class="btn btn-outline"
+                                style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">📋
+                                Normal</button>
+                            <button id="btnCritical" onclick="setTaskPriority('critical')" class="btn btn-outline"
+                                style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">🚨
+                                Critical Response</button>
                         </div>
                     </div>
 
                     <!-- Critical warning banner (hidden by default) -->
-                    <div id="criticalWarningBanner" style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#b91c1c;line-height:1.5;">
-                        ⚠️ <strong>HIGH PRIORITY ALERT:</strong> This will trigger an urgent approval popup on the rescuer's device requiring immediate Accept or Decline response.
+                    <div id="criticalWarningBanner"
+                        style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#b91c1c;line-height:1.5;">
+                        ⚠️ <strong>HIGH PRIORITY ALERT:</strong> This will trigger an urgent approval popup on the
+                        rescuer's device requiring immediate Accept or Decline response.
                     </div>
 
                     <div class="input-group">
@@ -1098,10 +1240,13 @@
                     <div class="input-group">
                         <label class="input-label">Assign To</label>
                         <div style="display:flex;gap:8px;margin-bottom:8px;">
-                            <button id="btnTargetGroup" onclick="setTargetType('group')" class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;font-weight:700;">👥 Group</button>
-                            <button id="btnTargetIndividual" onclick="setTargetType('individual')" class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;font-weight:700;">👤 Individual</button>
+                            <button id="btnTargetGroup" onclick="setTargetType('group')" class="btn btn-outline"
+                                style="flex:1;font-size:11px;padding:6px;font-weight:700;">👥 Group</button>
+                            <button id="btnTargetIndividual" onclick="setTargetType('individual')"
+                                class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;font-weight:700;">👤
+                                Individual</button>
                         </div>
-                        
+
                         <div id="targetGroupSelect">
                             <select id="cmdTeam" class="form-control">
                                 <option value="alpha">Alpha Squad (12)</option>
@@ -1131,8 +1276,8 @@
                         <textarea id="cmdDetails" class="form-control"
                             placeholder="Enter operational instructions..."></textarea>
                     </div>
-                    <button id="createCmdBtn" class="btn btn-primary btn-block" onclick="createCommand()"><i data-lucide="plus-circle"
-                            style="width:16px;"></i> Create Command</button>
+                    <button id="createCmdBtn" class="btn btn-primary btn-block" onclick="createCommand()"><i
+                            data-lucide="plus-circle" style="width:16px;"></i> Create Command</button>
                 </div>
 
                 <!-- Command Details Panel -->
@@ -1153,11 +1298,36 @@
                             style="font-size: 14px; color: var(--text-main); margin-bottom: 16px; line-height: 1.5; font-weight: 500;">
                         </div>
                         <div
-                            style="background: var(--bg-panel); padding: 12px; border-radius: 6px; font-size: 13px; border: 1px solid var(--border); margin-bottom: 16px;">
+                            style="background: var(--bg-panel); padding: 12px; border-radius: 6px; font-size: 13px; border: 1px solid var(--border); margin-bottom: 12px;">
                             <div id="tdMeta" style="color: var(--text-muted); font-weight: 500; line-height: 1.6;">
                             </div>
                         </div>
-                        <button class="btn btn-outline btn-block" onclick="openReassignModalFromDetails()" style="color: var(--primary); border-color: var(--primary);">
+
+                        <!-- Public / Requester Details Section -->
+                        <div id="tdRequesterSection"
+                            style="display:none; background: #eff6ff; padding: 12px; border-radius: 6px; font-size: 13px; border: 1px solid #bfdbfe; margin-bottom: 16px;">
+                            <div
+                                style="font-weight: 800; color: #1e40af; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; text-transform: uppercase; font-size: 11px;">
+                                <i data-lucide="user" style="width:12px;"></i> Public / Requester Details
+                            </div>
+                            <div style="color: #1e3a8a; font-weight: 600; font-size: 14px; margin-bottom: 4px;"
+                                id="tdRequesterName">N/A</div>
+                            <div style="color: #1d4ed8; font-weight: 500; font-size: 12px; margin-bottom: 8px;"
+                                id="tdRequesterPhone">N/A</div>
+                            <div id="tdRequesterMeta"
+                                style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; font-size: 10px; color: #1e40af; border-top: 1px solid #dbeafe; padding-top: 8px;">
+                                <div><b>Request ID:</b> <span id="tdRequesterId">-</span></div>
+                                <div><b>Rescue Type:</b> <span id="tdRequesterType">-</span></div>
+                                <div style="grid-column: span 2;"><b>Location:</b> <span id="tdRequesterLoc">-</span>
+                                </div>
+                            </div>
+                            <div id="tdRequesterItems"
+                                style="font-size: 11px; color: #374151; padding: 6px; background: rgba(255,255,255,0.5); border-radius: 4px; border: 1px dashed #93c5fd;">
+                                <!-- Item details -->
+                            </div>
+                        </div>
+                        <button class="btn btn-outline btn-block" onclick="openReassignModalFromDetails()"
+                            style="color: var(--primary); border-color: var(--primary);">
                             <i data-lucide="refresh-cw" style="width:14px; margin-right:4px;"></i> Reassign Task
                         </button>
                     </div>
@@ -1175,47 +1345,54 @@
 
                 <!-- Command List Area -->
                 <div class="command-list-area">
-                    <!-- Critical Operations Feed (NEW) -->
-                    <div id="criticalOperationsHub" style="display:none; margin-bottom: 20px; padding: 0 16px;">
-                        <div class="section-title" style="color:var(--critical); font-weight:800; display:flex; align-items:center; gap:8px;">
-                            <i data-lucide="zap" style="width:16px; fill:var(--critical);"></i> 
-                            CRITICAL RESPONSE HUB
-                        </div>
-                        <div id="criticalTasksList" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
-                            <!-- Critical Tasks Cards will be injected here -->
-                        </div>
-                    </div>
-
                     <div class="cmd-tabs">
                         <div class="cmd-tab active" onclick="switchCmdTab('live', this)">Live Commands</div>
                         <div class="cmd-tab" onclick="switchCmdTab('completed', this)">Completed Commands</div>
                     </div>
+
                     <div class="cmd-content" id="cmd-live">
-                        <div style="margin-bottom: 20px;">
-                            <h4 style="margin: 0 0 10px 16px; font-size: 13px; font-weight: 800; color: var(--critical); display: flex; align-items: center; gap: 6px;">
-                                <i data-lucide="alert-circle" style="width:14px;"></i> CRITICAL OPERATIONS
-                            </h4>
-                            <table>
-                                <thead>
-                                    <!-- Header injected by JS -->
-                                </thead>
-                                <tbody id="liveCmdBodyCritical">
-                                    <!-- Populated by JS -->
-                                </tbody>
-                            </table>
+                        <!-- Critical Operations Feed (NEW) -->
+                        <div id="criticalOperationsHub" style="display:none; margin-bottom: 24px;">
+                            <div class="section-title"
+                                style="color:var(--critical); font-weight:800; display:flex; align-items:center; gap:8px; margin-bottom:12px; margin-left:0;">
+                                <i data-lucide="zap" style="width:16px; fill:var(--critical);"></i>
+                                CRITICAL RESPONSE HUB
+                            </div>
+                            <div id="criticalTasksList"
+                                style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
+                                <!-- Critical Tasks Cards will be injected here -->
+                            </div>
                         </div>
-                        <div>
-                            <h4 style="margin: 0 0 10px 16px; font-size: 13px; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 6px;">
-                                <i data-lucide="box" style="width:14px;"></i> NORMAL LOGISTICS
-                            </h4>
-                            <table>
-                                <thead>
-                                    <!-- Header injected by JS -->
-                                </thead>
-                                <tbody id="liveCmdBodyNormal">
-                                    <!-- Populated by JS -->
-                                </tbody>
-                            </table>
+
+                        <div style="display:flex; gap:20px;">
+                            <div style="flex: 1; min-width: 0;">
+                                <h4
+                                    style="margin: 0 0 10px 16px; font-size: 13px; font-weight: 800; color: var(--critical); display: flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="alert-circle" style="width:14px;"></i> CRITICAL MISSIONS
+                                </h4>
+                                <table>
+                                    <thead>
+                                        <!-- Header injected by JS -->
+                                    </thead>
+                                    <tbody id="liveCmdBodyCritical">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <h4
+                                    style="margin: 0 0 10px 16px; font-size: 13px; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="box" style="width:14px;"></i> NORMAL LOGISTICS
+                                </h4>
+                                <table>
+                                    <thead>
+                                        <!-- Header injected by JS -->
+                                    </thead>
+                                    <tbody id="liveCmdBodyNormal">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                     <div class="cmd-content" id="cmd-completed" style="display:none;">
@@ -1244,41 +1421,31 @@
             <!-- RIGHT PANEL: INTELLIGENCE (18%) -->
             <aside class="panel right-panel">
                 <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+
                     <div class="section-title" style="flex-shrink: 0;"><i data-lucide="bell" style="width:14px;"></i>
                         New Notifications</div>
 
-                    <div class="notif-group" id="rescueRequestsList"
+                    <div id="rescueNotificationsContainer"
                         style="flex: 1; overflow-y: auto; margin-bottom: 12px; padding-right: 4px;">
-                        <!-- Actionable (Critical) - Populated dynamically via JS -->
-                        <div class="notif-item actionable-item" style="align-items: flex-start;">
-                            <div class="notif-icon"
-                                style="background:#f3e8ff; color:var(--special); font-weight:900; font-size:12px;">01
-                            </div>
-                            <div class="notif-content">
-                                <div class="notif-title" style="color:var(--special);">Pregnancy Rescue</div>
-                                <div class="notif-count text-sm text-muted" style="margin-bottom:6px;">Sector 4, urgency
-                                    high</div>
-                                <div class="actionable-actions">
-                                    <button class="btn btn-primary"
-                                        onclick="openAssignModal('req-1', 'Pregnancy Rescue', 'Sector 4', 'high')">Accept</button>
-                                    <button class="btn btn-outline" onclick="alert('Declined')">Decline</button>
-                                </div>
+                        <!-- Critical Response Section -->
+                        <div style="margin-bottom: 16px;">
+                            <h4
+                                style="margin: 0 0 10px 0; font-size: 11px; font-weight: 800; color: var(--critical); display: flex; align-items: center; gap: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <i data-lucide="alert-circle" style="width:12px;"></i> Critical Response
+                            </h4>
+                            <div id="rescueRequestsCritical" class="notif-group">
+                                <!-- Populated by JS -->
                             </div>
                         </div>
 
-                        <div class="notif-item actionable-item" style="align-items: flex-start; border-color:#fca5a5;">
-                            <div class="notif-icon"
-                                style="background:#fee2e2; color:var(--critical); font-weight:900; font-size:12px;">02
-                            </div>
-                            <div class="notif-content">
-                                <div class="notif-title" style="color:var(--critical);">Medical Rescue</div>
-                                <div class="notif-count text-sm text-muted" style="margin-bottom:6px;">Block 7, critical
-                                    injury</div>
-                                <div class="actionable-actions">
-                                    <button class="btn btn-primary"
-                                        onclick="openAssignModal('req-2', 'Medical Rescue', 'Block 7', 'critical')">Accept</button>
-                                    <button class="btn btn-outline" onclick="alert('Declined')">Decline</button>
-                                </div>
+                        <!-- Normal Logistics Section -->
+                        <div>
+                            <h4
+                                style="margin: 0 0 10px 0; font-size: 11px; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <i data-lucide="box" style="width:12px;"></i> Normal Logistics
+                            </h4>
+                            <div id="rescueRequestsNormal" class="notif-group">
+                                <!-- Populated by JS -->
                             </div>
                         </div>
                     </div>
@@ -1566,7 +1733,8 @@
             </div>
             <div class="card">
                 <h3 style="margin-top:0;">Async Refresh Settings</h3>
-                <p style="color:var(--text-muted);font-size:13px;">Configure how often the dashboard updates automatically (affects all connected apps).</p>
+                <p style="color:var(--text-muted);font-size:13px;">Configure how often the dashboard updates
+                    automatically (affects all connected apps).</p>
                 <div class="input-group" style="margin-bottom: 12px;">
                     <label class="input-label">Refresh Time Period</label>
                     <select id="refreshIntervalSelect" class="form-control" onchange="updateRefreshSetting(this.value)">
@@ -2351,10 +2519,11 @@
         function switchCmdTab(tab, btnEl) {
             document.getElementById('cmd-live').style.display = 'none';
             document.getElementById('cmd-completed').style.display = 'none';
+
             document.getElementById('cmd-' + tab).style.display = 'block';
 
             document.querySelectorAll('.cmd-tab').forEach(el => el.classList.remove('active'));
-            btnEl.classList.add('active');
+            if (btnEl) btnEl.classList.add('active');
         }
 
         // 3. Modals
@@ -2362,12 +2531,12 @@
             const title = type === 'SOS' ? 'SOS Emergency Missions' : 'Food & Supply Distribution';
             document.getElementById('opModalTitle').innerText = title;
             document.getElementById('opDetailsModal').style.display = 'flex';
-            
+
             // Fetch all requests to show a full breakdown
             try {
                 const res = await fetch(`${API_BASE}/rescue-requests`);
                 const allReqs = await res.json();
-                
+
                 let filtered = [];
                 if (type === 'SOS') {
                     filtered = allReqs.filter(r => r.type === 'sos' || r.type === 'medical' || r.type === 'pregnancy');
@@ -2377,7 +2546,7 @@
 
                 const tbody = document.querySelector('#opDetailsModal tbody');
                 tbody.innerHTML = '';
-                
+
                 if (filtered.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">No records found for this category.</td></tr>';
                 }
@@ -2386,7 +2555,7 @@
                     const statusTag = r.status === 'completed' ? 'tag-green' : r.status === 'accepted' ? 'tag-yellow' : 'tag-gray';
                     const time = new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const updateTime = r.updated_at ? new Date(r.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
-                    
+
                     let itemsStr = '';
                     if (r.details) {
                         try {
@@ -2394,12 +2563,12 @@
                             if (d.food) itemsStr += `Food:${d.food} `;
                             if (d.med) itemsStr += `Med:${d.med} `;
                             if (d.sanitary) itemsStr += `San:${d.sanitary} `;
-                        } catch(e) {}
+                        } catch (e) { }
                     }
 
                     tbody.innerHTML += `
                         <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 8px; font-weight: 800; color: var(--text-muted);">${String(idx+1).padStart(2, '0')}</td>
+                            <td style="padding: 8px; font-weight: 800; color: var(--text-muted);">${String(idx + 1).padStart(2, '0')}</td>
                             <td style="padding: 8px; font-weight:600;">
                                 ${r.type.toUpperCase()} @ ${r.sector}
                                 <div style="font-size:10px; color:var(--text-muted); font-weight:400;">${itemsStr}</div>
@@ -2485,21 +2654,229 @@
             // Map interaction for drawing
             map.on('mousedown', onMapClick);
 
+            updateTacticalMap();
+            setInterval(updateTacticalMap, 5000);
+
             setTimeout(() => lucide.createIcons(), 100);
         }
 
-        function addMarker(lat, lng, type, iconHtml, details) {
-            let icon = L.divIcon({
-                className: `custom-marker marker-${type}`,
-                html: iconHtml,
-                iconSize: type === 'rescue' ? [32, 32] : [28, 28],
-                iconAnchor: [16, 16]
+        function addMarker(lat, lng, type, iconHtml, details, label, isCriticalMovement = false, isGrouped = false, dbId = null, isCommand = false) {
+            // Priority check for pulsing
+            const isPriority = isCriticalMovement || ['sos', 'medical', 'pregnancy', 'command', 'critical'].includes(type.toLowerCase());
+            const markerClass = `marker-${type.toLowerCase()} ${isGrouped ? 'marker-grouped' : ''}`;
+
+            const icon = L.divIcon({
+                className: `custom-marker ${markerClass}`,
+                html: `
+                    <div style="position:relative; width:34px; height:34px; display:flex; align-items:center; justify-content:center;">
+                        ${isPriority ? `<div class="marker-pulse" style="background:${type === 'command' ? '#ef4444' : '#3b82f6'}"></div>` : ''}
+                        <div class="marker-inner" style="${isGrouped ? 'border-style: dashed !important;' : ''}">
+                            ${iconHtml}
+                        </div>
+                        ${label ? `<div class="marker-label">${label}</div>` : ''}
+                    </div>
+                `,
+                iconSize: [34, 34],
+                iconAnchor: [17, 17]
             });
-            let marker = L.marker([lat, lng], { icon: icon }).addTo(map);
-            if (details) {
-                let colorVar = type === 'sos' || type === 'rescue' ? 'critical' : type === 'food' ? 'pending' : type === 'medical' ? 'medical' : 'special';
-                marker.bindPopup(`<div style="font-family:'Inter'; font-size:13px;"><strong style="text-transform:uppercase; color:var(--${colorVar});">${type} Alert</strong><div style="margin-top:4px;">${details}</div></div>`);
+
+            // Make rescue and command markers draggable
+            const isTask = ['sos', 'medical', 'pregnancy', 'food', 'delivery', 'medical_delivery'].includes(type.toLowerCase());
+            const draggable = (isTask || isCommand) && dbId !== null;
+
+            let marker = L.marker([lat, lng], {
+                icon: icon,
+                draggable: draggable
+            }).addTo(map);
+
+            if (draggable) {
+                marker.on('dragend', async function (e) {
+                    const newPos = e.target.getLatLng();
+                    const endpoint = isCommand ? `${API_BASE}/commands/${dbId}/location` : `${API_BASE}/rescue-requests/${dbId}/location`;
+
+                    try {
+                        const res = await fetch(endpoint, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ lat: newPos.lat, lng: newPos.lng })
+                        });
+
+                        if (res.ok) {
+                            showAdminToast(`${isCommand ? 'Command' : 'Rescue'} location updated successfully`);
+                            // Refresh map to sync all layers (like dotted lines)
+                            updateTacticalMap();
+                        } else {
+                            // Revert if failed
+                            marker.setLatLng([lat, lng]);
+                            alert("Failed to update location");
+                        }
+                    } catch (err) {
+                        marker.setLatLng([lat, lng]);
+                        console.error("Drag update failed", err);
+                    }
+                });
             }
+            if (details) {
+                marker.bindPopup(`<div style="font-family:'Inter'; font-size:13px; padding:4px;">
+                    <div style="font-weight:900; text-transform:uppercase; margin-bottom:4px; color:var(--primary);">${type} Mission</div>
+                    <div style="line-height:1.4; color:var(--text-muted);">${details}</div>
+                </div>`);
+            }
+            return marker;
+        }
+
+        let mapLayers = [];
+        async function updateTacticalMap() {
+            if (!map) return;
+            try {
+                // Fetch All Data
+                const [zonesRes, rescuersRes, tasksRes, cmdsRes] = await Promise.all([
+                    fetch(`${API_BASE}/zones`),
+                    fetch(`${API_BASE}/users?role=rescuer`),
+                    fetch(`${API_BASE}/rescue-requests?status=pending`),
+                    fetch(`${API_BASE}/commands`)
+                ]);
+
+                const zones = await zonesRes.json();
+                const rescuers = await rescuersRes.json();
+                const tasks = await tasksRes.json();
+                const activeCmds = await cmdsRes.json();
+
+                // Clear existing tactical layers
+                mapLayers.forEach(l => map.removeLayer(l));
+                mapLayers = [];
+
+                // 1. Render Zones (Minimal Transparent Grouped Visualization)
+                zones.forEach(z => {
+                    if (z.status === 'inactive') return;
+                    try {
+                        const geo = JSON.parse(z.zone_geometry);
+                        const isGrouped = z.zone_name.includes('Grouped Task Zone') || z.zone_name.includes('Command Zone');
+                        let layer;
+
+                        const latlng = geo.latlng || geo.center;
+                        const radius = geo.radius;
+
+                        if (geo.type === 'Circle' || geo.type === 'radius' || (latlng && radius)) {
+                            layer = L.circle([latlng.lat, latlng.lng], {
+                                radius: radius,
+                                color: isGrouped ? '#3b82f6' : (z.color || '#ef4444'),
+                                dashArray: isGrouped ? '5, 5' : '0',
+                                fillOpacity: isGrouped ? 0.08 : 0.05,
+                                weight: isGrouped ? 2 : 1.5
+                            }).addTo(map);
+                        } else if (geo.bounds) {
+                            layer = L.rectangle(geo.bounds, {
+                                color: isGrouped ? '#3b82f6' : (z.color || '#ef4444'),
+                                dashArray: isGrouped ? '5, 5' : '0',
+                                fillOpacity: isGrouped ? 0.08 : 0.05,
+                                weight: isGrouped ? 2 : 1.5
+                            }).addTo(map);
+                        }
+
+                        if (layer) {
+                            layer.bindTooltip(z.zone_name.toLowerCase(), {
+                                permanent: true,
+                                direction: 'center',
+                                className: 'zone-tooltip',
+                                opacity: 0.8
+                            });
+                            mapLayers.push(layer);
+                        }
+                    } catch (e) { }
+                });
+
+                // 2. Render Rescuers & Missions (with Dotted Lines for Critical Tasks)
+                rescuers.forEach(r => {
+                    if (r.lat && r.lng) {
+                        const m = addMarker(r.lat, r.lng, 'rescuer', '🚁', `Rescuer: ${r.name}`, r.name);
+                        mapLayers.push(m);
+
+                        // Draw lines for assigned critical commands or SOS alerts
+                        activeCmds.forEach(c => {
+                            const isCriticalCmd = c.command_type === 'critical' || c.priority === 'critical' || c.command_type === 'sos';
+                            if (isCriticalCmd && c.status !== 'completed' && (c.target_phone === r.phone || c.group_id === r.group_id)) {
+                                // Find the target request location
+                                let targetLat, targetLng;
+                                const payload = JSON.parse(c.command_payload || '{}');
+
+                                if (payload.rescue_req_id) {
+                                    const targetReq = tasks.find(t => t.id === payload.rescue_req_id);
+                                    if (targetReq) { targetLat = targetReq.lat; targetLng = targetReq.lng; }
+                                } else if (payload.lat && payload.lng) {
+                                    targetLat = payload.lat; targetLng = payload.lng;
+                                }
+
+                                if (targetLat && targetLng) {
+                                    const line = L.polyline([[r.lat, r.lng], [targetLat, targetLng]], {
+                                        color: '#ef4444',
+                                        weight: 2,
+                                        dashArray: '5, 10',
+                                        opacity: 0.6
+                                    }).addTo(map);
+                                    mapLayers.push(line);
+                                }
+                            }
+                        });
+                    }
+                });
+
+                // 3. Render Pending Tasks (with Grouped styling)
+                tasks.forEach(t => {
+                    const activeZones = zones.filter(z => z.status === 'active');
+                    const isInZone = activeZones.some(z => {
+                        try {
+                            const geo = JSON.parse(z.zone_geometry);
+                            const latlng = geo.latlng || geo.center;
+                            if (geo.type === 'Circle' || geo.type === 'radius' || (latlng && geo.radius)) {
+                                const dist = map.distance([t.lat, t.lng], [latlng.lat, latlng.lng]);
+                                return dist <= geo.radius;
+                            } else if (geo.bounds) {
+                                return L.latLngBounds(geo.bounds).contains([t.lat, t.lng]);
+                            }
+                        } catch (e) { return false; }
+                        return false;
+                    });
+
+                    const icon = getTaskIconByType(t.type);
+                    const label = t.serial_number || t.phone || t.device_id;
+                    const m = addMarker(t.lat, t.lng, t.type.toLowerCase(), icon, `Request: ${t.type}<br>Area: ${t.sector}`, label, false, isInZone, t.id, false);
+                    mapLayers.push(m);
+                });
+
+                // 4. Render Active Commands (Crosshair markers)
+                activeCmds.forEach(c => {
+                    let cLat, cLng;
+                    // Check if command has explicit coordinates in payload
+                    try {
+                        const p = typeof c.command_payload === 'string' ? JSON.parse(c.command_payload) : c.command_payload;
+                        if (p && p.lat && p.lng) {
+                            cLat = p.lat;
+                            cLng = p.lng;
+                        } else if (c.layerData && c.layerData.latlng) {
+                            cLat = c.layerData.latlng.lat;
+                            cLng = c.layerData.latlng.lng;
+                        }
+                    } catch (e) { }
+
+                    if (cLat && cLng) {
+                        const icon = `<i data-lucide="crosshair" style="width:16px; color:#ef4444;"></i>`;
+                        const dbId = c.id;
+                        const m = addMarker(cLat, cLng, 'command', icon, `Command: ${c.desc || 'Direct Order'}<br>Status: ${c.status}`, `CMD-${c.id}`, false, false, dbId, true);
+                        mapLayers.push(m);
+                    }
+                });
+
+            } catch (e) { console.error('Map update error', e); }
+        }
+
+        function getTaskIconByType(type) {
+            type = type.toLowerCase();
+            if (type.includes('food')) return '📦';
+            if (type.includes('medical')) return '💊';
+            if (type.includes('pregnancy')) return '🤰';
+            if (type.includes('sos')) return '🆘';
+            return '📍';
         }
 
         function setDrawMode(mode) {
@@ -2614,6 +2991,39 @@
             document.getElementById('tdMeta').innerHTML = `<b>Assigned Team:</b> ${cmd.team} <br><br> <b>Target Zone:</b><br> ${cmd.zone}`;
             document.getElementById('tdStatus').innerHTML = `<span class="tag ${getTagForStatus(cmd.status)}">${cmd.status}</span>`;
 
+            // Public / Requester Details
+            const reqSection = document.getElementById('tdRequesterSection');
+            const reqName = document.getElementById('tdRequesterName');
+            const reqPhone = document.getElementById('tdRequesterPhone');
+            const reqItems = document.getElementById('tdRequesterItems');
+
+            if (cmd.rescueReqId) {
+                reqSection.style.display = 'block';
+                reqName.innerText = cmd.requesterName || 'Public Requester';
+                reqPhone.innerText = cmd.requesterPhone || 'Phone Not Available';
+
+                document.getElementById('tdRequesterId').innerText = cmd.rescueReqId ? `PUB-${cmd.rescueReqId}` : 'N/A';
+                document.getElementById('tdRequesterType').innerText = (cmd.requesterType || 'Emergency').toUpperCase();
+                document.getElementById('tdRequesterLoc').innerHTML = (cmd.requesterLat && cmd.requesterLng)
+                    ? `<a href="#" onclick="map.flyTo([${cmd.requesterLat}, ${cmd.requesterLng}], 18); return false;" style="color:#1d4ed8; text-decoration:underline;">📍 ${parseFloat(cmd.requesterLat).toFixed(5)}, ${parseFloat(cmd.requesterLng).toFixed(5)}</a>`
+                    : 'Coordinates Not Available';
+
+                let itemsHtml = '<span style="color:var(--text-muted)">No specific items listed</span>';
+                if (cmd.details) {
+                    try {
+                        const d = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
+                        const items = [];
+                        if (d.food) items.push(`🍞 Food: <b>${d.food}</b>`);
+                        if (d.med) items.push(`💊 Medicine: <b>${d.med}</b>`);
+                        if (d.sanitary) items.push(`🧻 Sanitary: <b>${d.sanitary}</b>`);
+                        if (items.length > 0) itemsHtml = items.join(' • ');
+                    } catch (e) { }
+                }
+                reqItems.innerHTML = itemsHtml;
+            } else {
+                reqSection.style.display = 'none';
+            }
+
             // Draw map area in blue
             if (selectedCmdLayer) map.removeLayer(selectedCmdLayer);
 
@@ -2626,6 +3036,7 @@
                 }
                 map.flyToBounds(selectedCmdLayer.getBounds(), { padding: [50, 50], duration: 1 });
             }
+            if (window.lucide) lucide.createIcons();
         }
 
         function closeTaskDetails() {
@@ -2638,11 +3049,11 @@
         }
 
         function getTagForType(type) {
-            const m = { 
-                sos: 'tag-red', 
-                food: 'tag-yellow', 
-                medical: 'tag-purple', 
-                pregnancy: 'tag-special', 
+            const m = {
+                sos: 'tag-red',
+                food: 'tag-yellow',
+                medical: 'tag-purple',
+                pregnancy: 'tag-special',
                 rescue: 'tag-red',
                 critical: 'tag-red',
                 normal: 'tag-blue'
@@ -2670,7 +3081,7 @@
 
             cmds.forEach((c) => {
                 let isReassignable = c.status !== 'Completed';
-                
+
                 let row = `<tr onclick="selectTask('${c.id}')" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                     <td style="font-weight: 800; color: var(--text-muted);">{SNO}</td>
                     <td style="font-weight:700;">${c.id}</td>
@@ -2688,9 +3099,15 @@
                     </td>
                 </tr>`;
 
-                const isCrit = ['sos', 'medical', 'pregnancy', 'critical'].includes(c.type.toLowerCase());
+                const isCrit = c.priority === 'critical' || ['sos', 'medical', 'pregnancy', 'critical'].includes(c.type.toLowerCase());
 
-                if (c.status === 'Ongoing' || c.status === 'Critical' || c.status === 'Pending' || c.status === 'Accepted' || c.status === 'Declined') {
+                // Logic for Live vs Completed separation
+                // Live: Everything currently active or needing attention
+                // Completed: Only tasks that are fully finished
+                const s = (c.status || '').toLowerCase();
+                const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'acknowledged', 'declined', 'in_progress'].includes(s);
+
+                if (isOngoing) {
                     if (isCrit) {
                         liveCritCount++;
                         liveCritHtml += row.replace('{SNO}', String(liveCritCount).padStart(2, '0'));
@@ -2699,6 +3116,7 @@
                         liveNormHtml += row.replace('{SNO}', String(liveNormCount).padStart(2, '0'));
                     }
                 } else {
+                    // status is 'Completed' or anything else treated as done
                     compCount++;
                     compHtml += row.replace('{SNO}', String(compCount).padStart(2, '0'));
                 }
@@ -2711,7 +3129,7 @@
                     histNormalHtml += row.replace('{SNO}', String(normHistCount).padStart(2, '0'));
                 }
             });
-            
+
             const tableHeader = `<tr>
                 <th style="width: 40px;">S.NO</th>
                 <th style="width: 80px;">ID</th>
@@ -2724,16 +3142,16 @@
                 <th style="width: 100px;">STATUS</th>
                 <th style="width: 100px;">ACTION</th>
             </tr>`;
-            
+
             // Apply headers to all tables
             document.querySelectorAll('#cmd-live table thead, #cmd-completed table thead').forEach(thead => {
                 thead.innerHTML = tableHeader;
             });
-            
+
             document.getElementById('liveCmdBodyCritical').innerHTML = liveCritHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No critical commands</td></tr>';
             document.getElementById('liveCmdBodyNormal').innerHTML = liveNormHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No normal commands</td></tr>';
             document.getElementById('compCmdBody').innerHTML = compHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No completed commands</td></tr>';
-            
+
             document.getElementById('historyTbodyCritical').innerHTML = histCriticalHtml || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted)">No critical history</td></tr>';
             document.getElementById('historyTbodyNormal').innerHTML = histNormalHtml || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted)">No normal history</td></tr>';
 
@@ -2741,7 +3159,7 @@
             const criticalMissions = cmds.filter(c => c.type === 'critical' && c.status !== 'Completed');
             const hub = document.getElementById('criticalOperationsHub');
             const hubList = document.getElementById('criticalTasksList');
-            
+
             if (criticalMissions.length > 0) {
                 hub.style.display = 'block';
                 hubList.innerHTML = criticalMissions.map(m => `
@@ -2755,6 +3173,7 @@
                             <b>Assigned:</b> ${m.team} <br>
                             <b>Target:</b> ${m.zone} <br>
                             <b>Status:</b> <span class="tag ${getTagForStatus(m.status)}" style="font-size:9px; padding:1px 4px;">${m.status}</span>
+                            ${m.requesterName ? `<br><span style="display:inline-block; margin-top:4px; color:var(--primary); font-weight:700;">👤 Requester: ${m.requesterName}</span>` : ''}
                         </div>
                         <div style="display:flex; gap:8px;">
                             <button class="btn btn-outline" style="flex:1; padding:6px; font-size:10px; font-weight:700;" onclick="openReassignModal('${m.id.replace('CMD-', '')}')">🔄 RE-ASSIGN</button>
@@ -2843,7 +3262,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const typeSelect = document.getElementById('cmdType');
             if (typeSelect) {
-                typeSelect.addEventListener('change', function() {
+                typeSelect.addEventListener('change', function () {
                     if (this.value === 'critical') setTaskPriority('critical');
                     else if (currentTaskPriority === 'critical') setTaskPriority('normal');
                 });
@@ -2880,7 +3299,7 @@
             if (!select) return;
             // Clear except first option
             select.innerHTML = '<option value="">-- Select Rescuer --</option>';
-            
+
             // Use currentUsers if available, or fetch from API
             if (window.currentUsers && window.currentUsers.length > 0) {
                 window.currentUsers.forEach(u => {
@@ -2912,18 +3331,18 @@
             document.querySelector('#assignModal .modal-title').innerText = `Reassign Command: ${id}`;
             document.getElementById('assignReqTitle').innerText = cmd.desc;
             document.getElementById('assignReqDetails').innerText = `Currently assigned to: ${cmd.team}`;
-            
+
             // Clear selections
             document.getElementById('assignPersonSelect').value = '';
             document.getElementById('assignGroupSelect').value = '';
-            
+
             // Populate person select if not done
             populateIndividualSelect('assignPersonSelect');
 
             // Change button click handler temporarily
             const dispatchBtn = document.querySelector('#assignModal .btn-primary');
             dispatchBtn.setAttribute('onclick', 'confirmReassignment()');
-            
+
             openModal('assignModal');
         }
 
@@ -2941,8 +3360,8 @@
                 return;
             }
 
-            const targetName = personId ? document.querySelector(`#assignPersonSelect option[value="${personId}"]`).textContent : 
-                                       document.querySelector(`#assignGroupSelect option[value="${groupId}"]`).textContent;
+            const targetName = personId ? document.querySelector(`#assignPersonSelect option[value="${personId}"]`).textContent :
+                document.querySelector(`#assignGroupSelect option[value="${groupId}"]`).textContent;
 
             try {
                 const response = await fetch(`${API_BASE}/commands/${reassigningCmdId}/reassign`, {
@@ -3014,6 +3433,22 @@
                 } else {
                     cmdLayerData = { type: 'area', bounds: drawnLayer.getBounds() };
                 }
+
+                // Convert to persistent zone for delivery tasks
+                if (['food', 'delivery', 'medical_delivery'].includes(type) || currentTaskPriority === 'normal') {
+                    const zoneName = `Command Zone: ${areaName}`;
+                    fetch(`${API_BASE}/zones`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            zone_name: zoneName,
+                            zone_geometry: JSON.stringify(cmdLayerData),
+                            color: '#3b82f6',
+                            status: 'active'
+                        })
+                    }).then(() => updateTacticalMap());
+                }
+
                 map.removeLayer(drawnLayer);
                 drawnLayer = null;
                 document.getElementById('distanceInput').value = '';
@@ -3022,9 +3457,8 @@
 
             let d = new Date();
             let t = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-            const localId = `CMD-${100 + cmds.length + 1}`;
-
-            cmds.unshift({ id: localId, desc: desc, type: type, zone: zoneHtml, team: team, time: t, status: 'Ongoing', layerData: cmdLayerData });
+            const localId = `CMD-TEMP-${Date.now()}`;
+            cmds.unshift({ id: localId, desc: desc, type: type, priority: currentTaskPriority, zone: zoneHtml, team: team, time: t, status: 'Ongoing', layerData: cmdLayerData });
             renderCmds();
 
             document.getElementById('cmdDetails').value = '';
@@ -3039,6 +3473,7 @@
                     group_id: teamId || null,
                     target_user_id: rescuerPhone || null,
                     command_type: type,
+                    priority: currentTaskPriority,
                     command_payload: { message: desc, zone: areaName, coords, layerData: cmdLayerData },
                     actor: 'Commander'
                 })
@@ -3088,7 +3523,7 @@
                         </div>
                         <div style="display:flex;gap:12px;">
                             <button onclick="document.getElementById('criticalApprovalOverlay').remove();" style="flex:1;padding:14px;background:#f1f5f9;border:2px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:800;color:#64748b;cursor:pointer;">✗ Cancel</button>
-                            <button onclick="confirmCriticalDispatch(${JSON.stringify(params).replace(/"/g,'&quot;')})" style="flex:1;padding:14px;background:#ef4444;border:none;border-radius:10px;font-size:15px;font-weight:900;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(239,68,68,0.4);">🚨 CONFIRM DISPATCH</button>
+                            <button onclick="confirmCriticalDispatch(${JSON.stringify(params).replace(/"/g, '&quot;')})" style="flex:1;padding:14px;background:#ef4444;border:none;border-radius:10px;font-size:15px;font-weight:900;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(239,68,68,0.4);">🚨 CONFIRM DISPATCH</button>
                         </div>
                     </div>
                 </div>
@@ -3117,8 +3552,9 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     group_id: params.teamId || null,
-                    rescuer_phone: params.rescuerPhone || null,
+                    target_user_id: params.rescuerPhone || null,
                     command_type: 'critical',
+                    priority: 'critical',
                     command_payload: { message: params.desc, zone: params.areaName, coords: params.coords },
                     actor: 'Commander'
                 })
@@ -3201,20 +3637,23 @@
         }
 
         function renderRescueRequests() {
-            const list = document.getElementById('rescueRequestsList');
-            if (!list) return;
+            const criticalList = document.getElementById('rescueRequestsCritical');
+            const normalList = document.getElementById('rescueRequestsNormal');
+            if (!criticalList || !normalList) return;
 
-            list.innerHTML = '';
+            criticalList.innerHTML = '';
+            normalList.innerHTML = '';
 
             if (rescueRequests.length === 0) {
-                list.innerHTML = '<div style="padding:12px; text-align:center; color:var(--text-muted); font-size:12px;">No pending requests</div>';
+                normalList.innerHTML = '<div style="padding:12px; text-align:center; color:var(--text-muted); font-size:12px;">No pending requests</div>';
                 return;
             }
+
             rescueRequests.forEach((req, index) => {
                 let typeLabel = req.type.charAt(0).toUpperCase() + req.type.slice(1) + ' Rescue';
                 let color = 'var(--special)';
                 let bg = '#f3e8ff';
-                let isDelivery = false;
+                let isCritical = true;
 
                 if (req.type === 'medical') {
                     color = 'var(--critical)';
@@ -3228,12 +3667,12 @@
                     color = 'var(--pending)';
                     bg = '#fffbeb';
                     typeLabel = req.type === 'food' ? '📦 Food Delivery' : '💊 Medical Supply';
-                    isDelivery = true;
+                    isCritical = false;
                 } else if (req.type === 'sos') {
-                    color = 'var(--pending)';
-                    bg = '#fffbeb';
+                    color = 'var(--critical)';
+                    bg = 'rgba(239,68,68,0.05)';
                     typeLabel = '🚨 SOS Alert Response';
-                    isDelivery = true;
+                    isCritical = true;
                 }
 
                 // Parse details for quantities
@@ -3245,29 +3684,29 @@
                         if (d.food) items.push(`🍞 Food: <b>${d.food}</b>`);
                         if (d.med) items.push(`💊 Medicine: <b>${d.med}</b>`);
                         if (d.sanitary) items.push(`🧻 Sanitary: <b>${d.sanitary}</b>`);
-                        
+
                         if (items.length > 0) {
                             detailsHtml = `<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
                                 ${items.join(' • ')}
                             </div>`;
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 }
 
                 const num = String(index + 1).padStart(2, '0');
-                const user = (window.currentUsers || []).find(u => u.device_id === req.device_id || u.phone === req.device_id || u.phone === req.phone);
+                const user = (currentUsers || []).find(u => u.device_id === req.device_id || u.phone === req.device_id || u.phone === req.phone);
                 const nickName = user ? (user.serial_number || user.name) : (req.phone || req.device_id || 'Unknown');
 
-                const assignBtnLabel = (req.type === 'sos' || req.type === 'food') ? 'Assign as Normal Task' : 'Accept & Assign';
+                const assignBtnLabel = !isCritical ? 'Assign as Normal Task' : 'Accept & Assign';
 
-                list.innerHTML += `
-                    <div class="notif-item actionable-item" style="align-items: flex-start; border-left: 3px solid ${color}; cursor:pointer;" 
+                const html = `
+                    <div class="notif-item actionable-item" style="align-items: flex-start; border-left: 3px solid ${color}; cursor:pointer; margin-bottom:8px;" 
                          onclick="openAssignModal('${req.id}', '${typeLabel}', '${req.sector}', '${req.urgency}', '${num}')">
                         <div class="notif-icon" style="background:${bg}; color:${color}; font-weight:900; font-size:12px;">${num}</div>
                         <div class="notif-content">
                             <div class="notif-title" style="color:${color}; font-weight:800; display:flex; justify-content:space-between; align-items:center;">
                                 <span>${typeLabel}</span>
-                                <span style="font-size:9px; background:${bg}; padding:2px 4px; border-radius:3px;">${isDelivery ? 'NORMAL TASK' : 'CRITICAL'}</span>
+                                <span style="font-size:9px; background:${bg}; padding:2px 4px; border-radius:3px;">${!isCritical ? 'NORMAL' : 'CRITICAL'}</span>
                             </div>
                             <div class="notif-count text-sm text-muted" style="margin-bottom:6px;">
                                 <b>Person:</b> <span style="color:var(--text-main); font-weight:700;">${nickName}</span><br>
@@ -3282,7 +3721,21 @@
                         </div>
                     </div>
                 `;
+
+                if (isCritical) {
+                    criticalList.innerHTML += html;
+                } else {
+                    normalList.innerHTML += html;
+                }
             });
+
+            if (criticalList.innerHTML === '') {
+                criticalList.innerHTML = '<div style="padding:8px; text-align:center; color:var(--text-muted); font-size:11px; background:#f8fafc; border-radius:8px; border:1px dashed var(--border);">No critical alerts</div>';
+            }
+            if (normalList.innerHTML === '') {
+                normalList.innerHTML = '<div style="padding:8px; text-align:center; color:var(--text-muted); font-size:11px; background:#f8fafc; border-radius:8px; border:1px dashed var(--border);">No normal logistics</div>';
+            }
+            lucide.createIcons();
         }
 
         async function populateAssignDropdowns() {
@@ -3310,7 +3763,7 @@
             document.getElementById('assignReqId').value = id;
             document.getElementById('assignReqTitle').innerHTML = `<span style="background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; color: var(--text-muted); margin-right: 6px;">${num}</span> ${title}`;
             document.getElementById('assignReqDetails').innerText = `${sector}, urgency ${urgency}`;
-            
+
             // Dynamic Title based on request type
             const modalTitle = document.querySelector('#assignModal .modal-title');
             if (title.toLowerCase().includes('sos') || title.toLowerCase().includes('food')) {
@@ -3318,7 +3771,7 @@
             } else {
                 modalTitle.innerText = "Assign Rescue Operation";
             }
-            
+
             populateAssignDropdowns();
             document.getElementById('assignModal').style.display = 'flex';
         }
@@ -3346,12 +3799,14 @@
                     });
                     showAdminToast('Task successfully reassigned!');
                 } else {
+                    const priority = document.querySelector('#assignModal .modal-title').innerText.toLowerCase().includes('normal') ? 'normal' : 'critical';
                     await fetch(`${API_BASE}/rescue-requests/${rawId}/accept`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             assigned_user_id: personId || null,
-                            assigned_group_id: groupId || null
+                            assigned_group_id: groupId || null,
+                            priority: priority
                         })
                     });
                 }
@@ -3374,26 +3829,41 @@
 
         async function fetchDashboardStats() {
             try {
-                const res = await fetch('http://localhost:3001/api/dashboard-stats');
+                // 1. Fetch Summary Stats from specialized endpoint
+                const res = await fetch(`${API_BASE}/dashboard-stats`);
                 const stats = await res.json();
 
-                // Update Badge Counts
-                document.getElementById('sosCallsBadge').innerText = stats.sos.total;
-                document.getElementById('foodDistBadge').innerText = stats.food.total;
+                if (document.getElementById('sosCallsBadge')) {
+                    document.getElementById('sosCallsBadge').innerText = stats.sos.total;
+                    document.getElementById('foodDistBadge').innerText = stats.food.total;
+                    document.getElementById('opSosCount').innerText = stats.sos.total;
+                    const sosPct = stats.sos.total > 0 ? (stats.sos.completed / stats.sos.total) * 100 : 0;
+                    document.getElementById('opSosBar').style.width = sosPct + '%';
+                    document.getElementById('opFoodCount').innerText = stats.food.total;
+                    const foodPct = stats.food.total > 0 ? (stats.food.completed / stats.food.total) * 100 : 0;
+                    document.getElementById('opFoodBar').style.width = foodPct + '%';
+                    document.getElementById('opMedCount').innerText = stats.medical.total;
+                    const medPct = stats.medical.total > 0 ? (stats.medical.completed / stats.medical.total) * 100 : 0;
+                    document.getElementById('opMedBar').style.width = medPct + '%';
+                }
 
-                // Update Progress Bars & Counts
-                document.getElementById('opSosCount').innerText = stats.sos.total;
-                const sosPct = stats.sos.total > 0 ? (stats.sos.completed / stats.sos.total) * 100 : 0;
-                document.getElementById('opSosBar').style.width = sosPct + '%';
+                // 2. Fetch raw requests for secondary stats
+                const reqRes = await fetch(`${API_BASE}/rescue-requests`);
+                const data = await reqRes.json();
 
-                document.getElementById('opFoodCount').innerText = stats.food.total;
-                const foodPct = stats.food.total > 0 ? (stats.food.completed / stats.food.total) * 100 : 0;
-                document.getElementById('opFoodBar').style.width = foodPct + '%';
+                const rawStats = {
+                    sos: data.filter(r => (r.type === 'sos' || r.type === 'medical' || r.type === 'pregnancy') && r.status !== 'completed').length,
+                    food: data.filter(r => (r.type === 'food' || r.type === 'delivery' || r.type === 'medical_delivery') && r.status !== 'completed').length,
+                    rescuers: (currentUsers || []).filter(u => u.role?.toLowerCase() === 'rescuer').length,
+                    active: data.filter(r => r.status === 'accepted').length
+                };
 
-                document.getElementById('opMedCount').innerText = stats.medical.total;
-                const medPct = stats.medical.total > 0 ? (stats.medical.completed / stats.medical.total) * 100 : 0;
-                document.getElementById('opMedBar').style.width = medPct + '%';
-
+                if (document.getElementById('sosCount')) {
+                    document.getElementById('sosCount').innerText = rawStats.sos;
+                    document.getElementById('foodCount').innerText = rawStats.food;
+                    document.getElementById('rescuerCount').innerText = rawStats.rescuers;
+                    document.getElementById('activeCount').innerText = rawStats.active;
+                }
             } catch (e) {
                 console.error("Error fetching dashboard stats", e);
             }
@@ -3403,21 +3873,29 @@
             try {
                 const res = await fetch(`${API_BASE}/commands`);
                 const data = await res.json();
-                
+
                 // Map the DB commands to the UI format
                 cmds = data.map(c => {
                     let payload = {};
-                    try { payload = JSON.parse(c.command_payload); } catch(e) {}
-                    
+                    try { payload = JSON.parse(c.command_payload); } catch (e) { }
+
                     return {
                         id: 'CMD-' + c.id,
                         desc: payload.message || c.command_payload,
                         type: c.command_type,
+                        priority: c.priority || 'normal',
                         zone: payload.sector || payload.zone || 'N/A',
                         team: c.target_phone || (c.group_id ? `Group ${c.group_id}` : 'Unassigned'),
                         time: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                         status: c.status.charAt(0).toUpperCase() + c.status.slice(1),
-                        rescueReqId: payload.rescue_req_id || null
+                        rescueReqId: payload.rescue_req_id || c.requester_db_id || null,
+                        requesterName: c.requester_name || payload.requester_name || null,
+                        requesterPhone: c.requester_phone || payload.requester_phone || null,
+                        requesterType: c.requester_type || payload.type || null,
+                        requesterLat: c.requester_lat || null,
+                        requesterLng: c.requester_lng || null,
+                        requesterUrgency: c.requester_urgency || null,
+                        details: c.requester_details || payload.details || null
                     };
                 });
                 renderCmds();
@@ -3649,24 +4127,7 @@
             document.getElementById('assignExistingModal').style.display = 'flex';
         }
 
-        async function fetchDashboardStats() {
-            try {
-                const res = await fetch(`${API_BASE}/rescue-requests`);
-                const data = await res.json();
-                
-                const stats = {
-                    sos: data.filter(r => (r.type === 'sos' || r.type === 'medical' || r.type === 'pregnancy') && r.status !== 'completed').length,
-                    food: data.filter(r => (r.type === 'food' || r.type === 'delivery' || r.type === 'medical_delivery') && r.status !== 'completed').length,
-                    rescuers: currentUsers.filter(u => u.role === 'rescuer').length,
-                    active: data.filter(r => r.status === 'accepted').length
-                };
 
-                document.getElementById('sosCount').innerText = stats.sos;
-                document.getElementById('foodCount').innerText = stats.food;
-                document.getElementById('rescuerCount').innerText = stats.rescuers;
-                document.getElementById('activeCount').innerText = stats.active;
-            } catch (e) { console.error("Error fetching stats", e); }
-        }
 
         async function assignExistingMembers() {
             const userIds = Array.from(document.querySelectorAll('#availableMembersList input[name="assignUserSelect"]:checked')).map(c => parseInt(c.value));
@@ -3852,13 +4313,7 @@
             } catch (e) { console.error(e); }
         }
 
-        function closeModal(id) {
-            document.getElementById(id).style.display = 'none';
-        }
 
-        function openModal(id) {
-            document.getElementById(id).style.display = 'flex';
-        }
 
         // Initialize
         window.onload = () => {
