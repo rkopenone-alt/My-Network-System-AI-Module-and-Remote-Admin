@@ -446,9 +446,51 @@ app.post('/api/login', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/api/users/:id/combined-history', async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const user = await get(`SELECT phone, device_id FROM users WHERE id = ?`, [userId]);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const groups = await all(`SELECT group_id FROM group_members WHERE user_id = ?`, [userId]);
+        const groupIds = groups.map(g => g.group_id);
+        
+        // Personal Rescue Requests
+        const personalReqs = await all(`SELECT 'request' as source, id, type, sector, status, lat, lng, created_at, updated_at FROM rescue_requests WHERE assigned_user_id = ?`, [userId]);
+        
+        // Group & Personal Commands
+        let commandQuery = `SELECT 'command' as source, id, command_type as type, 'HQ Order' as sector, status, created_at, updated_at, command_payload FROM command_queue WHERE (target_phone = ?)`;
+        let params = [user.phone || user.device_id];
+        
+        if (groupIds.length > 0) {
+            commandQuery += ` OR (group_id IN (${groupIds.map(() => '?').join(',')}))`;
+            params = params.concat(groupIds);
+        }
+        
+        const commands = await all(commandQuery, params);
+        
+        // Process commands to match format
+        const processedCommands = commands.map(c => {
+            let payload = {};
+            try { payload = JSON.parse(c.command_payload); } catch(e) {}
+            return {
+                source: c.source,
+                id: c.id,
+                type: c.type,
+                sector: payload.message || c.sector,
+                status: c.status,
+                created_at: c.created_at,
+                updated_at: c.updated_at
+            };
+        });
+
+        const combined = [...personalReqs, ...processedCommands].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        res.json(combined);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/users/:id/history', async (req, res) => {
     try {
-        // Fetch tasks accepted/completed by this rescuer
         const history = await all(`SELECT * FROM rescue_requests WHERE assigned_user_id = ? ORDER BY updated_at DESC LIMIT 50`, [req.params.id]);
         res.json(history);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -906,39 +948,7 @@ app.get('/api/commands', async (req, res) => {
     }
 });
 
-app.put('/api/commands/:id/reassign', async (req, res) => {
-    const { assigned_user_id, assigned_group_id } = req.body;
-    const cmdId = req.params.id;
-    try {
-        let assignedPhone = null;
-        let assignedDeviceId = null;
-        let assignedName = 'Team';
 
-        if (assigned_user_id) {
-            const user = await get(`SELECT phone, device_id, name FROM users WHERE id = ?`, [assigned_user_id]);
-            if (user) {
-                assignedPhone = user.phone;
-                assignedDeviceId = user.device_id;
-                assignedName = user.name;
-            }
-        }
-
-        await run(`UPDATE command_queue SET group_id = ?, target_phone = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-            [assigned_group_id || null, assignedPhone || assignedDeviceId || null, cmdId]);
-
-        const cmd = await get(`SELECT * FROM command_queue WHERE id = ?`, [cmdId]);
-        
-        // Notify new assignee
-        if (assignedPhone || assignedDeviceId) {
-            await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
-                [assignedDeviceId || assignedPhone, 'direct_command', `🚨 RE-ASSIGNED TASK: ${JSON.parse(cmd.command_payload).message}. Please acknowledge.`, 1]);
-        }
-
-        broadcast('COMMAND_REASSIGNED', cmd);
-        await logCommand('COMMAND_REASSIGNED', 'Commander', `CMD ID: ${cmdId}`, { assigned_user_id, assigned_group_id });
-        res.json(cmd);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
 
 // Direct command from admin to a specific rescuer/group
 app.post('/api/commands', async (req, res) => {

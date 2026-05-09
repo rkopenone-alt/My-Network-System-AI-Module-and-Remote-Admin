@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
@@ -915,17 +917,17 @@
         /* Non-Dashboard Pages */
         .page-content {
             display: none;
-            padding: 32px;
+            padding: 24px;
             flex: 1;
             overflow-y: auto;
             background: var(--bg-body);
         }
 
         .page-header {
-            margin-bottom: 24px;
+            margin-bottom: 16px;
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
+            align-items: center;
         }
 
         .page-title {
@@ -940,7 +942,7 @@
         .filters-bar {
             display: flex;
             gap: 12px;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
             background: white;
             padding: 16px;
             border-radius: 8px;
@@ -1659,9 +1661,14 @@
         <!-- 4. ACTION HISTORY LOG PAGE -->
         <div id="page-history" class="page-content">
             <div class="page-header">
-                <h2 class="page-title"><i data-lucide="history" style="color:var(--accent);"></i> Action History Log
-                </h2>
-                <button class="btn btn-outline"><i data-lucide="download" style="width:16px;"></i> Export CSV</button>
+                <div style="display: flex; align-items: center; gap: 24px;">
+                    <h2 class="page-title" style="margin:0;"><i data-lucide="history" style="color:var(--accent);"></i> Action History Log</h2>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-primary" id="btnHistOngoing" onclick="setHistoryFilter('ongoing')" style="padding: 6px 16px; font-size: 13px;">Ongoing List</button>
+                        <button class="btn btn-outline" id="btnHistCompleted" onclick="setHistoryFilter('completed')" style="padding: 6px 16px; font-size: 13px;">Complete Selection</button>
+                    </div>
+                </div>
+                <button class="btn btn-outline" onclick="exportHistoryToPDF()"><i data-lucide="file-text" style="width:16px;"></i> Export Report (PDF)</button>
             </div>
 
             <div class="filters-bar">
@@ -1677,8 +1684,8 @@
                 </div>
             </div>
 
-            <div style="margin-bottom: 24px;">
-                <h3 style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--critical);">
+            <div style="margin-bottom: 16px;">
+                <h3 style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--critical); font-size: 16px;">
                     <i data-lucide="alert-circle" style="width:20px;"></i> Critical Task History
                 </h3>
                 <div class="card" style="padding:0; overflow:hidden;">
@@ -1694,6 +1701,7 @@
                                 <th>Req. Time</th>
                                 <th>Cmd Time</th>
                                 <th>Status</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="historyTbodyCritical">
@@ -1704,7 +1712,7 @@
             </div>
 
             <div>
-                <h3 style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--accent);">
+                <h3 style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--accent); font-size: 16px;">
                     <i data-lucide="box" style="width:20px;"></i> Normal Task History
                 </h3>
                 <div class="card" style="padding:0; overflow:hidden;">
@@ -1720,6 +1728,7 @@
                                 <th>Req. Time</th>
                                 <th>Cmd Time</th>
                                 <th>Status</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="historyTbodyNormal">
@@ -2434,8 +2443,12 @@
         }
 
         let activeMacroZoneLayer = null;
+        let currentActiveOp = null;
 
         function enterDashboard(opId) {
+            let op = operations.find(o => o.id === opId);
+            currentActiveOp = op;
+            
             document.getElementById('operationalHub').style.display = 'none';
             document.querySelector('.top-nav').style.display = 'flex';
             document.getElementById('appWrapper').style.display = 'flex';
@@ -2637,6 +2650,14 @@
         let drawnLayer;
         let drawMode = null; // null until user selects radius or area
         let zoneOverlay;
+        let historyStatusFilter = 'ongoing';
+
+        function setHistoryFilter(status) {
+            historyStatusFilter = status;
+            document.getElementById('btnHistOngoing').className = status === 'ongoing' ? 'btn btn-primary' : 'btn btn-outline';
+            document.getElementById('btnHistCompleted').className = status === 'completed' ? 'btn btn-primary' : 'btn btn-outline';
+            renderCmds();
+        }
 
         function initMap() {
             map = L.map('map', { zoomControl: false }).setView([13.0827, 80.2707], 13);
@@ -3083,7 +3104,8 @@
                         if (items.length > 0) itemsHtml = items.join(' • ');
                     } catch (e) { }
                 }
-                reqItems.innerHTML = itemsHtml;
+                const itemsListEl = document.getElementById('reqItemsList');
+                if (itemsListEl) itemsListEl.innerHTML = itemsHtml;
             } else {
                 reqSection.style.display = 'none';
             }
@@ -3159,7 +3181,7 @@
                     <td style="color:var(--text-muted); font-size: 12px;">${c.cmdTime || c.time}</td>
                     <td><span class="tag ${getTagForStatus(c.status)}">${c.status}</span></td>
                     <td>
-                        ${isReassignable ? `<button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id.replace('CMD-', '')}')">🔄 Reassign</button>` : '-'}
+                        ${isReassignable ? `<button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Reassign</button>` : '-'}
                     </td>
                 </tr>`;
 
@@ -3197,14 +3219,32 @@
                     <td style="color:var(--text-muted); font-size: 12px;">${c.reqTime || c.time}</td>
                     <td style="color:var(--text-muted); font-size: 12px;">${c.cmdTime || c.time}</td>
                     <td><span class="tag ${getTagForStatus(c.status)}">${c.status}</span></td>
+                    <td>
+                        ${isOngoing ? `<button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Reassign</button>` : '-'}
+                    </td>
                 </tr>`;
 
-                if (isCrit) {
-                    critHistCount++;
-                    histCriticalHtml += historyRow.replace('{SNO}', String(critHistCount).padStart(2, '0'));
+                if (historyStatusFilter === 'ongoing') {
+                    if (isOngoing) {
+                        if (isCrit) {
+                            critHistCount++;
+                            histCriticalHtml += historyRow.replace('{SNO}', String(critHistCount).padStart(2, '0'));
+                        } else {
+                            normHistCount++;
+                            histNormalHtml += historyRow.replace('{SNO}', String(normHistCount).padStart(2, '0'));
+                        }
+                    }
                 } else {
-                    normHistCount++;
-                    histNormalHtml += historyRow.replace('{SNO}', String(normHistCount).padStart(2, '0'));
+                    // Completed filter
+                    if (!isOngoing) {
+                        if (isCrit) {
+                            critHistCount++;
+                            histCriticalHtml += historyRow.replace('{SNO}', String(critHistCount).padStart(2, '0'));
+                        } else {
+                            normHistCount++;
+                            histNormalHtml += historyRow.replace('{SNO}', String(normHistCount).padStart(2, '0'));
+                        }
+                    }
                 }
             });
 
@@ -3230,8 +3270,8 @@
             document.getElementById('liveCmdBodyNormal').innerHTML = liveNormHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No normal commands</td></tr>';
             document.getElementById('compCmdBody').innerHTML = compHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No completed commands</td></tr>';
 
-            document.getElementById('historyTbodyCritical').innerHTML = histCriticalHtml || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted)">No critical history</td></tr>';
-            document.getElementById('historyTbodyNormal').innerHTML = histNormalHtml || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted)">No normal history</td></tr>';
+            document.getElementById('historyTbodyCritical').innerHTML = histCriticalHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No critical history found</td></tr>';
+            document.getElementById('historyTbodyNormal').innerHTML = histNormalHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No normal history found</td></tr>';
 
             // Handle Critical Operations Hub
             const criticalMissions = cmds.filter(c => c.type === 'critical' && c.status !== 'Completed');
@@ -3254,7 +3294,7 @@
                             ${m.requesterName ? `<br><span style="display:inline-block; margin-top:4px; color:var(--primary); font-weight:700;">👤 Requester: ${m.requesterName}</span>` : ''}
                         </div>
                         <div style="display:flex; gap:8px;">
-                            <button class="btn btn-outline" style="flex:1; padding:6px; font-size:10px; font-weight:700;" onclick="openReassignModal('${m.id.replace('CMD-', '')}')">🔄 RE-ASSIGN</button>
+                            <button class="btn btn-outline" style="flex:1; padding:6px; font-size:10px; font-weight:700;" onclick="openReassignModal('${m.id}')">🔄 RE-ASSIGN</button>
                             <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700;" onclick="selectTask('${m.id}')">👁️ VIEW</button>
                         </div>
                     </div>
@@ -3265,16 +3305,7 @@
             lucide.createIcons();
         }
 
-        function openReassignModal(cmdId) {
-            const cmd = cmds.find(c => c.id === 'CMD-' + cmdId);
-            if (!cmd) return;
 
-            document.getElementById('assignReqId').value = 'CMD_REF:' + cmdId;
-            document.getElementById('assignReqTitle').innerHTML = `<span style="background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; color: var(--text-muted); margin-right: 6px;">REF</span> RE-ASSIGN: ${cmd.desc}`;
-            document.getElementById('assignReqDetails').innerText = `Currently assigned to: ${cmd.team}`;
-            populateAssignDropdowns();
-            document.getElementById('assignModal').style.display = 'flex';
-        }
 
         async function reassignTask(cmdId, personId, groupId) {
             // This is handled by dispatchAssignment if I update it to detect CMD_REF
@@ -3404,10 +3435,14 @@
             const cmd = cmds.find(c => c.id === id);
             if (!cmd) return;
 
+            // Extract numeric ID for backend
+            const dbId = id.replace('CMD-', '');
+
             // Use the existing assignModal UI but customize it
             const modal = document.getElementById('assignModal');
             document.querySelector('#assignModal .modal-title').innerText = `Reassign Command: ${id}`;
-            document.getElementById('assignReqTitle').innerText = cmd.desc;
+            document.getElementById('assignReqId').value = 'CMD_REF:' + dbId;
+            document.getElementById('assignReqTitle').innerHTML = `<span style="background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; color: var(--text-muted); margin-right: 6px;">REF</span> RE-ASSIGN: ${cmd.desc}`;
             document.getElementById('assignReqDetails').innerText = `Currently assigned to: ${cmd.team}`;
 
             // Clear selections
@@ -3416,6 +3451,7 @@
 
             // Populate person select if not done
             populateIndividualSelect('assignPersonSelect');
+            populateAssignDropdowns(); // Ensure groups are also populated
 
             // Change button click handler temporarily
             const dispatchBtn = document.querySelector('#assignModal .btn-primary');
@@ -3442,7 +3478,9 @@
                 document.querySelector(`#assignGroupSelect option[value="${groupId}"]`).textContent;
 
             try {
-                const response = await fetch(`${API_BASE}/commands/${reassigningCmdId}/reassign`, {
+                // Use numeric ID for the API
+                const dbId = reassigningCmdId.replace('CMD-', '');
+                const response = await fetch(`${API_BASE}/commands/${dbId}/reassign`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -3469,6 +3507,101 @@
                 const dispatchBtn = document.querySelector('#assignModal .btn-primary');
                 dispatchBtn.setAttribute('onclick', 'dispatchAssignment()');
             }
+        }
+
+        
+        // --- PDF EXPORT LOGIC ---
+        function exportHistoryToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4'); // Landscape A4
+            
+            // Add Logo or System Name
+            doc.setFontSize(22);
+            doc.setTextColor(15, 23, 42); // var(--primary)
+            doc.text("RESCUE MISSION COMMAND - ACTION HISTORY", 14, 18);
+            
+            // Operation Context
+            if (currentActiveOp) {
+                doc.setFontSize(14);
+                doc.setTextColor(37, 99, 235); // var(--accent)
+                doc.text(`Active Operation: ${currentActiveOp.name}`, 14, 26);
+                
+                doc.setFontSize(10);
+                doc.setTextColor(71, 85, 105);
+                doc.text(`Initiated: ${currentActiveOp.date} | ID: ${currentActiveOp.id}`, 14, 32);
+                
+                if (currentActiveOp.zoneData) {
+                    const zoneStr = currentActiveOp.zoneData.type === 'radius' 
+                        ? `Center: ${currentActiveOp.zoneData.latlng.lat.toFixed(4)}, ${currentActiveOp.zoneData.latlng.lng.toFixed(4)} (Radius: ${(currentActiveOp.zoneData.radius / 1000).toFixed(2)}km)`
+                        : `Boundaries Defined Area`;
+                    doc.text(`Main Zone: ${zoneStr}`, 14, 37);
+                }
+            }
+
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139); // var(--text-muted)
+            const dateStr = new Date().toLocaleString();
+            doc.text(`Report Exported: ${dateStr}`, 14, currentActiveOp ? 43 : 28);
+            
+            const startY = currentActiveOp ? 48 : 35;
+
+            // Filter data based on current view if needed, or export all
+            const tableData = cmds.map((c, index) => {
+                const isCritical = ['sos', 'rescue', 'emergency'].includes(c.type.toLowerCase());
+                const priority = isCritical ? 'CRITICAL' : 'NORMAL';
+                
+                let taskDesc = c.desc;
+                if (c.requesterName) {
+                    taskDesc += `\n[Requester: ${c.requesterName}]`;
+                }
+                
+                return [
+                    String(index + 1).padStart(2, '0'),
+                    c.id,
+                    taskDesc,
+                    priority,
+                    c.type.toUpperCase(),
+                    c.zone.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim(), 
+                    c.team,
+                    c.reqTime || '-',
+                    c.status.toUpperCase()
+                ];
+            });
+            
+            doc.autoTable({
+                startY: startY,
+                head: [['S.#', 'ID', 'TASK / DESCRIPTION', 'PRIORITY', 'TYPE', 'ZONE / AREA', 'TEAM', 'REQ TIME', 'STATUS']],
+                body: tableData,
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold', halign: 'center' },
+                columnStyles: {
+                    0: { cellWidth: 10, halign: 'center' },
+                    1: { cellWidth: 18 },
+                    2: { cellWidth: 55 },
+                    3: { cellWidth: 20, fontStyle: 'bold' },
+                    4: { cellWidth: 18 },
+                    5: { cellWidth: 40 },
+                    6: { cellWidth: 35 },
+                    7: { cellWidth: 20, halign: 'center' },
+                    8: { cellWidth: 20, halign: 'center' }
+                },
+                alternateRowStyles: { fillColor: [248, 250, 252] },
+                margin: { top: 35, left: 14, right: 14 },
+                tableWidth: 'auto',
+                didDrawPage: (data) => {
+                    // Footer
+                    const str = "Page " + doc.internal.getNumberOfPages();
+                    doc.setFontSize(10);
+                    const pageSize = doc.internal.pageSize;
+                    const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+                    doc.text(str, data.settings.margin.left, pageHeight - 10);
+                }
+            });
+            
+            // Save PDF
+            doc.save(`Rescue_Action_History_${new Date().getTime()}.pdf`);
+            showAdminToast("PDF Report generated and downloading...");
         }
 
         function createCommand() {

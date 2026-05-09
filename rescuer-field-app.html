@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Field Rescuer App - Professional Platform</title>
     
     <!-- Google Fonts -->
@@ -12,6 +12,10 @@
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     
     <style>
         :root {
@@ -43,12 +47,14 @@
 
         body, html {
             height: 100%;
+            height: 100dvh;
             font-family: 'Outfit', sans-serif;
             background-color: #cbd5e1;
             display: flex;
             justify-content: center;
             align-items: center;
             overflow: hidden;
+            overscroll-behavior: none;
         }
 
         /* Phone Mockup Wrapper */
@@ -56,6 +62,7 @@
             width: 400px;
             max-width: 100%;
             height: 100%;
+            height: 100dvh;
             max-height: 850px;
             background: #1e293b;
             border-radius: 40px;
@@ -65,6 +72,7 @@
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
+            transition: height 0.3s ease-out;
         }
 
         @media (max-width: 450px) {
@@ -628,7 +636,10 @@
             <div class="screen" id="screenHistory">
                 <div class="dashboard-header">
                     <h2 style="font-size: 22px; font-weight: 900;">Mission History</h2>
-                    <div class="control-btn" onclick="core.nav('Home')">✕</div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="control-btn" onclick="core.exportHistoryToPDF()" title="Download PDF Log">📥</div>
+                        <div class="control-btn" onclick="core.nav('Home')">✕</div>
+                    </div>
                 </div>
                 
                 <div class="history-content">
@@ -687,6 +698,10 @@
                             <div class="item-label"><i>🌍</i> Map Cache</div>
                             <div class="item-val">OFFLINE</div>
                         </div>
+                        <div class="settings-item" onclick="core.exportHistoryToPDF()">
+                            <div class="item-label"><i>📥</i> Download Mission Log</div>
+                            <div class="item-val">PDF</div>
+                        </div>
                     </div>
                     
                     <div class="logout-btn" onclick="core.logout()">SECURE SESSION LOGOUT</div>
@@ -735,6 +750,7 @@
             allHistory: [],
             
             init() {
+                this.setupKeyboardHandling();
                 const saved = localStorage.getItem('rescue_user_v3');
                 if (saved) {
                     this.user = JSON.parse(saved);
@@ -1102,7 +1118,7 @@
                 list.innerHTML = '<div style="text-align:center; padding:20px;"><div class="spinner" style="width:24px; height:24px; margin:0 auto;"></div></div>';
                 
                 try {
-                    const res = await fetch(`${this.API}/users/${this.user.id}/history`);
+                    const res = await fetch(`${this.API}/users/${this.user.id}/combined-history`);
                     this.allHistory = await res.json();
                     this.renderHistory(this.allHistory);
                 } catch (e) {
@@ -1195,6 +1211,72 @@
             toggleMapType() {
                 this.toast('Switching to Satellite View...', '🗺️');
             },
+
+            exportHistoryToPDF() {
+                if (this.allHistory.length === 0) {
+                    this.toast('NO MISSION LOGS TO EXPORT', '⚠️');
+                    return;
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                const now = new Date();
+
+                // Header Branding
+                doc.setFillColor(14, 165, 233); // Primary Color
+                doc.rect(0, 0, 210, 40, 'F');
+                
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(22);
+                doc.setFont("helvetica", "bold");
+                doc.text("OFFICER MISSION LOG", 15, 25);
+                
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "normal");
+                doc.text(`RESCUER: ${this.user.name.toUpperCase()}`, 15, 33);
+                doc.text(`ID: ${this.user.serial_number || 'MEM-01'}`, 130, 33);
+                doc.text(`EXPORTED: ${now.toLocaleString()}`, 130, 25);
+
+                // Table Construction
+                const tableData = this.allHistory.map((h, index) => [
+                    index + 1,
+                    h.type.toUpperCase(),
+                    h.sector,
+                    h.source === 'command' ? 'HQ DIRECTIVE' : 'CITIZEN SOS',
+                    h.status.toUpperCase(),
+                    new Date(h.updated_at).toLocaleDateString(),
+                    new Date(h.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                ]);
+
+                doc.autoTable({
+                    startY: 50,
+                    head: [['#', 'MISSION TYPE', 'SECTOR / MESSAGE', 'SOURCE', 'STATUS', 'DATE', 'TIME']],
+                    body: tableData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [14, 165, 233], textColor: 255, fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
+                    margin: { top: 50 },
+                    styles: { fontSize: 9, cellPadding: 4 },
+                    columnStyles: {
+                        0: { cellWidth: 10 },
+                        2: { cellWidth: 'auto' },
+                        3: { cellWidth: 30 }
+                    }
+                });
+
+                // Footer
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(100);
+                    doc.text(`Confidential Field Report - Page ${i} of ${pageCount}`, 105, 285, null, null, "center");
+                }
+
+                const fileName = `Mission_Log_${this.user.serial_number || 'OFFICER'}_${now.toISOString().split('T')[0]}.pdf`;
+                doc.save(fileName);
+                this.toast('MISSION LOG DOWNLOADED', '📥');
+            },
             
             toast(msg, icon = 'ℹ️') {
                 const t = document.createElement('div');
@@ -1204,7 +1286,30 @@
                 setTimeout(() => t.remove(), 3500);
             },
             
-            showLoader(val) { document.getElementById('loader').style.display = val ? 'flex' : 'none'; }
+            showLoader(val) { document.getElementById('loader').style.display = val ? 'flex' : 'none'; },
+
+            setupKeyboardHandling() {
+                // Scroll active elements into view on focus
+                window.addEventListener('focusin', (e) => {
+                    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+                        setTimeout(() => {
+                            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 300);
+                    }
+                });
+
+                // Adjust mockup height for Visual Viewport (handles mobile keyboard overlap)
+                if (window.visualViewport) {
+                    window.visualViewport.addEventListener('resize', () => {
+                        const mockup = document.querySelector('.phone-mockup');
+                        if (window.innerWidth <= 450) {
+                            mockup.style.height = `${window.visualViewport.height}px`;
+                        } else {
+                            mockup.style.height = '100dvh';
+                        }
+                    });
+                }
+            }
         };
         
         // Leaflet CSS Override

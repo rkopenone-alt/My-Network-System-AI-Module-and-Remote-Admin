@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Public SOS App - Citizen Support</title>
     
     <!-- Google Fonts -->
@@ -39,12 +39,14 @@
 
         body, html {
             height: 100%;
+            height: 100dvh;
             font-family: 'Outfit', sans-serif;
             background-color: #cbd5e1;
             display: flex;
             justify-content: center;
             align-items: center;
             overflow: hidden;
+            overscroll-behavior: none;
         }
 
         /* Phone Mockup Wrapper */
@@ -52,6 +54,7 @@
             width: 400px;
             max-width: 100%;
             height: 100%;
+            height: 100dvh;
             max-height: 850px;
             background: #1e293b;
             border-radius: 40px;
@@ -61,6 +64,7 @@
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
+            transition: height 0.3s ease-out;
         }
 
         @media (max-width: 450px) {
@@ -210,7 +214,7 @@
 
         /* Dashboard Styles */
         .header {
-            padding: 24px 24px 12px;
+            padding: 20px 20px 10px;
             background: var(--surface);
             z-index: 100;
         }
@@ -219,7 +223,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
 
         .avatar-box {
@@ -239,7 +243,7 @@
 
         .sos-container {
             flex: 1;
-            padding: 24px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -307,49 +311,66 @@
             background: var(--surface);
             border: 2px solid var(--border);
             border-radius: 20px;
-            padding: 16px 10px;
+            padding: 10px 8px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             cursor: pointer;
             transition: 0.2s;
         }
 
-        .mode-btn.active {
+        .mode-btn.active, .route-btn.active {
             border-color: var(--primary);
             background: var(--primary-light);
             box-shadow: var(--shadow-sm);
         }
 
-        .mode-btn i { font-size: 28px; font-style: normal; }
-        .mode-btn span { font-size: 11px; font-weight: 800; color: var(--text-main); text-transform: uppercase; }
+        .route-btn {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            padding: 10px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .route-btn i { font-size: 20px; font-style: normal; }
+        .route-btn span { font-size: 10px; font-weight: 800; color: var(--text-main); text-transform: uppercase; }
+
+        .mode-btn i { font-size: 20px; font-style: normal; }
+        .mode-btn span { font-size: 10px; font-weight: 800; color: var(--text-main); text-transform: uppercase; }
 
         /* Request Form Screen */
-        .form-content { padding: 24px; flex: 1; overflow-y: auto; }
-        .section-label { font-size: 12px; font-weight: 900; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 16px; margin-top: 20px; }
+        .form-content { padding: 20px; flex: 1; overflow-y: auto; }
+        .section-label { font-size: 11px; font-weight: 900; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; margin-top: 14px; }
 
         .config-card {
             background: var(--surface);
-            border-radius: 24px;
+            border-radius: 20px;
             border: 1px solid var(--border);
-            padding: 20px;
-            margin-bottom: 24px;
+            padding: 15px;
+            margin-bottom: 16px;
         }
 
         .config-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
+            padding: 10px 0;
             border-bottom: 1px solid var(--border);
         }
         .config-row:last-child { border-bottom: none; }
         .config-row span { font-size: 15px; font-weight: 700; color: var(--text-main); }
 
-        .counter { display: flex; align-items: center; gap: 16px; background: var(--bg); padding: 6px 14px; border-radius: 12px; }
-        .counter button { border: none; background: none; font-size: 20px; font-weight: 900; color: var(--primary); cursor: pointer; padding: 0 4px; }
-        .counter span { font-size: 16px; font-weight: 800; min-width: 20px; text-align: center; }
+        .counter { display: flex; align-items: center; gap: 12px; background: var(--bg); padding: 4px 10px; border-radius: 12px; border: 1px solid var(--border); }
+        .counter button { border: none; background: none; font-size: 20px; font-weight: 900; color: var(--primary); cursor: pointer; padding: 0 8px; }
+        .counter input { width: 45px; border: none; background: transparent; text-align: center; font-size: 16px; font-weight: 800; font-family: inherit; color: var(--text-main); outline: none; -moz-appearance: textfield; }
+        .counter input::-webkit-outer-spin-button, .counter input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
         .submit-btn {
             background: var(--primary);
@@ -467,7 +488,7 @@
 
                     <div class="mode-selector">
                         <div class="mode-btn active" onclick="core.setMode('medical', this)"><i>🏥</i><span>Medical</span></div>
-                        <div class="mode-btn" onclick="core.setMode('food', this)"><i>🍱</i><span>Food</span></div>
+                        <div class="mode-btn" onclick="core.setMode('pregnancy', this)"><i>🤰</i><span>Pregnancy</span></div>
                         <div class="mode-btn" onclick="core.setMode('sos', this)"><i>🚨</i><span>Rescue</span></div>
                     </div>
                 </div>
@@ -488,13 +509,20 @@
                 </div>
                 
                 <div class="form-content">
+                    <div class="section-label">Preferred Rescue Route</div>
+                    <div class="config-card" style="display: flex; gap: 8px; padding: 0; background: transparent; border: none; box-shadow: none;">
+                        <div class="route-btn" onclick="core.setRoute('air', this)"><i>🚁</i><span>Air</span></div>
+                        <div class="route-btn" onclick="core.setRoute('boat', this)"><i>🚤</i><span>Boat</span></div>
+                        <div class="route-btn" onclick="core.setRoute('road', this)"><i>road</i><span>Road</span></div>
+                    </div>
+
                     <div class="section-label">Affected People</div>
                     <div class="config-card">
                         <div class="config-row">
                             <span>Total Count</span>
                             <div class="counter">
                                 <button onclick="core.updateNeeds('people', -1)">-</button>
-                                <span id="n_people">1</span>
+                                <input type="number" id="n_people" value="1" oninput="core.manualNeeds('people', this.value)">
                                 <button onclick="core.updateNeeds('people', 1)">+</button>
                             </div>
                         </div>
@@ -506,7 +534,7 @@
                             <span>Food Rations</span>
                             <div class="counter">
                                 <button onclick="core.updateNeeds('food', -1)">-</button>
-                                <span id="n_food">0</span>
+                                <input type="number" id="n_food" value="0" oninput="core.manualNeeds('food', this.value)">
                                 <button onclick="core.updateNeeds('food', 1)">+</button>
                             </div>
                         </div>
@@ -514,7 +542,7 @@
                             <span>Medical Kits</span>
                             <div class="counter">
                                 <button onclick="core.updateNeeds('med', -1)">-</button>
-                                <span id="n_med">0</span>
+                                <input type="number" id="n_med" value="0" oninput="core.manualNeeds('med', this.value)">
                                 <button onclick="core.updateNeeds('med', 1)">+</button>
                             </div>
                         </div>
@@ -522,15 +550,32 @@
                             <span>Sanitary Supplies</span>
                             <div class="counter">
                                 <button onclick="core.updateNeeds('sanitary', -1)">-</button>
-                                <span id="n_sanitary">0</span>
+                                <input type="number" id="n_sanitary" value="0" oninput="core.manualNeeds('sanitary', this.value)">
                                 <button onclick="core.updateNeeds('sanitary', 1)">+</button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="section-label">Location Details</div>
-                    <div class="config-card">
-                        <input type="text" id="inpLoc" class="input-field" placeholder="Apartment, Floor, Sector..." style="font-size:14px; padding:15px;">
+                    <div class="section-label">Location & Media Details</div>
+                    <div style="display: flex; gap: 10px; align-items: flex-start; margin-bottom: 20px;">
+                        <div class="config-card" style="flex: 8; margin-bottom: 0; padding: 0;">
+                            <textarea id="inpLoc" class="input-field" placeholder="Enter full address, apartment, floor, sector, or landmarks..." style="font-size:14px; padding:15px; min-height: 120px; resize: none; border-radius: 20px;"></textarea>
+                        </div>
+                        <div style="flex: 2; display: flex; flex-direction: column; gap: 10px;">
+                            <input type="file" id="camInput" accept="image/*" capture="camera" style="display:none" onchange="core.handlePhoto(this)">
+                            <div onclick="core.openCamera()" class="config-card" style="margin: 0; padding: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; background: var(--primary-light); border-color: var(--primary);">
+                                <span style="font-size: 20px;">📷</span>
+                                <span style="font-size: 8px; font-weight: 800; margin-top: 4px; color: var(--primary-dark)">ACTIVE</span>
+                            </div>
+                            <div onclick="core.toast('Voice input currently disabled', '🎙️')" class="config-card" style="margin: 0; padding: 15px; display: flex; justify-content: center; align-items: center; cursor: pointer; opacity: 0.5;">
+                                <span style="font-size: 20px;">🎙️</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="photoPreview" style="display:none; margin-bottom: 20px; position: relative;">
+                        <img id="capturedImg" src="" style="width:100%; border-radius: 20px; border: 2px solid var(--primary);">
+                        <div onclick="core.removePhoto()" style="position: absolute; top: 10px; right: 10px; background: var(--danger); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 900; cursor: pointer;">✕</div>
                     </div>
 
                     <button class="submit-btn" onclick="core.submitRequest()">CONFIRM & SEND SOS</button>
@@ -622,9 +667,10 @@
             user: null,
             sosTimer: null,
             mode: 'medical',
-            needs: { people: 1, food: 0, med: 0, sanitary: 0 },
+            needs: { people: 1, food: 0, med: 0, sanitary: 0, photo: null, route: null },
             
             init() {
+                this.setupKeyboardHandling();
                 const saved = localStorage.getItem('citizen_user');
                 if (saved) {
                     this.user = JSON.parse(saved);
@@ -720,7 +766,12 @@
             
             updateNeeds(key, val) {
                 this.needs[key] = Math.max(0, this.needs[key] + val);
-                document.getElementById('n_' + key).innerText = this.needs[key];
+                document.getElementById('n_' + key).value = this.needs[key];
+            },
+            
+            manualNeeds(key, val) {
+                this.needs[key] = Math.max(0, parseInt(val) || 0);
+                document.getElementById('n_' + key).value = this.needs[key];
             },
             
             startSOS() {
@@ -743,7 +794,12 @@
                         device_id: this.user.serial_number,
                         type: this.mode,
                         lat: 13.085, lng: 80.272,
-                        details: JSON.stringify({ needs: this.needs, sector: document.getElementById('inpLoc').value }),
+                        details: JSON.stringify({ 
+                            needs: this.needs, 
+                            photo: this.needs.photo, 
+                            route: this.needs.route || 'Not Defined',
+                            sector: document.getElementById('inpLoc').value 
+                        }),
                         urgency: 'critical',
                         sector: document.getElementById('inpLoc').value || 'Detected Location'
                     };
@@ -805,7 +861,67 @@
                 setTimeout(() => t.style.display = 'none', 3500);
             },
             
-            showLoader(val) { document.getElementById('loader').style.display = val ? 'flex' : 'none'; }
+            showLoader(val) { document.getElementById('loader').style.display = val ? 'flex' : 'none'; },
+
+            setupKeyboardHandling() {
+                // Scroll active elements into view on focus
+                window.addEventListener('focusin', (e) => {
+                    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+                        setTimeout(() => {
+                            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 300);
+                    }
+                });
+
+                // Adjust mockup height for Visual Viewport (handles mobile keyboard overlap)
+                if (window.visualViewport) {
+                    window.visualViewport.addEventListener('resize', () => {
+                        const mockup = document.querySelector('.phone-mockup');
+                        if (window.innerWidth <= 450) {
+                            mockup.style.height = `${window.visualViewport.height}px`;
+                        } else {
+                            mockup.style.height = '100dvh';
+                        }
+                    });
+                }
+            },
+
+            openCamera() {
+                document.getElementById('camInput').click();
+            },
+
+            handlePhoto(input) {
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.needs.photo = e.target.result;
+                        document.getElementById('capturedImg').src = e.target.result;
+                        document.getElementById('photoPreview').style.display = 'block';
+                        this.toast('PHOTO ATTACHED', '📸');
+                    };
+                    reader.readAsDataURL(input.files[0]);
+                }
+            },
+
+            removePhoto() {
+                this.needs.photo = null;
+                document.getElementById('camInput').value = '';
+                document.getElementById('photoPreview').style.display = 'none';
+                this.toast('PHOTO REMOVED', '🗑️');
+            },
+
+            setRoute(route, btn) {
+                if (this.needs.route === route) {
+                    this.needs.route = null;
+                    btn.classList.remove('active');
+                    this.toast('ROUTE DESELECTED', '📍');
+                } else {
+                    this.needs.route = route;
+                    document.querySelectorAll('.route-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    this.toast(`PREFERRING ${route.toUpperCase()}`, '🚀');
+                }
+            }
         };
         
         window.onload = () => core.init();
