@@ -654,6 +654,14 @@
                 </div>
             </div>
 
+            <!-- LOCATION POPUP -->
+            <div id="locationPopup" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.95); z-index:9999; justify-content:center; align-items:center; flex-direction:column; padding:20px; text-align:center;">
+                <div style="font-size:60px; margin-bottom:20px;">📍</div>
+                <h2 style="color:white; font-size:24px; font-weight:900; margin-bottom:10px;">Location Required</h2>
+                <p style="color:var(--text-muted); font-size:14px; font-weight:600; margin-bottom:30px;">Please enable location services so we can automatically capture your coordinates in an emergency.</p>
+                <button class="submit-btn" style="width:100%; box-shadow:none;" onclick="core.startLocationTracking()">GRANT ACCESS</button>
+            </div>
+
             <!-- LOADER -->
             <div class="full-loader" id="loader">
                 <div class="spinner"></div>
@@ -679,6 +687,30 @@
             needs: { people: 1, food: 0, med: 0, sanitary: 0, photo: null, route: null },
             retryQueue: [],
             backoff: [3000, 7000, 12000],
+            currentLocation: { lat: 13.085, lng: 80.272 },
+            locationWatcher: null,
+
+            startLocationTracking() {
+                if (!navigator.geolocation) {
+                    this.toast("Geolocation not supported", "🚫");
+                    return;
+                }
+                
+                document.getElementById('locationPopup').style.display = 'none';
+
+                this.locationWatcher = navigator.geolocation.watchPosition(
+                    (position) => {
+                        this.currentLocation.lat = position.coords.latitude;
+                        this.currentLocation.lng = position.coords.longitude;
+                        document.getElementById('locationPopup').style.display = 'none';
+                    },
+                    (error) => {
+                        console.error("Location error:", error);
+                        document.getElementById('locationPopup').style.display = 'flex';
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            },
             
             async init() {
                 this.setupKeyboardHandling();
@@ -697,6 +729,7 @@
                             this.showScreen('screenHome');
                             this.bootstrap();
                             this.connectGateway();
+                            this.startLocationTracking();
                         } else {
                             this.logout();
                         }
@@ -707,6 +740,7 @@
                         this.showScreen('screenHome');
                         this.bootstrap();
                         this.connectGateway();
+                        this.startLocationTracking();
                     } finally {
                         this.showLoader(false);
                     }
@@ -756,6 +790,7 @@
                         this.showScreen('screenHome');
                         this.bootstrap();
                         this.connectGateway();
+                        this.startLocationTracking();
                     } else {
                         const errData = await res.json();
                         err.innerText = errData.error || "INVALID CREDENTIALS";
@@ -915,7 +950,7 @@
                     phone: this.user.phone,
                     device_id: this.user.serial_number,
                     type: this.mode,
-                    lat: 13.085, lng: 80.272,
+                    lat: this.currentLocation.lat, lng: this.currentLocation.lng,
                     details: JSON.stringify({ 
                         needs: this.needs, 
                         photo: this.needs.photo, 
