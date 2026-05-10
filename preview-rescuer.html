@@ -694,9 +694,12 @@
                             <div class="item-label"><i>🔔</i> Dispatch Alerts</div>
                             <div class="item-val">ACTIVE</div>
                         </div>
-                        <div class="settings-item">
-                            <div class="item-label"><i>🌍</i> Map Cache</div>
-                            <div class="item-val">OFFLINE</div>
+                        <div class="settings-item" style="background: var(--primary-light);">
+                            <div class="item-label">
+                                <div id="syncStatusDot" style="width:10px; height:10px; border-radius:50%; background:var(--secondary); box-shadow:0 0 10px var(--secondary);"></div>
+                                <i>🔄</i> Reconnect Timing
+                            </div>
+                            <div class="item-val" id="dispSyncInterval">15s (Admin Set)</div>
                         </div>
                     </div>
                     
@@ -797,6 +800,43 @@
                 this.refresh();
                 this.startSync();
                 this.connectWS();
+                this.fetchSyncSettings();
+                
+                window.addEventListener('online', () => this.updateNetUI(true));
+                window.addEventListener('offline', () => this.updateNetUI(false));
+                this.updateNetUI(navigator.onLine);
+            },
+
+            async fetchSyncSettings() {
+                try {
+                    const res = await fetch(`${this.API}/settings`);
+                    if (res.ok) {
+                        const settings = await res.json();
+                        if (settings.retry_intervals) {
+                            this.refreshInterval = parseInt(settings.retry_intervals.split(',')[0]) || 15;
+                            const el = document.getElementById('dispSyncInterval');
+                            if(el) el.innerText = this.refreshInterval + 's (Admin Set)';
+                        }
+                    }
+                } catch (e) { console.error('[SYNC] Failed to fetch settings', e); }
+            },
+
+            refreshInterval: 15,
+
+            updateNetUI(online) {
+                const dot = document.getElementById('syncStatusDot');
+                const label = document.getElementById('dispSyncInterval');
+                if (dot) {
+                    dot.style.background = online ? 'var(--secondary)' : 'var(--danger)';
+                    dot.style.boxShadow = online ? '0 0 10px var(--secondary)' : '0 0 10px var(--danger)';
+                }
+                if (!online && label) {
+                    label.innerText = `RECONNECTING: ${this.refreshInterval}s`;
+                    label.style.color = 'var(--danger)';
+                } else if (label) {
+                    label.innerText = `${this.refreshInterval}s (Admin Set)`;
+                    label.style.color = 'var(--primary)';
+                }
             },
             
             updateUI() {

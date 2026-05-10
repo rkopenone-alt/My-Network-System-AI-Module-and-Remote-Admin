@@ -11,6 +11,9 @@ const bcrypt = require('bcryptjs');
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
+// Serve root directory files (previews) for easy local testing
+app.use('/', express.static(path.join(__dirname, '..')));
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
@@ -783,6 +786,25 @@ app.post('/api/settings', async (req, res) => {
         await run(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, value]);
         broadcast('SETTINGS_UPDATED', { key, value });
         res.json({ message: 'Settings updated' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/public/status/:phone', async (req, res) => {
+    const { phone } = req.params;
+    try {
+        const globalTotal = await get(`SELECT COUNT(*) as count FROM rescue_requests`);
+        const globalActive = await get(`SELECT COUNT(*) as count FROM rescue_requests WHERE status != 'completed' AND status != 'declined'`);
+        const userActive = await all(`SELECT * FROM rescue_requests WHERE (phone = ? OR device_id = ?) AND status != 'completed' AND status != 'declined' ORDER BY created_at DESC`, [phone, phone]);
+        const userHistory = await all(`SELECT * FROM rescue_requests WHERE (phone = ? OR device_id = ?) AND (status = 'completed' OR status = 'declined') ORDER BY updated_at DESC LIMIT 10`, [phone, phone]);
+        
+        res.json({
+            stats: {
+                totalSos: globalTotal.count,
+                activeMissions: globalActive.count
+            },
+            myActive: userActive,
+            myHistory: userHistory
+        });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

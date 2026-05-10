@@ -543,8 +543,9 @@ export default function App() {
                     <div key={s.id} style={{ borderBottom: '1px solid rgba(239,68,68,0.2)', padding: '6px 0' }}>
                       <div style={{ fontWeight: 700, fontSize: '12px', color: '#ef4444' }}>🚨 {d?.medicalNeed || 'Emergency'}</div>
                       <div style={{ fontSize: '11px', color: '#94a3b8' }}>{s.device_id} • Adults: {d?.adults}</div>
-                      <div style={{ fontSize: '11px', display: 'flex', gap: 6 }}>
-                        {d?.attachments?.voice && <span>🔊</span>}{d?.attachments?.camera && <span>📷</span>}{d?.attachments?.note && <span>📝</span>}
+                      <div style={{ fontSize: '11px', display: 'flex', gap: 6, justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>{d?.attachments?.voice && <span>🔊</span>}{d?.attachments?.camera && <span>📷</span>}{d?.attachments?.note && <span>📝</span>}</div>
+                        <button onClick={() => setCmdForm({ type: 'critical', target: 'group', targetId: groups[0]?.id?.toString() || '', message: `🚨 SOS at ${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}\nNeed: ${d?.medicalNeed || 'Emergency'}\nFrom: ${s.device_id || s.deviceId}` })} style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', color: '#ef4444', padding: '2px 8px', borderRadius: 4, fontSize: '10px', cursor: 'pointer', fontWeight: 700 }}>Assign Task</button>
                       </div>
                     </div>
                   );
@@ -619,33 +620,33 @@ export default function App() {
                 {liveCommands.filter(c => c.status === 'pending' || c.status === 'accepted').length} Active
               </span>
             </h2>
-            <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {liveCommands.length === 0 && <div className="empty-state" style={{ fontSize: '12px', padding: '16px' }}>No commands yet</div>}
-              {liveCommands.slice(0, 20).map(cmd => {
+            <div style={{ maxHeight: 450, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8, paddingRight: 4 }}>
+              {liveCommands.filter(c => c.status !== 'completed').length === 0 && <div className="empty-state" style={{ fontSize: '12px', padding: '16px', gridColumn: '1 / -1' }}>No active commands</div>}
+              {liveCommands.filter(c => c.status !== 'completed').slice(0, 20).map(cmd => {
                 const isCritical = cmd.command_type === 'critical';
                 const statusColors = { pending: '#f59e0b', accepted: '#10b981', declined: '#ef4444', completed: '#94a3b8', acknowledged: '#94a3b8' };
                 const statusColor = statusColors[cmd.status] || '#94a3b8';
                 return (
-                  <div key={cmd.id} style={{ padding: '10px 12px', borderRadius: 8, border: `1px solid ${isCritical ? 'rgba(239,68,68,0.4)' : 'var(--border)'}`, background: isCritical ? 'rgba(239,68,68,0.06)' : 'rgba(15,23,42,0.5)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                      <span style={{ fontWeight: 700, fontSize: '12px', color: isCritical ? '#ef4444' : 'var(--text-main)' }}>
+                  <div key={cmd.id} style={{ padding: '8px', borderRadius: 6, border: `1px solid ${isCritical ? 'rgba(239,68,68,0.4)' : 'var(--border)'}`, background: isCritical ? 'rgba(239,68,68,0.06)' : 'rgba(15,23,42,0.5)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                      <span style={{ fontWeight: 700, fontSize: '11px', color: isCritical ? '#ef4444' : 'var(--text-main)' }}>
                         {isCritical ? '🚨 CRITICAL' : '📋 Normal'}
                       </span>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: statusColor, background: `${statusColor}22`, padding: '2px 6px', borderRadius: 4 }}>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: statusColor, background: `${statusColor}22`, padding: '2px 6px', borderRadius: 4 }}>
                         {(cmd.status || 'pending').toUpperCase()}
                       </span>
                     </div>
-                    <div style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: 6, lineHeight: 1.4 }}>
+                    <div style={{ fontSize: '11px', color: '#cbd5e1', marginBottom: 6, lineHeight: 1.4, flex: 1, wordBreak: 'break-word' }}>
                       {getCommandLabel(cmd)}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: 6 }}>
-                      → {cmd.target_phone ? `📱 ${cmd.target_phone}` : cmd.group_id ? `👥 Group ${cmd.group_id}` : 'All'}
-                      &nbsp;•&nbsp;{new Date(cmd.created_at).toLocaleTimeString()}
+                    <div style={{ fontSize: '9px', color: '#64748b', marginBottom: 6 }}>
+                      → {cmd.target_phone ? `📱 ${cmd.target_phone}` : cmd.group_id ? `👥 Grp ${cmd.group_id}` : 'All'}
+                      &nbsp;•&nbsp;{new Date(cmd.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
                     {(cmd.status === 'pending' || cmd.status === 'declined') && (
                       <button onClick={() => setReassignModal({ id: cmd.id, label: getCommandLabel(cmd), newTarget: 'group', newTargetId: '' })}
-                        style={{ width: '100%', padding: '5px 8px', borderRadius: 5, border: '1px solid #334155', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', fontWeight: 600, fontSize: '11px', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
-                        🔄 Reassign Task
+                        style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid #334155', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', fontWeight: 600, fontSize: '10px', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
+                        🔄 Reassign
                       </button>
                     )}
                   </div>

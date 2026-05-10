@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Public SOS App - Citizen Support</title>
-    
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
     <style>
         :root {
             /* Professional Citizen-Focused Palette */
@@ -17,15 +20,18 @@
             --primary-dark: #0284c7;
             --primary-light: #e0f2fe;
             --secondary: #10b981;
-            --danger: #f43f5e;
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
             --warning: #f59e0b;
             --bg: #f8fafc;
             --surface: #ffffff;
             --text-main: #0f172a;
             --text-muted: #64748b;
             --border: #e2e8f0;
+            --white: #ffffff;
+            --dark: #1e293b;
             --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
             --radius: 20px;
         }
@@ -37,7 +43,8 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        body, html {
+        body,
+        html {
             height: 100%;
             height: 100dvh;
             font-family: 'Outfit', sans-serif;
@@ -112,8 +119,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Login Screen */
@@ -140,8 +154,15 @@
         }
 
         @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
         }
 
         .brand-name {
@@ -210,36 +231,48 @@
             margin-top: 10px;
         }
 
-        .login-btn:active { transform: scale(0.97); }
+        .login-btn:active {
+            transform: scale(0.97);
+        }
 
         /* Dashboard Styles */
         .header {
-            padding: 20px 20px 10px;
+            padding: 8px 20px 4px;
             background: var(--surface);
             z-index: 100;
+            text-align: center;
         }
 
         .header-top {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 2px;
         }
 
         .avatar-box {
-            width: 44px;
-            height: 44px;
-            border-radius: 14px;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
             background: var(--primary-light);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            border: 2px solid var(--primary);
+            font-size: 16px;
+            border: 1px solid var(--primary);
         }
 
-        .header-title h1 { font-size: 24px; font-weight: 900; color: var(--text-main); }
-        .header-title p { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+        .header-title h1 {
+            font-size: 18px;
+            font-weight: 900;
+            color: var(--text-main);
+        }
+
+        .header-title p {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
 
         .sos-container {
             flex: 1;
@@ -280,10 +313,23 @@
             z-index: 2;
         }
 
-        .sos-btn-inner:active { transform: scale(0.92); box-shadow: 0 10px 20px rgba(244, 63, 94, 0.4); }
+        .sos-btn-inner:active {
+            transform: scale(0.92);
+            box-shadow: 0 10px 20px rgba(244, 63, 94, 0.4);
+        }
 
-        .sos-btn-inner span { font-size: 44px; font-weight: 900; letter-spacing: 2px; }
-        .sos-btn-inner p { font-size: 12px; font-weight: 800; opacity: 0.9; margin-top: -5px; }
+        .sos-btn-inner span {
+            font-size: 44px;
+            font-weight: 900;
+            letter-spacing: 2px;
+        }
+
+        .sos-btn-inner p {
+            font-size: 12px;
+            font-weight: 800;
+            opacity: 0.9;
+            margin-top: -5px;
+        }
 
         .pulse-ring {
             position: absolute;
@@ -296,8 +342,15 @@
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.5; }
-            100% { transform: scale(1.5); opacity: 0; }
+            0% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
         }
 
         .mode-selector {
@@ -320,7 +373,8 @@
             transition: 0.2s;
         }
 
-        .mode-btn.active, .route-btn.active {
+        .mode-btn.active,
+        .route-btn.active {
             border-color: var(--primary);
             background: var(--primary-light);
             box-shadow: var(--shadow-sm);
@@ -328,111 +382,326 @@
 
         .route-btn {
             background: var(--surface);
-            border: 2px solid var(--border);
-            border-radius: 20px;
-            padding: 10px 8px;
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            padding: 6px 4px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
+            gap: 2px;
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.2s;
+            min-width: 75px;
+            flex: 1;
+            max-width: 90px;
         }
 
-        .route-btn i { font-size: 20px; font-style: normal; }
-        .route-btn span { font-size: 10px; font-weight: 800; color: var(--text-main); text-transform: uppercase; }
+        .route-btn i {
+            font-size: 18px;
+            font-style: normal;
+        }
 
-        .mode-btn i { font-size: 20px; font-style: normal; }
-        .mode-btn span { font-size: 10px; font-weight: 800; color: var(--text-main); text-transform: uppercase; }
+        .route-btn span {
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+        }
+
+        .mode-btn i {
+            font-size: 20px;
+            font-style: normal;
+        }
+
+        .mode-btn span {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-main);
+            text-transform: uppercase;
+        }
 
         /* Request Form Screen */
-        .form-content { padding: 20px; flex: 1; overflow-y: auto; }
-        .section-label { font-size: 11px; font-weight: 900; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; margin-top: 14px; }
+        .form-content {
+            padding: 8px 16px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .section-label {
+            font-size: 9px;
+            font-weight: 900;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
+            margin-top: 6px;
+            text-align: center;
+            width: 100%;
+        }
 
         .config-card {
             background: var(--surface);
-            border-radius: 20px;
+            border-radius: 12px;
             border: 1px solid var(--border);
-            padding: 15px;
-            margin-bottom: 16px;
+            padding: 6px 10px;
+            margin-bottom: 6px;
         }
+
+        .hist-item {
+            background: var(--surface);
+            border-radius: 15px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+        .hist-item:hover {
+            border-color: var(--primary);
+            transform: scale(1.02);
+        }
+        .hist-details h4 { font-size: 14px; font-weight: 900; color: var(--dark); margin: 0 0 4px 0; }
+        .hist-details p { font-size: 11px; font-weight: 700; color: var(--text-muted); margin: 0; }
+        .status-badge {
+            font-size: 10px;
+            font-weight: 900;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+        .status-completed { background: var(--secondary-light); color: var(--secondary); }
+        .status-active { background: var(--danger-light); color: var(--danger); }
 
         .config-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 0;
+            padding: 3px 0;
             border-bottom: 1px solid var(--border);
         }
-        .config-row:last-child { border-bottom: none; }
-        .config-row span { font-size: 15px; font-weight: 700; color: var(--text-main); }
 
-        .counter { display: flex; align-items: center; gap: 12px; background: var(--bg); padding: 4px 10px; border-radius: 12px; border: 1px solid var(--border); }
-        .counter button { border: none; background: none; font-size: 20px; font-weight: 900; color: var(--primary); cursor: pointer; padding: 0 8px; }
-        .counter input { width: 45px; border: none; background: transparent; text-align: center; font-size: 16px; font-weight: 800; font-family: inherit; color: var(--text-main); outline: none; -moz-appearance: textfield; }
-        .counter input::-webkit-outer-spin-button, .counter input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .config-row:last-child {
+            border-bottom: none;
+        }
+
+        .config-row span {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .counter {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg);
+            padding: 1px 6px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .counter button {
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 900;
+            color: var(--primary);
+            cursor: pointer;
+            padding: 0 3px;
+        }
+
+        .counter input {
+            width: 30px;
+            border: none;
+            background: transparent;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 800;
+            font-family: inherit;
+            color: var(--text-main);
+            outline: none;
+        }
+
+        .counter input::-webkit-outer-spin-button,
+        .counter input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
 
         .submit-btn {
             background: var(--primary);
             color: white;
             width: 100%;
-            padding: 20px;
-            border-radius: 20px;
+            padding: 12px;
+            border-radius: 14px;
             border: none;
-            font-size: 17px;
+            font-size: 14px;
             font-weight: 900;
             cursor: pointer;
-            box-shadow: 0 10px 20px rgba(14, 165, 233, 0.3);
-            margin-top: 20px;
+            box-shadow: 0 6px 12px rgba(14, 165, 233, 0.2);
+            margin-top: 6px;
         }
 
         /* Bottom Nav */
         .bottom-nav {
             background: var(--surface);
             border-top: 1px solid var(--border);
-            height: 80px;
+            height: 70px;
             display: flex;
             align-items: center;
             justify-content: space-around;
-            padding-bottom: 15px;
-            z-index: 100;
+            padding: 0 10px;
+            flex-shrink: 0;
         }
 
         .nav-link {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
             color: var(--text-muted);
-            cursor: pointer;
+            text-decoration: none;
+            gap: 4px;
             flex: 1;
+            cursor: pointer;
         }
 
-        .nav-link.active { color: var(--primary); }
-        .nav-link i { font-size: 24px; font-style: normal; }
-        .nav-link span { font-size: 10px; font-weight: 800; text-transform: uppercase; }
+        .nav-link.active {
+            color: var(--primary);
+        }
+
+        .nav-link i {
+            font-size: 20px;
+            font-style: normal;
+        }
+
+        .nav-link span {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
 
         /* Loader */
         .full-loader {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(255,255,255,0.9);
-            display: none; justify-content: center; align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
             z-index: 10000;
         }
-        .spinner { width: 48px; height: 48px; border: 5px solid var(--primary-light); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 5px solid var(--primary-light);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         /* Toast */
         .toast {
-            position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
-            background: #0f172a; color: white; padding: 14px 24px; border-radius: 30px;
-            font-size: 14px; font-weight: 800; z-index: 10000; display: none; align-items: center; gap: 12px;
-            animation: pop 0.3s ease-out; width: 85%; text-align: center; justify-content: center;
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0f172a;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 800;
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            animation: pop 0.3s ease-out;
+            width: 85%;
+            text-align: center;
+            justify-content: center;
         }
-        @keyframes pop { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
 
+        @keyframes pop {
+            from {
+                transform: translateX(-50%) translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Location Status Bar */
+        .loc-status-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            padding: 12px 16px;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 800;
+            z-index: 100;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .loc-status-on {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: var(--text-main);
+        }
+
+        .loc-status-off {
+            background: rgba(254, 242, 242, 0.9);
+            border: 1px solid rgba(254, 202, 202, 0.5);
+            color: var(--danger);
+        }
+
+        .loc-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .loc-btn-fix {
+            background: var(--text-main);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 900;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
+
 <body>
 
     <div class="phone-mockup">
@@ -441,46 +710,57 @@
             <!-- SCREEN 1: LOGIN -->
             <div class="screen active" id="screenLogin">
                 <div class="brand-logo" style="background:none; box-shadow:none; border:none;">
-                    <img src="citizen_sos_logo_1778175366035.png" style="width:100%; height:100%; border-radius:24px; object-fit:cover;">
+                    <img src="citizen_sos_logo_1778175366035.png"
+                        style="width:100%; height:100%; border-radius:24px; object-fit:cover;">
                 </div>
                 <h1 class="brand-name">Citizen Connect</h1>
                 <p class="brand-tagline">Emergency Assistance Hub</p>
-                
+
                 <div class="input-group">
                     <label class="input-label">Citizen Login ID</label>
-                    <input type="text" id="inpId" class="input-field" placeholder="Enter Phone or ID" value="918000000099">
+                    <input type="text" id="inpId" class="input-field" placeholder="Enter Phone or ID"
+                        value="918000000099">
                 </div>
                 <div class="input-group">
                     <label class="input-label">Security PIN</label>
                     <input type="password" id="inpPin" class="input-field" placeholder="Enter PIN" value="123456">
                 </div>
-                
+
                 <button class="login-btn" onclick="core.login()">LOGIN</button>
-                <p id="loginError" style="color:var(--danger); font-size:12px; font-weight:800; margin-top:20px; display:none; text-align:center;">ACCESS DENIED - CHECK ID & PIN</p>
-                <p style="color:var(--text-muted); font-size:11px; margin-top:30px; text-align:center; font-weight:700;">Credentials are managed by local administration.</p>
+                <p id="loginError"
+                    style="color:var(--danger); font-size:12px; font-weight:800; margin-top:20px; display:none; text-align:center;">
+                    ACCESS DENIED - CHECK ID & PIN</p>
+                <p
+                    style="color:var(--text-muted); font-size:11px; margin-top:30px; text-align:center; font-weight:700;">
+                    Credentials are managed by local administration.</p>
+
+                <!-- Location Notification Bar -->
+                <div id="locStatusBar" class="loc-status-bar loc-status-on" style="display: none;">
+                    <div style="display:flex; align-items:center;">
+                        <div class="loc-dot" style="background:var(--secondary)"></div>
+                        <span>Location Auto detect ON</span>
+                    </div>
+                </div>
             </div>
 
-            <!-- SCREEN 2: DASHBOARD (SOS) -->
+            <!-- SCREEN 2: FINAL SOS PAGE -->
             <div class="screen" id="screenHome">
-                <div class="header">
-                    <div class="header-top">
-                        <div class="avatar-box">👤</div>
-                        <div class="header-title">
-                            <h1 id="dispName">Citizen User</h1>
-                            <p>Status: Monitoring...</p>
-                        </div>
-                    </div>
+                <div class="header" style="text-align:center; padding: 20px;">
+                    <h1 style="font-size:24px; font-weight:900; color:var(--danger); margin:0;">Final SOS Page</h1>
+                    <p style="font-size:12px; font-weight:700; color:var(--text-muted); margin:5px 0 0 0;">Details Captured • Tactical Standby</p>
                 </div>
 
                 <div class="sos-container">
                     <div style="width:100%">
                         <h2 style="font-size:20px; font-weight:900; margin-bottom:10px;">Emergency Trigger</h2>
-                        <p style="font-size:14px; color:var(--text-muted); font-weight:600;">Hold the button for 2 seconds to alert nearby rescue teams immediately.</p>
+                        <p style="font-size:14px; color:var(--text-muted); font-weight:600;">Hold the button for 2
+                            seconds to alert nearby rescue teams immediately.</p>
                     </div>
 
                     <div class="sos-btn-outer">
                         <div class="pulse-ring"></div>
-                        <div class="sos-btn-inner" onmousedown="core.startSOS()" onmouseup="core.cancelSOS()" ontouchstart="core.startSOS()" ontouchend="core.cancelSOS()">
+                        <div class="sos-btn-inner" onmousedown="core.startSOS()" onmouseup="core.cancelSOS()"
+                            ontouchstart="core.startSOS()" ontouchend="core.cancelSOS()">
                             <span>SOS</span>
                             <p>EMERGENCY</p>
                         </div>
@@ -489,131 +769,178 @@
                     <!-- REAL-TIME STATUS TICKER -->
                     <div id="sosStatusTicker" style="margin-top: 20px; text-align: center; display: none;">
                         <div id="tickerIcon" style="font-size: 24px; margin-bottom: 8px;">📡</div>
-                        <div id="tickerLabel" style="font-size: 14px; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">Ready</div>
-                        <div id="tickerSub" style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 4px;">System Online</div>
+                        <div id="tickerLabel"
+                            style="font-size: 14px; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">
+                            Ready</div>
+                        <div id="tickerSub"
+                            style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 4px;">System
+                            Online</div>
                     </div>
 
                     <div class="mode-selector">
-                        <div class="mode-btn active" onclick="core.setMode('medical', this)"><i>🏥</i><span>Medical</span></div>
-                        <div class="mode-btn" onclick="core.setMode('pregnancy', this)"><i>🤰</i><span>Pregnancy</span></div>
+                        <div class="mode-btn active" onclick="core.setMode('medical', this)">
+                            <i>🏥</i><span>Medical</span></div>
+                        <div class="mode-btn" onclick="core.setMode('pregnancy', this)"><i>🤰</i><span>Pregnancy</span>
+                        </div>
                         <div class="mode-btn" onclick="core.setMode('sos', this)"><i>🚨</i><span>Rescue</span></div>
                     </div>
                 </div>
 
                 <div class="bottom-nav">
-                    <div class="nav-link active" onclick="core.nav('Home')"><i>🏠</i><span>Home</span></div>
-                    <div class="nav-link" onclick="core.nav('Form')"><i>📋</i><span>Details</span></div>
-                    <div class="nav-link" onclick="core.nav('Status')"><i>📡</i><span>Status</span></div>
-                    <div class="nav-link" onclick="core.nav('Settings')"><i>⚙️</i><span>Profile</span></div>
+                    <div class="nav-link active" onclick="core.nav('Home')"><i>🏠</i><span>HOME</span></div>
+                    <div class="nav-link" onclick="core.nav('Status')"><i>📋</i><span>HISTORY</span></div>
+                    <div class="nav-link" onclick="core.nav('Settings')"><i>⚙️</i><span>SETTINGS</span></div>
                 </div>
             </div>
 
-            <!-- SCREEN 3: FORM DETAILS -->
+            <!-- SCREEN 3: HOME (DETAILS) -->
             <div class="screen" id="screenForm">
-                <div class="header">
-                    <h1 style="font-size:24px; font-weight:900;">Request Details</h1>
-                    <p style="font-size:14px; color:var(--text-muted); font-weight:600;">Provide more info for better rescue</p>
+                <div class="header" style="padding: 16px 20px; border-bottom: 1px solid var(--border);">
+                    <h1 style="font-size:24px; font-weight:900; margin:0;">Home (Details)</h1>
+                    <p style="font-size:13px; font-weight:700; color:var(--text-muted); margin:4px 0 0 0;">Capture Incident Intel</p>
                 </div>
-                
-                <div class="form-content">
-                    <div class="section-label">Preferred Rescue Route</div>
-                    <div class="config-card" style="display: flex; gap: 8px; padding: 0; background: transparent; border: none; box-shadow: none;">
-                        <div class="route-btn" onclick="core.setRoute('air', this)"><i>🚁</i><span>Air</span></div>
-                        <div class="route-btn" onclick="core.setRoute('boat', this)"><i>🚤</i><span>Boat</span></div>
-                        <div class="route-btn" onclick="core.setRoute('road', this)"><i>road</i><span>Road</span></div>
+
+                <div class="form-content"
+                    style="padding: 20px 20px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div class="config-card"
+                            style="display: flex; gap: 12px; padding: 0; background: transparent; border: none; box-shadow: none; justify-content: center; margin-bottom: 20px;">
+                            <div class="route-btn" style="padding: 15px 25px;" onclick="core.setRoute('air', this)">
+                                <i>🚁</i><span>Air</span></div>
+                            <div class="route-btn" style="padding: 15px 25px;" onclick="core.setRoute('boat', this)">
+                                <i>🚤</i><span>Boat</span></div>
+                            <div class="route-btn" style="padding: 15px 25px;" onclick="core.setRoute('road', this)">
+                                <i>🚑</i><span>Road</span></div>
+                        </div>
+
+                        <div class="section-label" style="font-size: 11px; margin-bottom: 8px;">Affected People</div>
+                        <div class="config-card" style="margin-bottom: 15px; padding: 12px 16px;">
+                            <div class="config-row" style="padding: 5px 0;">
+                                <span style="font-size: 14px;">Total Count</span>
+                                <div class="counter" style="padding: 4px 12px;">
+                                    <button style="font-size: 18px;" onclick="core.updateNeeds('people', -1)">-</button>
+                                    <input type="number" id="n_people" value="1"
+                                        oninput="core.manualNeeds('people', this.value)"
+                                        style="width: 40px; font-size: 16px;">
+                                    <button style="font-size: 18px;" onclick="core.updateNeeds('people', 1)">+</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-label" style="font-size: 11px; margin-bottom: 8px;">Supplies Needed</div>
+                        <div class="config-card" style="margin-bottom: 15px; padding: 12px 16px;">
+                            <div class="config-row" style="padding: 5px 0;">
+                                <span style="font-size: 14px;">Food Rations</span>
+                                <div class="counter" style="padding: 4px 12px;">
+                                    <button style="font-size: 18px;" onclick="core.updateNeeds('food', -1)">-</button>
+                                    <input type="number" id="n_food" value="0" style="width: 40px; font-size: 16px;">
+                                    <button style="font-size: 18px;" onclick="core.updateNeeds('food', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="config-row" style="padding: 5px 0;">
+                                <span style="font-size: 14px;">Medical Kits</span>
+                                <div class="counter" style="padding: 4px 12px;">
+                                    <button style="font-size: 18px;" onclick="core.updateNeeds('med', -1)">-</button>
+                                    <input type="number" id="n_med" value="0" style="width: 40px; font-size: 16px;">
+                                    <button style="font-size: 18px;" onclick="core.updateNeeds('med', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="config-row" style="padding: 5px 0;">
+                                <span style="font-size: 14px;">Sanitary Supplies</span>
+                                <div class="counter" style="padding: 4px 12px;">
+                                    <button style="font-size: 18px;"
+                                        onclick="core.updateNeeds('sanitary', -1)">-</button>
+                                    <input type="number" id="n_sanitary" value="0"
+                                        style="width: 40px; font-size: 16px;">
+                                    <button style="font-size: 18px;"
+                                        onclick="core.updateNeeds('sanitary', 1)">+</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-label" style="margin-top: 10px; font-size: 11px; margin-bottom: 8px;">
+                            Location & Media Details</div>
+                        <div style="display: flex; gap: 10px; align-items: stretch; margin-bottom: 15px; height: 80px;">
+                            <div class="config-card" style="flex: 8; margin-bottom: 0; padding: 0; display: flex;">
+                                <textarea id="inpLoc" class="input-field" placeholder="Enter full address, landmarks..."
+                                    style="flex: 1; font-size:14px; padding:12px; resize: none; border-radius: 12px; border: none; outline: none;"></textarea>
+                            </div>
+                            <div style="flex: 2.5; display: flex; flex-direction: column; gap: 6px;">
+                                <input type="file" id="camInput" accept="image/*" capture="camera" style="display:none"
+                                    onchange="core.handlePhoto(this)">
+                                <div onclick="core.openCamera()" class="config-card"
+                                    style="margin: 0; padding: 8px; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; background: var(--primary-light); border-color: var(--primary);">
+                                    <span style="font-size: 20px;">📷</span>
+                                    <span
+                                        style="font-size: 8px; font-weight: 900; color: var(--primary-dark)">ACTIVE</span>
+                                </div>
+                                <div onclick="core.toast('Voice input currently disabled', '🎙️')" class="config-card"
+                                    style="margin: 0; padding: 8px; flex: 1; display: flex; justify-content: center; align-items: center; cursor: pointer; opacity: 0.5;">
+                                    <span style="font-size: 20px;">🎙️</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="photoPreview" style="display:none; margin-bottom: 15px; position: relative;">
+                            <img id="capturedImg" src=""
+                                style="width:100%; border-radius: 16px; border: 2px solid var(--primary);">
+                            <div onclick="core.removePhoto()"
+                                style="position: absolute; top: 10px; right: 10px; background: var(--danger); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 900; cursor: pointer;">
+                                ✕</div>
+                        </div>
                     </div>
 
-                    <div class="section-label">Affected People</div>
-                    <div class="config-card">
-                        <div class="config-row">
-                            <span>Total Count</span>
-                            <div class="counter">
-                                <button onclick="core.updateNeeds('people', -1)">-</button>
-                                <input type="number" id="n_people" value="1" oninput="core.manualNeeds('people', this.value)">
-                                <button onclick="core.updateNeeds('people', 1)">+</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section-label">Supplies Needed</div>
-                    <div class="config-card">
-                        <div class="config-row">
-                            <span>Food Rations</span>
-                            <div class="counter">
-                                <button onclick="core.updateNeeds('food', -1)">-</button>
-                                <input type="number" id="n_food" value="0" oninput="core.manualNeeds('food', this.value)">
-                                <button onclick="core.updateNeeds('food', 1)">+</button>
-                            </div>
-                        </div>
-                        <div class="config-row">
-                            <span>Medical Kits</span>
-                            <div class="counter">
-                                <button onclick="core.updateNeeds('med', -1)">-</button>
-                                <input type="number" id="n_med" value="0" oninput="core.manualNeeds('med', this.value)">
-                                <button onclick="core.updateNeeds('med', 1)">+</button>
-                            </div>
-                        </div>
-                        <div class="config-row">
-                            <span>Sanitary Supplies</span>
-                            <div class="counter">
-                                <button onclick="core.updateNeeds('sanitary', -1)">-</button>
-                                <input type="number" id="n_sanitary" value="0" oninput="core.manualNeeds('sanitary', this.value)">
-                                <button onclick="core.updateNeeds('sanitary', 1)">+</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section-label">Location & Media Details</div>
-                    <div style="display: flex; gap: 10px; align-items: flex-start; margin-bottom: 20px;">
-                        <div class="config-card" style="flex: 8; margin-bottom: 0; padding: 0;">
-                            <textarea id="inpLoc" class="input-field" placeholder="Enter full address, apartment, floor, sector, or landmarks..." style="font-size:14px; padding:15px; min-height: 120px; resize: none; border-radius: 20px;"></textarea>
-                        </div>
-                        <div style="flex: 2; display: flex; flex-direction: column; gap: 10px;">
-                            <input type="file" id="camInput" accept="image/*" capture="camera" style="display:none" onchange="core.handlePhoto(this)">
-                            <div onclick="core.openCamera()" class="config-card" style="margin: 0; padding: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; background: var(--primary-light); border-color: var(--primary);">
-                                <span style="font-size: 20px;">📷</span>
-                                <span style="font-size: 8px; font-weight: 800; margin-top: 4px; color: var(--primary-dark)">ACTIVE</span>
-                            </div>
-                            <div onclick="core.toast('Voice input currently disabled', '🎙️')" class="config-card" style="margin: 0; padding: 15px; display: flex; justify-content: center; align-items: center; cursor: pointer; opacity: 0.5;">
-                                <span style="font-size: 20px;">🎙️</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="photoPreview" style="display:none; margin-bottom: 20px; position: relative;">
-                        <img id="capturedImg" src="" style="width:100%; border-radius: 20px; border: 2px solid var(--primary);">
-                        <div onclick="core.removePhoto()" style="position: absolute; top: 10px; right: 10px; background: var(--danger); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 900; cursor: pointer;">✕</div>
-                    </div>
-
-                    <button class="submit-btn" onclick="core.submitRequest()">CONFIRM & SEND SOS</button>
+                    <button class="submit-btn" style="padding: 18px; font-size: 16px; margin-top: 20px;"
+                        onclick="core.nav('SOS')">CONFIRM & PROCEED</button>
                 </div>
 
                 <div class="bottom-nav">
-                    <div class="nav-link" onclick="core.nav('Home')"><i>🏠</i><span>Home</span></div>
-                    <div class="nav-link active" onclick="core.nav('Form')"><i>📋</i><span>Details</span></div>
-                    <div class="nav-link" onclick="core.nav('Status')"><i>📡</i><span>Status</span></div>
-                    <div class="nav-link" onclick="core.nav('Settings')"><i>⚙️</i><span>Profile</span></div>
+                    <div class="nav-link" onclick="core.nav('Home')"><i>🏠</i><span>HOME</span></div>
+                    <div class="nav-link" onclick="core.nav('Status')"><i>📋</i><span>HISTORY</span></div>
+                    <div class="nav-link" onclick="core.nav('Settings')"><i>⚙️</i><span>SETTINGS</span></div>
                 </div>
             </div>
 
-            <!-- SCREEN 4: STATUS -->
+            <!-- SCREEN 4: MISSION HISTORY -->
             <div class="screen" id="screenStatus">
-                <div class="header">
-                    <h1 style="font-size:24px; font-weight:900;">Mission Status</h1>
-                    <p style="font-size:14px; color:var(--text-muted); font-weight:600;">Tracking your rescue requests</p>
-                </div>
-                <div class="form-content" id="statusList">
-                    <!-- Dynamic status items -->
-                    <div style="text-align:center; padding:50px 20px; color:var(--text-muted);">
-                        <div style="font-size:40px; margin-bottom:10px;">📡</div>
-                        <div style="font-size:15px; font-weight:700;">No active requests.</div>
+                <div class="header" style="display:flex; justify-content:space-between; align-items:center; padding: 20px 24px;">
+                    <h1 style="font-size:24px; font-weight:900; margin:0;">Mission History</h1>
+                    <div style="width:44px; height:44px; border-radius:15px; background:white; border:1px solid #eee; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:var(--shadow-sm);" onclick="core.nav('Home')">
+                        <span style="font-size:20px; color:#64748b;">✕</span>
                     </div>
                 </div>
+
+                <div class="form-content" style="padding: 0 24px; overflow-y: auto; max-height: calc(100vh - 160px);">
+                    <!-- Tactical Search Bar -->
+                    <div style="background:var(--white); border:2px solid #eef2f6; border-radius:20px; padding:12px 18px; display:flex; align-items:center; gap:12px; margin-bottom:15px;">
+                        <i style="color:#6366f1; font-style:normal; font-size:18px;">🔍</i>
+                        <input type="text" id="statusSearch" placeholder="Search mission ID, type, sector..." 
+                            style="border:none; outline:none; flex:1; font-size:13px; font-weight:700; color:var(--dark);"
+                            oninput="core.renderStatusUI()">
+                    </div>
+
+                    <!-- Filter & PDF Row -->
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px;">
+                        <button class="filter-btn active" style="background:#0ea5e9; color:white; border:none; padding:8px 16px; border-radius:12px; font-weight:900; font-size:11px;" onclick="core.setHistoryFilter('all', this)">Full</button>
+                        <button class="filter-btn" style="background:#f1f5f9; color:#64748b; border:none; padding:8px 16px; border-radius:12px; font-weight:900; font-size:11px;" onclick="core.setHistoryFilter('today', this)">Day</button>
+                        <button class="filter-btn" style="background:#f1f5f9; color:#64748b; border:none; padding:8px 16px; border-radius:12px; font-weight:900; font-size:11px;" onclick="core.setHistoryFilter('weekly', this)">Week</button>
+                        <button class="filter-btn" style="background:#f1f5f9; color:#64748b; border:none; padding:8px 16px; border-radius:12px; font-weight:900; font-size:11px;" onclick="core.setHistoryFilter('yearly', this)">Year</button>
+                        <button onclick="core.downloadPDF()" style="margin-left:auto; background:#f43f5e; color:white; border:none; padding:8px 16px; border-radius:12px; font-weight:900; display:flex; align-items:center; gap:6px; font-size:11px;">
+                            <i>📄</i> PDF
+                        </button>
+                    </div>
+
+                    <div style="font-size:12px; font-weight:900; color:#ef4444; margin-bottom:12px; letter-spacing:0.5px; border-left:3px solid #ef4444; padding-left:8px;">MISSIONS ONGOING</div>
+                    <div id="ongoingList"></div>
+
+                    <div style="margin-top:20px; font-size:12px; font-weight:900; color:#0ea5e9; margin-bottom:12px; letter-spacing:0.5px; border-left:3px solid #0ea5e9; padding-left:8px;">COMPLETED MISSIONS</div>
+                    <div id="completedList"></div>
+                </div>
+
                 <div class="bottom-nav">
-                    <div class="nav-link" onclick="core.nav('Home')"><i>🏠</i><span>Home</span></div>
-                    <div class="nav-link" onclick="core.nav('Form')"><i>📋</i><span>Details</span></div>
-                    <div class="nav-link active" onclick="core.nav('Status')"><i>📡</i><span>Status</span></div>
-                    <div class="nav-link" onclick="core.nav('Settings')"><i>⚙️</i><span>Profile</span></div>
+                    <div class="nav-link" onclick="core.nav('Home')"><i>🏠</i><span>HOME</span></div>
+                    <div class="nav-link active" onclick="core.nav('Status')"><i>📋</i><span>HISTORY</span></div>
+                    <div class="nav-link" onclick="core.nav('Settings')"><i>⚙️</i><span>SETTINGS</span></div>
                 </div>
             </div>
 
@@ -624,7 +951,9 @@
                 </div>
                 <div class="form-content">
                     <div style="text-align:center; margin-bottom:30px;">
-                        <div class="avatar-box" style="width:100px; height:100px; margin:0 auto 20px; font-size:44px; border-radius:30px;">👤</div>
+                        <div class="avatar-box"
+                            style="width:100px; height:100px; margin:0 auto 20px; font-size:44px; border-radius:30px;">
+                            👤</div>
                         <h2 id="profName" style="font-size:22px; font-weight:900;">User Name</h2>
                         <p id="profId" style="font-size:14px; color:var(--text-muted); font-weight:700;">ID: PUB-01</p>
                     </div>
@@ -634,32 +963,43 @@
                             <span>Notifications</span>
                             <span style="color:var(--secondary); font-weight:900;">ENABLED</span>
                         </div>
-                        <div class="config-row" style="padding:18px 20px; border-bottom:none;">
+                        <div class="config-row" style="padding:18px 20px;">
                             <span>Language</span>
                             <span style="color:var(--text-muted); font-weight:700;">English</span>
                         </div>
+                        <div class="config-row" style="padding:18px 20px; border-bottom:none; background: var(--primary-light);">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div id="syncStatusDot" style="width:10px; height:10px; border-radius:50%; background:var(--secondary); box-shadow:0 0 10px var(--secondary);"></div>
+                                <span style="font-size:14px; font-weight:800;">Network Sync</span>
+                            </div>
+                            <span id="dispSyncInterval" style="color:var(--primary); font-weight:900; font-size:12px;">FETCHING...</span>
+                        </div>
                     </div>
 
-                    <button class="submit-btn" style="background:#fee2e2; color:var(--danger); box-shadow:none;" onclick="core.logout()">SECURE LOGOUT</button>
-                    
-                    <p style="text-align:center; margin-top:30px; font-size:11px; font-weight:700; color:var(--text-muted);">
+                    <button class="submit-btn" style="background:#fee2e2; color:var(--danger); box-shadow:none;"
+                        onclick="core.logout()">SECURE LOGOUT</button>
+
+                    <p
+                        style="text-align:center; margin-top:30px; font-size:11px; font-weight:700; color:var(--text-muted);">
                         PUBLIC SOS APP v3.1.0<br>CITIZEN SUPPORT OPERATIONS
                     </p>
                 </div>
                 <div class="bottom-nav">
-                    <div class="nav-link" onclick="core.nav('Home')"><i>🏠</i><span>Home</span></div>
-                    <div class="nav-link" onclick="core.nav('Form')"><i>📋</i><span>Details</span></div>
-                    <div class="nav-link" onclick="core.nav('Status')"><i>📡</i><span>Status</span></div>
-                    <div class="nav-link active" onclick="core.nav('Settings')"><i>⚙️</i><span>Profile</span></div>
+                    <div class="nav-link" onclick="core.nav('Home')"><i>🏠</i><span>HOME</span></div>
+                    <div class="nav-link" onclick="core.nav('Status')"><i>📋</i><span>HISTORY</span></div>
+                    <div class="nav-link active" onclick="core.nav('Settings')"><i>⚙️</i><span>SETTINGS</span></div>
                 </div>
             </div>
 
             <!-- LOCATION POPUP -->
-            <div id="locationPopup" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.95); z-index:9999; justify-content:center; align-items:center; flex-direction:column; padding:20px; text-align:center;">
+            <div id="locationPopup"
+                style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.95); z-index:9999; justify-content:center; align-items:center; flex-direction:column; padding:20px; text-align:center;">
                 <div style="font-size:60px; margin-bottom:20px;">📍</div>
                 <h2 style="color:white; font-size:24px; font-weight:900; margin-bottom:10px;">Location Required</h2>
-                <p style="color:var(--text-muted); font-size:14px; font-weight:600; margin-bottom:30px;">Please enable location services so we can automatically capture your coordinates in an emergency.</p>
-                <button class="submit-btn" style="width:100%; box-shadow:none;" onclick="core.startLocationTracking()">GRANT ACCESS</button>
+                <p style="color:var(--text-muted); font-size:14px; font-weight:600; margin-bottom:30px;">Please enable
+                    location services so we can automatically capture your coordinates in an emergency.</p>
+                <button class="submit-btn" style="width:100%; box-shadow:none;"
+                    onclick="core.startLocationTracking()">GRANT ACCESS</button>
             </div>
 
             <!-- LOADER -->
@@ -695,7 +1035,7 @@
                     this.toast("Geolocation not supported", "🚫");
                     return;
                 }
-                
+
                 document.getElementById('locationPopup').style.display = 'none';
 
                 this.locationWatcher = navigator.geolocation.watchPosition(
@@ -710,8 +1050,89 @@
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
+                this.updateLocationStatus();
             },
-            
+
+            updateLocationStatus() {
+                const bar = document.getElementById('locStatusBar');
+                if (!bar) return;
+                bar.style.display = 'flex';
+
+                if (!navigator.geolocation) {
+                    this.renderLocationBar('unsupported');
+                    return;
+                }
+
+                if (window.location.protocol === 'file:') {
+                    // file:// protocol often blocks geolocation
+                    navigator.geolocation.getCurrentPosition(
+                        () => this.renderLocationBar('on'),
+                        (err) => {
+                            if (err.code === 1) this.renderLocationBar('denied');
+                            else this.renderLocationBar('file_off');
+                        },
+                        { timeout: 3000 }
+                    );
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    () => this.renderLocationBar('on'),
+                    (err) => {
+                        if (err.code === 1) this.renderLocationBar('denied');
+                        else this.renderLocationBar('off');
+                    },
+                    { timeout: 5000, enableHighAccuracy: true }
+                );
+            },
+
+            renderLocationBar(status) {
+                const bar = document.getElementById('locStatusBar');
+                if (!bar) return;
+
+                let message = "Location Auto detect ON";
+                let btn = "";
+                let type = "on";
+                let dotColor = "var(--secondary)";
+
+                switch (status) {
+                    case 'on':
+                        type = "on";
+                        break;
+                    case 'denied':
+                        message = "Location Access Denied - check browser settings";
+                        btn = '<button class="loc-btn-fix" onclick="core.startLocationTracking()">ALLOW</button>';
+                        type = "off";
+                        dotColor = "var(--danger)";
+                        break;
+                    case 'file_off':
+                        message = "Browser blocks location on local files (file://)";
+                        btn = '<button class="loc-btn-fix" onclick="window.alert(\'To fix this, please run the app through a local server or use the mobile APK.\')">HELP</button>';
+                        type = "off";
+                        dotColor = "var(--warning)";
+                        break;
+                    case 'unsupported':
+                        message = "Geolocation not supported in this browser";
+                        type = "off";
+                        dotColor = "var(--danger)";
+                        break;
+                    default:
+                        message = "Location setting OFF - need to turn on";
+                        btn = '<button class="loc-btn-fix" onclick="core.startLocationTracking()">ENABLE</button>';
+                        type = "off";
+                        dotColor = "var(--danger)";
+                }
+
+                bar.className = `loc-status-bar loc-status-${type === 'on' ? 'on' : 'off'}`;
+                bar.innerHTML = `
+                    <div style="display:flex; align-items:center;">
+                        <div class="loc-dot" style="background:${dotColor}"></div>
+                        <span>${message}</span>
+                    </div>
+                    ${btn}
+                `;
+            },
+
             async init() {
                 this.setupKeyboardHandling();
                 const savedToken = localStorage.getItem('citizen_token');
@@ -726,7 +1147,7 @@
                             const data = await res.json();
                             this.user = data.user;
                             localStorage.setItem('citizen_user', JSON.stringify(this.user));
-                            this.showScreen('screenHome');
+                            this.showScreen('screenForm');
                             this.bootstrap();
                             this.connectGateway();
                             this.startLocationTracking();
@@ -737,7 +1158,7 @@
                         // Offline mode: proceed with local data if network fails
                         console.log("Offline mode, relying on local session");
                         this.user = JSON.parse(savedUser);
-                        this.showScreen('screenHome');
+                        this.showScreen('screenForm');
                         this.bootstrap();
                         this.connectGateway();
                         this.startLocationTracking();
@@ -745,6 +1166,8 @@
                         this.showLoader(false);
                     }
                 }
+                this.updateLocationStatus();
+                setInterval(() => this.updateLocationStatus(), 10000);
                 await this.fetchSettings();
                 this.processRetryQueue();
             },
@@ -758,16 +1181,19 @@
                         if (intervals.length > 0 && !intervals.some(isNaN)) {
                             this.backoff = intervals;
                             console.log('[SYNC] Retry intervals updated:', this.backoff);
+                            this.refreshInterval = parseInt(settings.retry_intervals.split(',')[0]) || 15;
+                            const el = document.getElementById('dispSyncInterval');
+                            if(el) el.innerText = this.refreshInterval + 's (Admin Set)';
                         }
                     }
                 } catch (e) { console.error('[SYNC] Failed to fetch settings', e); }
             },
-            
+
             async login() {
                 const phone = document.getElementById('inpId').value;
                 const pin = document.getElementById('inpPin').value;
                 const err = document.getElementById('loginError');
-                
+
                 let localDeviceId = localStorage.getItem('citizen_device_id');
                 if (!localDeviceId) {
                     localDeviceId = 'PUBDEV-' + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -781,13 +1207,13 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ idOrPhone: phone, pin, deviceId: localDeviceId })
                     });
-                    
+
                     if (res.ok) {
                         const data = await res.json();
                         this.user = data.user;
                         localStorage.setItem('citizen_token', data.token);
                         localStorage.setItem('citizen_user', JSON.stringify(this.user));
-                        this.showScreen('screenHome');
+                        this.showScreen('screenForm');
                         this.bootstrap();
                         this.connectGateway();
                         this.startLocationTracking();
@@ -804,13 +1230,13 @@
                     this.showLoader(false);
                 }
             },
-            
+
             logout() {
                 localStorage.removeItem('citizen_token');
                 localStorage.removeItem('citizen_user');
                 location.reload();
             },
-            
+
             refreshInterval: 15,
             syncTimer: null,
 
@@ -823,11 +1249,11 @@
             connectGateway() {
                 console.log('[GATEWAY] Connecting...');
                 this.socket = new WebSocket(this.WS_URL);
-                
+
                 this.socket.onopen = async () => {
                     console.log('[GATEWAY] Connected');
-                    this.socket.send(JSON.stringify({ 
-                        type: 'REGISTER', 
+                    this.socket.send(JSON.stringify({
+                        type: 'REGISTER',
                         deviceId: this.user.serial_number || this.user.phone,
                         room: 'public_broadcast'
                     }));
@@ -898,64 +1324,186 @@
                 const iconEl = document.getElementById('tickerIcon');
                 if (iconEl) iconEl.innerText = icon || '📡';
             },
-            
+
             showScreen(id) {
                 document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
                 document.getElementById(id).classList.add('active');
             },
-            
+
             nav(tab) {
                 document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                if (tab === 'Home') this.showScreen('screenHome');
-                else if (tab === 'Form') this.showScreen('screenForm');
-                else if (tab === 'Status') this.showScreen('screenStatus');
+                if (tab === 'Home') this.showScreen('screenForm');
+                else if (tab === 'SOS') this.showScreen('screenHome');
+                else if (tab === 'Form') this.showScreen('screenForm'); // TASKS also points here for now
+                else if (tab === 'Status') {
+                    this.showScreen('screenStatus');
+                    this.fetchStatus();
+                }
                 else if (tab === 'Settings') this.showScreen('screenSettings');
-                
+
                 const activeLink = Array.from(document.querySelectorAll('.nav-link')).find(l => l.innerText.includes(tab));
                 if (activeLink) activeLink.classList.add('active');
             },
-            
+
+            historyFilter: 'all',
+            rawData: { myHistory: [] },
+
+            async fetchStatus() {
+                try {
+                    const res = await fetch(`${this.API}/public/status/${this.user.phone}`);
+                    const data = await res.json();
+                    this.rawData = data; 
+                    this.renderStatusUI();
+                } catch (e) { console.error(e); }
+            },
+
+            renderStatusUI() {
+                const search = document.getElementById('statusSearch').value.toLowerCase();
+                const listOngoing = document.getElementById('ongoingList');
+                const listDone = document.getElementById('completedList');
+                
+                listOngoing.innerHTML = '';
+                listDone.innerHTML = '';
+
+                // Render Ongoing (Live)
+                const activeItems = this.rawData.myActive.filter(i => 
+                    i.type.toLowerCase().includes(search) || i.sector.toLowerCase().includes(search)
+                );
+                
+                if (!activeItems.length) {
+                    listOngoing.innerHTML = '<div style="text-align:center; padding:15px; color:#cbd5e1; font-size:11px; border:1px dashed #e2e8f0; border-radius:12px;">No active missions currently</div>';
+                }
+
+                activeItems.forEach(item => {
+                    listOngoing.innerHTML += `
+                        <div class="hist-item" style="border-left: 4px solid var(--danger); padding:12px;">
+                            <div class="hist-details">
+                                <h4 style="font-size:13px;">${item.type.toUpperCase()} RESCUE</h4>
+                                <p style="font-size:10px;">📍 ${item.sector}</p>
+                            </div>
+                            <div class="status-badge status-active" style="padding:2px 8px; font-size:9px;">LIVE</div>
+                        </div>
+                    `;
+                });
+
+                // Filter & Render Completed
+                let historyItems = this.rawData.myHistory.filter(i => 
+                    i.type.toLowerCase().includes(search) || i.sector.toLowerCase().includes(search) || String(i.id).includes(search)
+                );
+
+                const now = new Date();
+                if (this.historyFilter === 'today') {
+                    historyItems = historyItems.filter(i => new Date(i.updated_at).toDateString() === now.toDateString());
+                } else if (this.historyFilter === 'weekly') {
+                    historyItems = historyItems.filter(i => new Date(i.updated_at) >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
+                } else if (this.historyFilter === 'yearly') {
+                    historyItems = historyItems.filter(i => new Date(i.updated_at) >= new Date(now.getFullYear(), 0, 1));
+                }
+
+                if (!historyItems.length) {
+                    listDone.innerHTML = '<div style="text-align:center; padding:15px; color:#cbd5e1; font-size:11px;">No completed records found</div>';
+                }
+
+                historyItems.forEach(item => {
+                    listDone.innerHTML += `
+                        <div class="hist-item" style="padding:12px;">
+                            <div class="hist-details">
+                                <h4 style="font-size:13px;">${item.type.toUpperCase()} • TID #${item.id}</h4>
+                                <p style="font-size:10px;">📍 ${item.sector}</p>
+                                <p style="margin-top:2px; font-size:9px; color:#94a3b8;">${new Date(item.updated_at).toLocaleDateString()}</p>
+                            </div>
+                            <div class="status-badge status-completed" style="padding:2px 8px; font-size:9px;">${item.status}</div>
+                        </div>
+                    `;
+                });
+            },
+
+            setHistoryFilter(filter, btn) {
+                this.historyFilter = filter;
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.renderStatusUI();
+                this.toast(`ARCHIVE FILTER: ${filter.toUpperCase()}`, '🔍');
+            },
+
+            downloadPDF() {
+                this.toast('GENERATING MISSION REPORT...', '📄');
+                setTimeout(() => {
+                    const printWindow = window.open('', '_blank');
+                    let historyHtml = '';
+                    this.rawData.myHistory.forEach(h => {
+                        historyHtml += `
+                            <div style="padding:15px; border-bottom:1px solid #eee;">
+                                <div style="font-weight:900;">${h.type.toUpperCase()} RESCUE - TID #${h.id}</div>
+                                <div style="font-size:12px; color:#666;">Date: ${new Date(h.updated_at).toLocaleString()} | Status: ${h.status.toUpperCase()}</div>
+                                <div style="font-size:12px; color:#666;">Location: ${h.sector}</div>
+                            </div>
+                        `;
+                    });
+
+                    printWindow.document.write(`
+                        <html>
+                        <head><title>SOS Mission Report - ${this.user.name}</title></head>
+                        <body style="font-family:sans-serif; padding:40px;">
+                            <h1 style="color:#0ea5e9;">SOS MISSION REPORT</h1>
+                            <hr/>
+                            <p><strong>Citizen:</strong> ${this.user.name}</p>
+                            <p><strong>Serial:</strong> ${this.user.serial_number || 'PUB-01'}</p>
+                            <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                            <h2 style="margin-top:40px; border-bottom:2px solid #000;">COMPLETED MISSIONS</h2>
+                            ${historyHtml || '<p>No mission history found.</p>'}
+                            <div style="margin-top:60px; font-size:10px; text-align:center; color:#999;">
+                                This is an automated system report. Verified by SOS Emergency Network.
+                            </div>
+                        </body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                    printWindow.print();
+                }, 1000);
+            },
+
             setMode(mode, btn) {
                 this.mode = mode;
                 document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             },
-            
+
             updateNeeds(key, val) {
                 this.needs[key] = Math.max(0, this.needs[key] + val);
                 document.getElementById('n_' + key).value = this.needs[key];
             },
-            
+
             manualNeeds(key, val) {
                 this.needs[key] = Math.max(0, parseInt(val) || 0);
                 document.getElementById('n_' + key).value = this.needs[key];
             },
-            
+
             startSOS() {
                 document.querySelector('.pulse-ring').style.opacity = '1';
                 this.sosTimer = setTimeout(() => {
                     this.triggerSOS();
                 }, 2000);
             },
-            
+
             cancelSOS() {
                 document.querySelector('.pulse-ring').style.opacity = '0';
                 clearTimeout(this.sosTimer);
             },
-            
+
             async triggerSOS() {
                 this.updateStatusUI('TRIGGERED', 'SOS initiated locally', '🚨');
-                
+
                 const payload = {
                     phone: this.user.phone,
                     device_id: this.user.serial_number,
                     type: this.mode,
                     lat: this.currentLocation.lat, lng: this.currentLocation.lng,
-                    details: JSON.stringify({ 
-                        needs: this.needs, 
-                        photo: this.needs.photo, 
+                    details: JSON.stringify({
+                        needs: this.needs,
+                        photo: this.needs.photo,
                         route: this.needs.route || 'Not Defined',
-                        sector: document.getElementById('inpLoc').value 
+                        sector: document.getElementById('inpLoc').value
                     }),
                     urgency: 'critical',
                     sector: document.getElementById('inpLoc').value || 'Detected Location'
@@ -1000,7 +1548,7 @@
                 if (navigator.onLine) {
                     const item = queue[0];
                     const waitTime = this.backoff[Math.min(item.retries, this.backoff.length - 1)];
-                    
+
                     setTimeout(async () => {
                         try {
                             const res = await fetch(`${this.API}/rescue-requests`, {
@@ -1027,23 +1575,23 @@
                     setTimeout(() => this.processRetryQueue(), 5000);
                 }
             },
-            
+
             async submitRequest() {
                 await this.triggerSOS();
             },
-            
+
             async refreshStatus() {
                 try {
                     const res = await fetch(`${this.API}/rescue-requests/by-phone/${this.user.phone || this.user.serial_number}`);
                     const data = await res.json();
                     this.renderStatus(data);
-                } catch (e) {}
+                } catch (e) { }
             },
-            
+
             renderStatus(items) {
                 const list = document.getElementById('statusList');
                 if (items.length === 0) return;
-                
+
                 list.innerHTML = '';
                 items.forEach(it => {
                     const card = document.createElement('div');
@@ -1061,7 +1609,7 @@
                     list.appendChild(card);
                 });
             },
-            
+
             toast(msg, icon = '⚠️') {
                 const t = document.getElementById('toast');
                 document.getElementById('toastMsg').innerText = msg;
@@ -1069,7 +1617,7 @@
                 t.style.display = 'flex';
                 setTimeout(() => t.style.display = 'none', 3500);
             },
-            
+
             showLoader(val) { document.getElementById('loader').style.display = val ? 'flex' : 'none'; },
 
             setupKeyboardHandling() {
@@ -1130,10 +1678,37 @@
                     btn.classList.add('active');
                     this.toast(`PREFERRING ${route.toUpperCase()}`, '🚀');
                 }
+            },
+
+            bootstrap() {
+                document.getElementById('dispName').innerText = this.user.name;
+                document.getElementById('profName').innerText = this.user.name;
+                document.getElementById('profId').innerText = `ID: ${this.user.serial_number || 'PUB-01'}`;
+                
+                window.addEventListener('online', () => this.updateNetUI(true));
+                window.addEventListener('offline', () => this.updateNetUI(false));
+                this.updateNetUI(navigator.onLine);
+            },
+
+            updateNetUI(online) {
+                const dot = document.getElementById('syncStatusDot');
+                const label = document.getElementById('dispSyncInterval');
+                if (dot) {
+                    dot.style.background = online ? 'var(--secondary)' : 'var(--danger)';
+                    dot.style.boxShadow = online ? '0 0 10px var(--secondary)' : '0 0 10px var(--danger)';
+                }
+                if (!online && label) {
+                    label.innerText = `RECONNECTING: ${this.refreshInterval}s`;
+                    label.style.color = 'var(--danger)';
+                } else if (label) {
+                    label.innerText = `${this.refreshInterval}s (Admin Set)`;
+                    label.style.color = 'var(--primary)';
+                }
             }
         };
-        
+
         window.onload = () => core.init();
     </script>
 </body>
+
 </html>

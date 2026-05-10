@@ -405,6 +405,80 @@ function DashboardScreen({ user, onLogout }) {
     if (newTab === 'history') fetchHistory();
   };
 
+  const SettingsScreen = ({ user, onLogout }) => {
+    const [syncInterval, setSyncInterval] = useState('FETCHING...');
+    const [isOnline, setIsOnline] = useState(true);
+
+    useEffect(() => {
+      const fetchSync = async () => {
+        try {
+          const res = await fetch(`${API_URL.replace('/api', '')}/api/settings`);
+          setIsOnline(true);
+          const settings = await res.json();
+          if (settings.retry_intervals) {
+            setSyncInterval(settings.retry_intervals.split(',')[0] + 's (Admin Set)');
+          }
+        } catch (e) {
+          setIsOnline(false);
+          console.error(e);
+        }
+      };
+      fetchSync();
+      const interval = setInterval(fetchSync, 10000);
+      return () => clearInterval(interval);
+    }, []);
+
+    return (
+      <ScrollView contentContainerStyle={{ padding: 24, flexGrow: 1, justifyContent: 'space-between' }}>
+        <View>
+          <View style={[s.loginCard, { marginBottom: 30, padding: 30, width: '100%' }]}>
+            <View style={s.logoCircle}>
+              <Text style={{ fontSize: 40 }}>🚁</Text>
+            </View>
+            <Text style={s.loginTitle}>{user?.name}</Text>
+            <Text style={s.loginSub}>RESCUE OPERATIVE</Text>
+            <View style={{ width: '100%', height: 1, backgroundColor: C.border, marginVertical: 20 }} />
+            <Text style={[s.notifLabel, { marginBottom: 4 }]}>IDENTIFICATION</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: C.text, marginBottom: 15 }}>{user?.phone}</Text>
+          </View>
+
+          <Text style={s.countText}>SYSTEM CONFIGURATION</Text>
+          <View style={[s.historyCard, { borderColor: C.secondary, borderLeftWidth: 4, marginBottom: 12, marginTop: 10 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={[s.statusDot, { backgroundColor: C.secondary }]} />
+                <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>Dispatch Alerts</Text>
+              </View>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: C.secondary }}>ACTIVE</Text>
+            </View>
+          </View>
+
+          <View style={[s.historyCard, { borderColor: isOnline ? C.primary : C.danger, borderLeftWidth: 4, backgroundColor: (isOnline ? C.primary : C.danger) + '15' }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={[s.statusDot, { backgroundColor: isOnline ? C.primary : C.danger }]} />
+                <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>Network Sync</Text>
+              </View>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: isOnline ? C.primary : C.danger }}>
+                {isOnline ? syncInterval : `RECONNECTING: ${syncInterval.split(' ')[0]}`}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: C.light, marginTop: 6 }}>
+              {isOnline ? 'Automated reconnect timing managed by Admin' : 'Device disconnected. Retrying based on Admin timing.'}
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={[s.loginBtn, { backgroundColor: '#fee2e2', shadowColor: C.danger, marginTop: 40 }]}
+          onPress={onLogout}
+        >
+          <Text style={{ color: C.danger, fontWeight: '900', fontSize: 16 }}>SECURE LOGOUT</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    );
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.dark }}>
       <StatusBar barStyle="light-content" backgroundColor={notifAlert ? C.danger : C.dark} />
@@ -504,9 +578,9 @@ function DashboardScreen({ user, onLogout }) {
                 </Marker>
 
                 {/* Task Markers */}
-                {!activeTask && tasks.filter(t => 
-                  (t.type === 'sos' && filters.sos) || 
-                  ((t.type === 'medical' || t.type === 'pregnancy') && filters.medical) || 
+                {!activeTask && tasks.filter(t =>
+                  (t.type === 'sos' && filters.sos) ||
+                  ((t.type === 'medical' || t.type === 'pregnancy') && filters.medical) ||
                   (t.type === 'food' && filters.food)
                 ).map(t => (
                   <Marker key={t.id} coordinate={{ latitude: t.lat, longitude: t.lng }}>
@@ -613,6 +687,9 @@ function DashboardScreen({ user, onLogout }) {
               ))
             )}
           </ScrollView>
+        ) : (
+        /* Settings Tab */
+        <SettingsScreen user={user} onLogout={onLogout} />
         )}
       </View>
 
@@ -625,6 +702,10 @@ function DashboardScreen({ user, onLogout }) {
         <TouchableOpacity style={s.navItem} onPress={() => handleTabChange('history')}>
           <Text style={[s.navIcon, tab === 'history' && { color: C.primary }]}>📋</Text>
           <Text style={[s.navLabel, tab === 'history' && { color: C.primary }]}>HISTORY</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.navItem} onPress={() => handleTabChange('settings')}>
+          <Text style={[s.navIcon, tab === 'settings' && { color: C.primary }]}>⚙️</Text>
+          <Text style={[s.navLabel, tab === 'settings' && { color: C.primary }]}>SETTINGS</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -664,7 +745,7 @@ export default function App() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  
+
   // Login
   loginContainer: { flex: 1, backgroundColor: C.bg, padding: 30, justifyContent: 'center' },
   loginCard: { width: width - 48, backgroundColor: C.surface, borderRadius: 24, padding: 30, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
