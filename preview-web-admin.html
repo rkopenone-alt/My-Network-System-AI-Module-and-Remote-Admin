@@ -1476,7 +1476,7 @@
                             <div style="position:relative;">
                                 <i data-lucide="radio" style="width:24px; color:var(--critical);"></i>
                                 <span id="sosCallsBadge"
-                                    style="position:absolute; top:-6px; right:-8px; background:var(--critical); color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:10px;">12</span>
+                                    style="position:absolute; top:-6px; right:-8px; background:var(--critical); color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:10px;">0</span>
                             </div>
                             <div style="font-size:11px; font-weight:700; margin-top:4px; color:var(--text-main);">SOS
                                 Calls</div>
@@ -1487,7 +1487,7 @@
                             <div style="position:relative;">
                                 <i data-lucide="package" style="width:24px; color:var(--pending);"></i>
                                 <span id="foodDistBadge"
-                                    style="position:absolute; top:-6px; right:-8px; background:var(--pending); color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:10px;">5</span>
+                                    style="position:absolute; top:-6px; right:-8px; background:var(--pending); color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:10px;">0</span>
                             </div>
                             <div style="font-size:11px; font-weight:700; margin-top:4px; color:var(--text-main);">Food
                                 Dist.</div>
@@ -1504,11 +1504,11 @@
                             onclick="openOpDetails('SOS Calls')">
                             <span style="font-size:12px; font-weight:700; display:flex; align-items:center; gap:4px;">
                                 <div style="width:8px; height:8px; border-radius:50%; background:var(--critical);">
-                                </div> SOS: <span id="opSosCount">12</span>
+                                </div> SOS: <span id="opSosCount">0</span>
                             </span>
                             <div style="flex:1; margin:0 8px; height:4px; background:var(--border); border-radius:2px;">
                                 <div id="opSosBar"
-                                    style="width:75%; height:100%; background:var(--critical); border-radius:2px;">
+                                    style="width:0%; height:100%; background:var(--critical); border-radius:2px;">
                                 </div>
                             </div>
                         </div>
@@ -1516,22 +1516,22 @@
                             onclick="openOpDetails('Food Dist.')">
                             <span style="font-size:12px; font-weight:700; display:flex; align-items:center; gap:4px;">
                                 <div style="width:8px; height:8px; border-radius:50%; background:var(--pending);"></div>
-                                Food: <span id="opFoodCount">5</span>
+                                Food: <span id="opFoodCount">0</span>
                             </span>
                             <div style="flex:1; margin:0 8px; height:4px; background:var(--border); border-radius:2px;">
                                 <div id="opFoodBar"
-                                    style="width:40%; height:100%; background:var(--pending); border-radius:2px;"></div>
+                                    style="width:0%; height:100%; background:var(--pending); border-radius:2px;"></div>
                             </div>
                         </div>
                         <div class="flex-between" id="medUpdateRow" style="cursor: pointer;"
                             onclick="openOpDetails('Medical')">
                             <span style="font-size:12px; font-weight:700; display:flex; align-items:center; gap:4px;">
                                 <div style="width:8px; height:8px; border-radius:50%; background:var(--medical);"></div>
-                                Med: <span id="opMedCount">4</span>
+                                Med: <span id="opMedCount">0</span>
                             </span>
                             <div style="flex:1; margin:0 8px; height:4px; background:var(--border); border-radius:2px;">
                                 <div id="opMedBar"
-                                    style="width:100%; height:100%; background:var(--medical); border-radius:2px;">
+                                    style="width:0%; height:100%; background:var(--medical); border-radius:2px;">
                                 </div>
                             </div>
                         </div>
@@ -2329,13 +2329,11 @@
     </div>
 
     <script>
-        const API_BASE = 'http://127.0.0.1:3001/api';
+        const API_BASE = 'http://192.168.1.11:3001/api';
         lucide.createIcons();
 
         // 0. Landing Page Logic
-        let operations = [
-            { id: 'OP-01', name: 'Flood Relief Sector 4', date: '2026-05-03', status: 'Active', zoneData: { type: 'radius', latlng: { lat: 13.0827, lng: 80.2707 }, radius: 4000 } }
-        ];
+        let operations = [];
 
         let opMapInstance;
         let opDrawnLayer;
@@ -2722,13 +2720,7 @@
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
             // Add dynamic tactical markers
-            let mapMarkersData = [
-                { id: 901, status: 'pending', lat: 13.085, lng: 80.27, type: 'sos', icon: 'radio', details: 'Critical SOS: Stranded family on roof, immediate evac needed.' },
-                { id: 902, status: 'pending', lat: 13.090, lng: 80.26, type: 'medical', icon: 'cross', details: 'Medical Emergency: Elderly patient with cardiac arrest.' },
-                { id: 903, status: 'pending', lat: 13.075, lng: 80.28, type: 'food', icon: 'package', details: 'Food Request: 50 meal packets needed for relief camp.' },
-                { id: 904, status: 'pending', lat: 13.095, lng: 80.275, type: 'pregnancy', icon: 'activity', details: 'Pregnancy Evac: Labor initiated, urgent medical transport.' },
-                { id: 905, status: 'pending', lat: 13.068, lng: 80.278, type: 'rescue', icon: 'triangle', details: 'Rescue Operation: Structural collapse, 2 trapped civilians.' }
-            ];
+            let mapMarkersData = [];
 
             mapMarkersData.forEach(m => {
                 let isHex = m.type === 'rescue';
@@ -2828,6 +2820,14 @@
                 icon: icon,
                 draggable: draggable
             }).addTo(map);
+
+            marker.on('click', () => {
+                const coordInput = document.getElementById('cmdCoords');
+                if (coordInput) {
+                    coordInput.value = `${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`;
+                    if (dbId) coordInput.dataset.reqId = dbId;
+                }
+            });
 
             if (draggable) {
                 marker.on('dragend', async function (e) {
@@ -3203,10 +3203,7 @@
         }
 
         // 5. Command Logic
-        let cmds = [
-            { id: 'CMD-101', desc: 'Evacuate 3 stranded on roof', type: 'rescue', zone: '<b>Sector 4</b><br><small style="color:var(--text-muted);font-size:11px;">Lat: 13.085, Lng: 80.270</small>', team: 'Alpha Squad', time: '10:15', status: 'Ongoing', layerData: { type: 'radius', latlng: [13.085, 80.270], radius: 1000 } },
-            { id: 'CMD-102', desc: 'Drop MREs and Water', type: 'food', zone: '<b>Sector 2</b><br><small style="color:var(--text-muted);font-size:11px;">Lat: 13.075, Lng: 80.280</small>', team: 'Bravo Medics', time: '09:30', status: 'Completed', layerData: { type: 'radius', latlng: [13.075, 80.280], radius: 600 } }
-        ];
+        let cmds = [];
 
         let selectedCmdLayer = null;
         function selectTask(id) {
@@ -3951,20 +3948,26 @@
         let ws;
 
         function initWebSocket() {
-            ws = new WebSocket('ws://' + window.location.hostname + ':3001');
-            ws.onopen = () => console.log('[Admin WS] Connected to backend');
+            ws = new WebSocket('ws://192.168.1.11:3001');
+            ws.onopen = () => {
+                console.log('[Admin WS] Connected to backend');
+                ws.send(JSON.stringify({ type: 'REGISTER', deviceId: 'WEB_ADMIN_MASTER', room: 'admin' }));
+            };
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 if (data.type === 'NEW_RESCUE_REQUEST') {
                     fetchRescueRequests();
                     fetchDashboardStats();
+                    updateTacticalMap();
                     showAdminToast(`🆘 New ${data.data?.type?.toUpperCase() || 'rescue'} request from ${data.data?.sector || 'field'}`);
                 } else if (data.type === 'RESCUE_REQUEST_ACCEPTED' || data.type === 'RESCUE_REQUEST_DECLINED') {
                     fetchRescueRequests();
                     fetchDashboardStats();
+                    updateTacticalMap();
                 } else if (data.type === 'RESCUE_REQUEST_COMPLETED') {
                     fetchRescueRequests();
                     fetchDashboardStats();
+                    updateTacticalMap();
                     showAdminToast(`✅ Mission complete: ${data.data?.sector || 'request'} marked done by rescuer`);
                     // Mark command as completed in local list
                     const reqId = data.data?.id;
@@ -3975,6 +3978,7 @@
                 } else if (data.type === 'SOS_ALERT') {
                     showAdminToast(`🚨 SOS Alert: ${data.data?.details?.message || 'Incoming alert'}`);
                     fetchDashboardStats();
+                    updateTacticalMap();
                 } else if (data.type === 'RESCUER_UPDATE') {
                     // Update rescuer marker on map if available
                     const d = data.data;

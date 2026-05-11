@@ -14,7 +14,7 @@ const Store = {
 };
 const AsyncStorage = Store;
 
-const API_URL = 'http://192.168.1.100:3001/api'; // UPDATE THIS with your server IP
+const API_URL = 'http://192.168.1.11:3001/api'; // UPDATED with current laptop IP
 const { width } = Dimensions.get('window');
 
 // ─── Color Palette ────────────────────────────────────────────────────────────
@@ -653,7 +653,7 @@ function DashboardScreen({ user, onLogout }) {
               )}
             </ScrollView>
           </>
-        ) : (
+        ) : tab === 'history' ? (
           /* History Tab */
           <ScrollView contentContainerStyle={{ padding: 15 }}>
             <Text style={s.historyTitle}>Mission Log</Text>

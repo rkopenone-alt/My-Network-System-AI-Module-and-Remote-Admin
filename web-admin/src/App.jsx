@@ -185,8 +185,11 @@ export default function App() {
       );
     }
 
-    const ws = new WebSocket('ws://localhost:3001');
-    ws.onopen = () => setWsStatus('active');
+    const ws = new WebSocket('ws://192.168.1.11:3001');
+    ws.onopen = () => {
+      setWsStatus('active');
+      ws.send(JSON.stringify({ type: 'REGISTER', deviceId: 'REACT_ADMIN_' + Date.now(), room: 'admin' }));
+    };
     ws.onclose = () => setWsStatus('offline');
     ws.onmessage = (event) => {
       const { type, data } = JSON.parse(event.data);

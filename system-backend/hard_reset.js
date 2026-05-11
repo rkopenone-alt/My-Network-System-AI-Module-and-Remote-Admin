@@ -120,15 +120,9 @@ async function hardReset() {
                 db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('refresh_interval', '5')`);
                 db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('retry_intervals', '3, 7, 15')`);
 
-                // 8. Add dummy rescue requests
-                db.run(`INSERT INTO rescue_requests (type, sector, urgency, status, device_id, phone) VALUES 
-                    ('medical', 'Sector 4', 'critical', 'pending', '918000000001', '918000000001'),
-                    ('food', 'Sector 2', 'normal', 'pending', '918000000002', '918000000002')`);
+                // 8. Ready for live testing
+                console.log('No dummy requests added. System is clean.');
 
-                // 9. Add dummy commands
-                db.run(`INSERT INTO command_queue (command_type, command_payload, status, target_phone) VALUES 
-                    ('critical', '{"message": "Urgent Medical Evac", "sector": "Sector 4"}', 'ongoing', '919000000001'),
-                    ('zone', '{"message": "Supply Drop", "sector": "Sector 2"}', 'ongoing', '919000000003')`);
 
                 console.log('Database Hard Reset and Seeding Completed Successfully.');
                 resolve();

@@ -29,6 +29,10 @@ const db = new sqlite3.Database('./rescue.db', (err) => {
 const run = (sql, params = []) => new Promise((res, rej) =>
     db.run(sql, params, function (err) { err ? rej(err) : res(this); }));
 
+// ─── Test Endpoints (For Connectivity Verification) ────────────────────────
+app.get('/api/test', (req, res) => res.json({ status: 'Connected to API' }));
+app.get('/api/auth/test', (req, res) => res.json({ status: 'Connected to Auth API' }));
+
 const all = (sql, params = []) => new Promise((res, rej) =>
     db.all(sql, params, (err, rows) => { err ? rej(err) : res(rows); }));
 
@@ -244,21 +248,14 @@ db.serialize(() => {
     // Default users
     db.get("SELECT COUNT(*) as count FROM users", [], (err, row) => {
         if (row && row.count === 0) {
-            db.run(`INSERT INTO users (name, role, phone, device_id, serial_number, password) VALUES ('Arjun Singh', 'rescuer', '919000000001', 'DEV_001', 'MEM-01', '123456')`);
-            db.run(`INSERT INTO users (name, role, phone, device_id, serial_number, password) VALUES ('Sarah Khan', 'rescuer', '919000000002', 'DEV_002', 'MEM-02', '123456')`);
-            db.run(`INSERT INTO users (name, role, phone, device_id, serial_number, password) VALUES ('Amit Kumar', 'public', '918000000001', '918000000001', 'PUB-01', '123456')`);
-            db.run(`INSERT INTO users (name, role, phone, device_id, serial_number, password) VALUES ('Vikram Rao', 'rescuer', '919000000003', 'DEV_003', 'MEM-03', '123456')`);
-            db.run(`INSERT INTO users (name, role, phone, device_id, serial_number, password) VALUES ('Neha Sharma', 'rescuer', '919000000004', 'DEV_004', 'MEM-04', '123456')`);
+            // Dummy users removed
         }
     });
 
     // Default rescue requests
     db.get("SELECT COUNT(*) as count FROM rescue_requests", [], (err, row) => {
         if (row && row.count === 0) {
-            db.run(`INSERT INTO rescue_requests (device_id, type, lat, lng, details, urgency, sector) VALUES ('IND_USER_99', 'pregnancy', 13.085, 80.272, 'Labor initiated, urgent medical transport needed', 'critical', 'Sector 4')`);
-            db.run(`INSERT INTO rescue_requests (device_id, type, lat, lng, details, urgency, sector) VALUES ('IND_USER_99', 'medical', 13.090, 80.260, 'Critical injury, cardiac arrest reported', 'high', 'Block 7')`);
-            db.run(`INSERT INTO rescue_requests (device_id, type, lat, lng, details, urgency, sector) VALUES ('IND_USER_99', 'pregnancy', 13.075, 80.280, 'Pregnant woman stranded on second floor', 'high', 'Sector 2')`);
-            db.run(`INSERT INTO rescue_requests (device_id, type, lat, lng, details, urgency, sector) VALUES ('IND_USER_99', 'medical', 13.068, 80.278, 'Multiple casualties, building collapse', 'critical', 'Sector 5')`);
+            // Dummy rescue requests removed
         }
     });
 });
@@ -1333,9 +1330,9 @@ app.get('/api/dashboard-stats', async (req, res) => {
 
         // Simulating some ongoing/completed stats based on data
         res.json({
-            sos: { ongoing: sosCount.count || 3, completed: sosCompleted.count || 9, total: (sosCount.count || 3) + (sosCompleted.count || 9) },
-            food: { ongoing: foodCount.count || 3, completed: foodCompleted.count || 2, total: (foodCount.count || 3) + (foodCompleted.count || 2) },
-            medical: { ongoing: medCount.count || 0, completed: medCompleted.count || 4, total: (medCount.count || 0) + (medCompleted.count || 4) }
+            sos: { ongoing: sosCount.count || 0, completed: sosCompleted.count || 0, total: (sosCount.count || 0) + (sosCompleted.count || 0) },
+            food: { ongoing: foodCount.count || 0, completed: foodCompleted.count || 0, total: (foodCount.count || 0) + (foodCompleted.count || 0) },
+            medical: { ongoing: medCount.count || 0, completed: medCompleted.count || 0, total: (medCount.count || 0) + (medCompleted.count || 0) }
         });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
