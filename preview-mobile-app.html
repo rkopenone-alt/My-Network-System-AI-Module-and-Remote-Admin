@@ -772,6 +772,83 @@
             cursor: pointer;
             letter-spacing: 0.5px;
         }
+        /* Notification Panel */
+        .notification-panel {
+            width: 100%;
+            height: 10%;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: none;
+            flex-direction: column;
+            padding: 10px 20px;
+            overflow: hidden;
+            z-index: 1000;
+            position: relative;
+        }
+
+        .notification-panel.active {
+            display: flex;
+            animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .notif-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            height: 100%;
+        }
+
+        .notif-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary-light);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            border: 1px solid var(--primary);
+        }
+
+        .notif-content {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .notif-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .notif-body {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .notif-badge {
+            font-size: 9px;
+            font-weight: 900;
+            padding: 2px 8px;
+            border-radius: 10px;
+            text-transform: uppercase;
+            background: var(--primary);
+            color: white;
+        }
     </style>
 </head>
 
@@ -779,6 +856,17 @@
 
     <div class="phone-mockup">
         <div class="phone-inner">
+            <!-- Global Notification Panel (Top 10%) -->
+            <div id="globalNotificationPanel" class="notification-panel">
+                <div class="notif-item">
+                    <div class="notif-icon" id="globalNotifIcon">📡</div>
+                    <div class="notif-content">
+                        <div class="notif-title" id="globalNotifTitle">System Ready</div>
+                        <div class="notif-body" id="globalNotifBody">Connected to Rescue Network</div>
+                    </div>
+                    <div class="notif-badge" id="globalNotifStatus">Live</div>
+                </div>
+            </div>
 
             <!-- SCREEN 1: LOGIN -->
             <div class="screen active" id="screenLogin">
@@ -1138,12 +1226,8 @@
 
     <script>
         const core = {
-            API: (window.location.protocol === 'file:' || !window.location.hostname) 
-                ? `http://192.168.1.7:3001/api` 
-                : `http://${window.location.hostname}:3001/api`,
-            WS_URL: (window.location.protocol === 'file:' || !window.location.hostname)
-                ? `ws://192.168.1.7:3001`
-                : `ws://${window.location.hostname}:3001`,
+            API: `http://192.168.1.8:3001/api`,
+            WS_URL: `ws://192.168.1.8:3001`,
             user: null,
             sosTimer: null,
             socket: null,
@@ -1318,6 +1402,8 @@
                             this.bootstrap();
                             this.connectGateway();
                             this.startLocationTracking();
+                            document.getElementById('globalNotificationPanel').classList.add('active');
+                            this.updateGlobalNotification('System Ready', 'Connected to Rescue Network', '📡', 'Live');
                         } else {
                             this.logout();
                         }
@@ -1367,6 +1453,7 @@
                     localStorage.setItem('citizen_device_id', localDeviceId);
                 }
 
+                console.log('[LOGIN] Attempting login...', { idOrPhone: phone, pin, deviceId: localDeviceId });
                 this.showLoader(true);
                 try {
                     const res = await fetch(`${this.API}/auth/login`, {
@@ -1374,6 +1461,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ idOrPhone: phone, pin, deviceId: localDeviceId })
                     });
+                    console.log('[LOGIN] Response status:', res.status);
 
                     if (res.ok) {
                         const data = await res.json();
@@ -1384,6 +1472,8 @@
                         this.bootstrap();
                         this.connectGateway();
                         this.startLocationTracking();
+                        document.getElementById('globalNotificationPanel').classList.add('active');
+                        this.updateGlobalNotification('Welcome', `Logged in as ${this.user.name}`, '👤', 'Live');
                     } else {
                         const errData = await res.json();
                         err.innerText = errData.error || "INVALID CREDENTIALS";
@@ -1411,6 +1501,26 @@
                 document.getElementById('dispName').innerText = this.user.name;
                 document.getElementById('profName').innerText = this.user.name;
                 document.getElementById('profId').innerText = `ID: ${this.user.serial_number || 'PUB-01'}`;
+            },
+
+            updateGlobalNotification(title, body, icon, status) {
+                const panel = document.getElementById('globalNotificationPanel');
+                if (!panel) return;
+                
+                const titleEl = document.getElementById('globalNotifTitle');
+                const bodyEl = document.getElementById('globalNotifBody');
+                const iconEl = document.getElementById('globalNotifIcon');
+                const statusEl = document.getElementById('globalNotifStatus');
+
+                if (titleEl) titleEl.innerText = title;
+                if (bodyEl) bodyEl.innerText = body;
+                if (iconEl) iconEl.innerText = icon || '📡';
+                if (statusEl) {
+                    statusEl.innerText = status || 'Live';
+                    statusEl.style.background = status === 'Critical' ? 'var(--danger)' : 'var(--primary)';
+                }
+
+                panel.classList.add('active');
             },
 
             connectGateway() {
@@ -1471,15 +1581,22 @@
                     
                     if (dist < 1) {
                         this.updateStatusUI('NEARBY', `Rescuer ${data.name || 'Team'} is arriving (${dist.toFixed(1)}km)`, '🏢');
+                        this.updateGlobalNotification('Rescuer Nearby', `${data.name || 'Team'} is arriving now!`, '🏢', 'Near');
                     } else if (dist < 5) {
                         this.updateStatusUI('APPROACHING', `Rescuer ${data.name || 'Team'} in transit (${dist.toFixed(1)}km)`, '🚁');
+                        this.updateGlobalNotification('Rescuer En Route', `${data.name || 'Team'} is ${dist.toFixed(1)}km away`, '🚁', 'Moving');
                     } else {
                         this.updateStatusUI('DISPATCHED', `Team assigned: ${data.name || 'Team'} (${dist.toFixed(1)}km)`, '🚨');
+                        this.updateGlobalNotification('Team Dispatched', `${data.name || 'Team'} assigned to your SOS`, '🚨', 'Assigned');
                     }
 
                     // Plot the live rescuer location on the map
                     if (!this.rescuerMarker) {
-                        const rIcon = L.divIcon({ className: 'user-marker', html: '<div class="marker-pulse" style="background:var(--secondary)"></div>', iconSize: [20, 20] });
+                        const rIcon = L.divIcon({ 
+                            className: 'rescuer-marker', 
+                            html: `<div style="background:url('official_rescuer_icon.png'); background-size:cover; width:48px; height:48px; border-radius:50%; border:3px solid white; box-shadow:0 0 20px rgba(220, 38, 38, 0.6);"></div>`, 
+                            iconSize: [48, 48] 
+                        });
                         this.rescuerMarker = L.marker([data.lat, data.lng], { icon: rIcon }).addTo(this.map);
                     } else {
                         this.rescuerMarker.setLatLng([data.lat, data.lng]);
@@ -1492,6 +1609,7 @@
                 if (type === 'RESCUE_REQUEST_ACCEPTED') {
                     if (data.phone === this.user.phone || data.device_id === this.user.serial_number) {
                         this.updateStatusUI('TEAM_ASSIGNED', 'Rescue team has been dispatched!', '🚨');
+                        this.updateGlobalNotification('Mission Accepted', `Team "${data.assignedName}" is en route`, '🚨', 'Active');
                         this.toast('MISSION ACCEPTED: TEAM EN ROUTE', '✅');
                         this.showMissionAlert(`TEAM DISPATCHED`, `The rescue team "${data.assignedName}" is now moving to your location. Stay calm and follow instructions.`);
                         this.fetchMyHistory();
@@ -1783,6 +1901,7 @@
                         if (res.ok) {
                             const result = await res.json();
                             this.updateStatusUI('DELIVERED', `SOS #${result.id || ''} Delivered Successfully`, '✅');
+                            this.updateGlobalNotification('SOS Received', 'Your SOS request received by Server', '📡', 'Received');
                             this.toast('SOS DELIVERED', '✅');
                             this.nav('Status');
                         } else if (res.status === 429) {
@@ -1985,6 +2104,7 @@
             }
         };
 
+        window.core = core;
         window.onload = () => core.init();
     </script>
 </body>

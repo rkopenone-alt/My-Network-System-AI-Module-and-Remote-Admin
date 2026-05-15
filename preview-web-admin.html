@@ -7,7 +7,10 @@
     <title>Rescue Command Center - Professional Dashboard</title>
     <!-- Leaflet & Icons -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -761,9 +764,12 @@
         }
 
         .marker-rescuer .marker-inner {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.1);
+            border-color: white;
+            background: white;
             color: #3b82f6;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
         }
 
         .marker-label {
@@ -1073,6 +1079,17 @@
             margin: 0 auto;
             padding: 80px 60px;
         }
+
+        .tracking-pulse-line {
+            animation: dashPulse 2s linear infinite;
+            stroke-dasharray: 10, 15;
+        }
+
+        @keyframes dashPulse {
+            to {
+                stroke-dashoffset: -25;
+            }
+        }
     </style>
 </head>
 
@@ -1369,10 +1386,16 @@
                                 <i data-lucide="package" style="width:12px; height:12px;"></i> <span id="reqItemsList">No items</span>
                             </div>
                         </div>
-                        <button class="btn btn-outline btn-block" onclick="openReassignModalFromDetails()"
-                            style="color: var(--primary); border-color: var(--primary);">
-                            <i data-lucide="refresh-cw" style="width:14px; margin-right:4px;"></i> Reassign Task
-                        </button>
+                        <div id="tdActionContainer" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <button class="btn btn-primary btn-block" style="background:#10b981; border-color:#10b981; padding:10px; font-weight:700; font-size:12px;" 
+                                onclick="const id = document.getElementById('tdId').innerText.split(' • ')[0]; closeTaskByAdmin(id);">
+                                ✅ MARK AS COMPLETED
+                            </button>
+                            <button class="btn btn-outline btn-block" onclick="const id = document.getElementById('tdId').innerText.split(' • ')[0]; openReassignModal(id);"
+                                style="color: var(--primary); border-color: var(--primary); font-weight:700;">
+                                <i data-lucide="refresh-cw" style="width:14px; margin-right:4px;"></i> RE-ASSIGN TASK
+                            </button>
+                        </div>
                     </div>
                 </div>
             </aside>
@@ -1393,6 +1416,17 @@
                     </div>
 
                     <div class="cmd-content" id="cmd-live">
+                        <!-- DEV TEST BUTTON -->
+                        <div style="margin-bottom: 15px; padding: 12px; background: rgba(37, 99, 235, 0.05); border: 1px dashed var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="font-size: 12px; color: var(--accent); font-weight: 700;">
+                                <i data-lucide="beaker" style="width:14px; vertical-align: middle; margin-right: 4px;"></i>
+                                TESTING MODE: Simulate a live mission to verify tracking lines.
+                            </div>
+                            <button class="btn btn-primary" onclick="createDummyTestTask()" style="padding: 6px 12px; font-size: 11px; font-weight: 800; border-radius: 6px;">
+                                <i data-lucide="plus-circle" style="width:12px;"></i> Generate Test Mission
+                            </button>
+                        </div>
+
                         <!-- Critical Operations Feed (NEW) -->
                         <div id="criticalOperationsHub" style="display:none; margin-bottom: 24px;">
                             <div class="section-title"
@@ -2511,10 +2545,8 @@
     </div>
 
     <script>
-        const SERVER_IP = '192.168.1.7'; // Your PC's current IP address
-        const API_BASE = (window.location.protocol === 'file:' || !window.location.hostname) 
-            ? `http://${SERVER_IP}:3001/api` 
-            : `${window.location.protocol}//${window.location.hostname}:3001/api`;
+        const SERVER_IP = '192.168.1.8'; // Your PC's current IP address
+        const API_BASE = 'http://192.168.1.8:3001/api';
         let operations = [];
         let rescueRequests = [];
         let cmds = [];
@@ -2525,9 +2557,7 @@
         // 0. WebSocket & Global Helpers
         let socket;
         function initWebSocket() {
-            const wsUrl = (window.location.protocol === 'file:' || !window.location.hostname)
-                ? `ws://${SERVER_IP}:3001`
-                : `ws://${window.location.hostname}:3001`;
+            const wsUrl = 'ws://192.168.1.8:3001';
             console.log(`[Admin] Connecting to WebSocket: ${wsUrl}`);
             socket = new WebSocket(wsUrl);
 
@@ -3127,7 +3157,7 @@
             }
         };
 
-        function addMarker(lat, lng, type, iconHtml, details, label, isCriticalMovement = false, isGrouped = false, dbId = null, isCommand = false, status = null) {
+        function addMarker(lat, lng, type, iconHtml, details, label, isCriticalMovement = false, isGrouped = false, dbId = null, isCommand = false, status = null, timestamp = null, userId = null, currentMission = null) {
             // Priority check for pulsing
             const isPriority = isCriticalMovement || ['sos', 'medical', 'pregnancy', 'command', 'critical'].includes(type.toLowerCase());
             const markerClass = `marker-${type.toLowerCase()} ${isGrouped ? 'marker-grouped' : ''}`;
@@ -3153,7 +3183,9 @@
             let marker = L.marker([lat, lng], {
                 icon: icon,
                 draggable: draggable
-            }).addTo(map);
+            });
+            // Marker gets added to map or cluster group externally
+
 
             marker.on('click', () => {
                 const coordInput = document.getElementById('cmdCoords');
@@ -3193,29 +3225,69 @@
             if (details) {
                 let statusHtml = '';
                 let actionHtml = '';
+                let metaHtml = '';
 
-                if (!isCommand && dbId) {
+                if (userId || label) {
+                    metaHtml += `<div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:2px;">User ID: ${userId || label}</div>`;
+                }
+                if (currentMission) {
+                    metaHtml += `<div style="font-size:11px; font-weight:700; color:#3b82f6; margin-bottom:2px;">Current Mission: ${currentMission}</div>`;
+                }
+                if (timestamp) {
+                    metaHtml += `<div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:2px;">Created: ${new Date(timestamp).toLocaleString()}</div>`;
+                }
+
+                if (dbId) {
                     if (status) {
                         let badgeClass = status === 'pending' ? 'tag-yellow' : (status === 'completed' ? 'tag-green' : (status === 'declined' ? 'tag-red' : 'tag-purple'));
                         statusHtml = `<div style="margin-top:8px; margin-bottom:4px;"><span class="tag ${badgeClass}">${status.toUpperCase()}</span></div>`;
                     }
 
-                    if (status !== 'completed') {
+                    if (status !== 'completed' && status !== 'declined') {
                         const safeDetails = details.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                        actionHtml = `<div style="margin-top:10px;">
-                            <button class="btn btn-primary" style="width:100%; font-size:11px; padding:6px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 6px;" onclick="window.populateCommandForm(${dbId}, '${type}', ${lat}, ${lng}, '${safeDetails}')">
-                                Assign Task
-                            </button>
-                        </div>`;
+                        
+                        if (isCommand) {
+                            // For commands, show Re-assign and Close
+                            actionHtml = `
+                                <div style="margin-top:10px; display: flex; flex-direction: column; gap: 6px;">
+                                    <button class="btn btn-primary" style="width:100%; font-size:11px; padding:6px; cursor: pointer;" 
+                                        onclick="window.openReassignModal('${dbId}')">
+                                        <i data-lucide="refresh-cw" style="width:12px; margin-right:4px;"></i> Re-assign Task
+                                    </button>
+                                    <button class="btn btn-danger" style="width:100%; font-size:11px; padding:6px; cursor: pointer; background: #ef4444; color: white; border: none; border-radius: 4px;" 
+                                        onclick="window.closeTaskByAdmin('${dbId}')">
+                                        <i data-lucide="check-circle" style="width:12px; margin-right:4px;"></i> Close Task
+                                    </button>
+                                </div>`;
+                        } else {
+                            // For rescue requests, show Assign (if pending) and Close
+                            actionHtml = `
+                                <div style="margin-top:10px; display: flex; flex-direction: column; gap: 6px;">
+                                    ${status === 'pending' ? `
+                                    <button class="btn btn-primary" style="width:100%; font-size:11px; padding:6px; cursor: pointer;" 
+                                        onclick="window.populateCommandForm(${dbId}, '${type}', ${lat}, ${lng}, '${safeDetails}')">
+                                        <i data-lucide="plus-circle" style="width:12px; margin-right:4px;"></i> Assign Task
+                                    </button>` : ''}
+                                    <button class="btn btn-danger" style="width:100%; font-size:11px; padding:6px; cursor: pointer; background: #ef4444; color: white; border: none; border-radius: 4px;" 
+                                        onclick="window.closeRescueRequest(${dbId})">
+                                        <i data-lucide="check-circle" style="width:12px; margin-right:4px;"></i> Close Request
+                                    </button>
+                                </div>`;
+                        }
                     }
                 }
 
                 marker.bindPopup(`<div style="font-family:'Inter'; font-size:13px; padding:4px; min-width:180px;">
                     <div style="font-weight:900; text-transform:uppercase; margin-bottom:4px; color:var(--primary);">${type} Mission</div>
-                    <div style="line-height:1.4; color:var(--text-muted);">${details}</div>
+                    ${metaHtml}
+                    <div style="line-height:1.4; color:var(--text-muted); margin-top:4px;">${details}</div>
                     ${statusHtml}
                     ${actionHtml}
                 </div>`);
+
+                marker.on('popupopen', () => {
+                    if (window.lucide) lucide.createIcons();
+                });
             }
 
             return marker;
@@ -3241,6 +3313,16 @@
                 // Clear existing tactical layers
                 mapLayers.forEach(l => map.removeLayer(l));
                 mapLayers = [];
+                
+                if (window.markerClusterGroup) {
+                    map.removeLayer(window.markerClusterGroup);
+                }
+                window.markerClusterGroup = L.markerClusterGroup({
+                    maxClusterRadius: 40,
+                    spiderfyOnMaxZoom: true,
+                    showCoverageOnHover: false,
+                    zoomToBoundsOnClick: true
+                });
 
                 // 1. Render Zones (Minimal Transparent Grouped Visualization)
                 zones.forEach(z => {
@@ -3285,7 +3367,25 @@
                 // 2. Render Rescuers & Missions (with Dotted Lines for Critical Tasks)
                 rescuers.forEach(r => {
                     if (r.lat && r.lng) {
-                        const m = addMarker(r.lat, r.lng, 'rescuer', '🚁', `Rescuer: ${r.name}`, r.name);
+                        // Find current mission if any
+                        const assignedTask = tasks.find(t => t.status === 'assigned' && t.rescuer_phone === r.phone);
+                        const assignedCmd = activeCmds.find(c => c.status === 'accepted' && c.target_phone === r.phone);
+                        const missionInfo = assignedTask ? assignedTask.type.toUpperCase() : (assignedCmd ? 'HQ DIRECTIVE' : 'AVAILABLE');
+
+                        const rescuerIconHtml = `<div style="background:url('official_rescuer_icon.png'); background-size:cover; width:100%; height:100%; border-radius:50%;"></div>`;
+                        let statusText = 'online';
+                        let isOffline = false;
+                        if (r.status === 'offline' || r.live_connected === false) {
+                            statusText = '⚠️ Signal Lost / Offline';
+                            isOffline = true;
+                        }
+                        const m = addMarker(r.lat, r.lng, 'rescuer', rescuerIconHtml, `Rescuer: ${r.name}`, r.name, false, false, r.id, false, statusText, null, r.serial_number || r.phone, missionInfo);
+                        
+                        if (isOffline) {
+                            m.setOpacity(0.6); // Gray out slightly if offline
+                        }
+                        
+                        window.markerClusterGroup.addLayer(m);
                         mapLayers.push(m);
 
                         // Helper to check if rescuer is in a specific group
@@ -3307,13 +3407,34 @@
                                 }
 
                                 if (targetLat && targetLng) {
-                                    const line = L.polyline([[r.lat, r.lng], [targetLat, targetLng]], {
-                                        color: '#ef4444',
-                                        weight: 2,
-                                        dashArray: '5, 10',
-                                        opacity: 0.6
-                                    }).addTo(map);
-                                    mapLayers.push(line);
+                                    const isSelected = (window.selectedTrackingCmdId === 'CMD-' + c.id);
+                                    let isOffline = (r.status === 'offline' || r.live_connected === false);
+                                    
+                                    // Normalize phone/ID check for rescuer matching
+                                    const isRescuerMatch = (c.target_phone === r.phone || (r.id && c.target_phone === r.id.toString()));
+
+                                    if (isSelected || isRescuerMatch || isInGroup(c.group_id)) {
+                                        const lineOptions = isSelected ? {
+                                            color: isOffline ? '#9ca3af' : '#2563eb', 
+                                            weight: 5,
+                                            dashArray: isOffline ? '10, 10' : null,
+                                            opacity: 1,
+                                            className: 'tracking-pulse-line'
+                                        } : {
+                                            color: '#ef4444',
+                                            weight: 2,
+                                            dashArray: '5, 10',
+                                            opacity: 0.6
+                                        };
+
+                                        const line = L.polyline([[r.lat, r.lng], [targetLat, targetLng]], lineOptions).addTo(map);
+                                        mapLayers.push(line);
+                                        
+                                        if (isSelected && window.selectedTrackingBounds) {
+                                            window.selectedTrackingBounds.extend([r.lat, r.lng]);
+                                            window.selectedTrackingBounds.extend([targetLat, targetLng]);
+                                        }
+                                    }
                                 }
                             }
                         });
@@ -3364,7 +3485,8 @@
                     const typeStr = t.type ? t.type.toLowerCase() : 'emergency';
                     const icon = getTaskIconByType(typeStr);
                     const label = t.serial_number || t.phone || t.device_id;
-                    const m = addMarker(t.lat, t.lng, typeStr, icon, `Request: ${typeStr}<br>Area: ${t.sector}`, label, false, isInZone, t.id, false, t.status);
+                    const m = addMarker(t.lat, t.lng, typeStr, icon, `Request: ${typeStr}<br>Area: ${t.sector}`, label, false, isInZone, t.id, false, t.status, t.created_at, label);
+                    window.markerClusterGroup.addLayer(m);
                     mapLayers.push(m);
                 });
 
@@ -3386,10 +3508,14 @@
                     if (cLat && cLng) {
                         const icon = `<i data-lucide="crosshair" style="width:16px; color:#ef4444;"></i>`;
                         const dbId = c.id;
-                        const m = addMarker(cLat, cLng, 'command', icon, `Command: ${c.desc || 'Direct Order'}<br>Status: ${c.status}`, `CMD-${c.id}`, false, false, dbId, true);
+                        const m = addMarker(cLat, cLng, 'command', icon, `Command: ${c.desc || 'Direct Order'}<br>Status: ${c.status}`, `CMD-${c.id}`, false, false, dbId, true, c.status, c.timestamp, c.target_phone || c.id);
+                        window.markerClusterGroup.addLayer(m);
                         mapLayers.push(m);
                     }
                 });
+
+                // Finally add the cluster group to map
+                map.addLayer(window.markerClusterGroup);
 
                 if (window.lucide) lucide.createIcons();
             } catch (e) { console.error('Map update error', e); }
@@ -3606,6 +3732,20 @@
                 }
                 map.flyToBounds(selectedCmdLayer.getBounds(), { padding: [50, 50], duration: 1 });
             }
+            
+            // Auto focus and smooth tracking on active mission
+            window.selectedTrackingCmdId = id;
+            window.selectedTrackingBounds = L.latLngBounds();
+            
+            updateTacticalMap().then(() => {
+                if (window.selectedTrackingBounds && window.selectedTrackingBounds.isValid()) {
+                    // Include the command zone bounds if present
+                    if (selectedCmdLayer) {
+                        window.selectedTrackingBounds.extend(selectedCmdLayer.getBounds());
+                    }
+                    map.flyToBounds(window.selectedTrackingBounds, { padding: [60, 60], duration: 1.5 });
+                }
+            });
             if (window.lucide) lucide.createIcons();
         }
 
@@ -3616,6 +3756,9 @@
                 map.removeLayer(selectedCmdLayer);
                 selectedCmdLayer = null;
             }
+            window.selectedTrackingCmdId = null;
+            window.selectedTrackingBounds = null;
+            updateTacticalMap(); // Refresh map to remove tracking lines
         }
 
         function getTagForType(type) {
@@ -3654,18 +3797,17 @@
             let normHistCount = 0;
 
             cmds.forEach((c) => {
-                let isReassignable = c.status !== 'Completed';
-
                 const s = (c.status || '').toLowerCase();
-                const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'assigned', 'acknowledged', 'declined', 'in_progress'].includes(s);
-                const isCrit = c.priority === 'critical' || ['sos', 'medical', 'pregnancy', 'critical', 'rescue'].includes(c.type.toLowerCase());
+                const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'assigned', 'acknowledged', 'declined', 'in_progress', 'active'].includes(s);
+                const isCrit = c.priority === 'critical' || ['sos', 'medical', 'pregnancy', 'critical', 'rescue'].includes((c.type || '').toLowerCase());
+                const isReassignable = s !== 'completed';
 
                 let row = `<tr onclick="selectTask('${c.id}')" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                     <td style="font-weight: 800; color: var(--text-muted);">{SNO}</td>
                     <td style="font-weight:700;">${c.id}</td>
                     <td>${c.desc}</td>
                     <td>
-                        <span class="tag ${getTagForType(c.type)}">${c.type.toUpperCase()}</span>
+                        <span class="tag ${getTagForType(c.type)}">${(c.type || 'N/A').toUpperCase()}</span>
                     </td>
                     <td>${c.zone}</td>
                     <td>${c.team}</td>
@@ -3673,8 +3815,10 @@
                     <td style="color:var(--text-muted); font-size: 12px;">${c.cmdTime || c.time}</td>
                     <td><span class="tag ${getTagForStatus(c.status)}">${c.status}</span></td>
                     <td>
-                        ${isReassignable ? `<button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Re Assign Task</button>` : '-'}
-                        ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #10b981; border-color: #10b981; margin-left:4px;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ Close</button>` : ''}
+                        <div style="display:flex; gap:4px;">
+                            ${isReassignable ? `<button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Re-Assign</button>` : ''}
+                            ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #10b981; border-color: #10b981;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ Close</button>` : ''}
+                        </div>
                     </td>
                 </tr>`;
 
@@ -3697,18 +3841,20 @@
                     <td style="font-weight:700;">${c.id}</td>
                     <td>${c.desc}</td>
                     <td>
-                        <span class="tag ${getTagForType(c.type)}">${c.type.toUpperCase()}</span>
+                        <span class="tag ${getTagForType(c.type)}">${(c.type || 'N/A').toUpperCase()}</span>
                     </td>
                     <td>${c.zone}</td>
                     <td>${c.team}</td>
                     <td style="color:var(--text-muted); font-size: 12px;">${c.reqTime || c.time}</td>
                     <td style="color:var(--text-muted); font-size: 12px;">${c.cmdTime || c.time}</td>
                     <td><span class="tag ${getTagForStatus(c.status)}">${c.status}</span></td>
-                    <td style="display: flex; gap: 4px;">
-                        ${isOngoing ? `
-                            <button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Re Assign Task</button>
-                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #10b981; border-color: #10b981;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ Close</button>
-                        ` : '-'}
+                    <td>
+                        <div style="display:flex; gap:4px;">
+                            ${isOngoing ? `
+                                <button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Re-Assign</button>
+                                <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #10b981; border-color: #10b981;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ Close</button>
+                            ` : (isReassignable ? `<button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Re-Assign</button>` : '-')}
+                        </div>
                     </td>
                 </tr>`;
 
@@ -3771,7 +3917,11 @@
             document.getElementById('historyTbodyNormal').innerHTML = histNormalHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No normal history found</td></tr>';
 
             // Handle Critical Operations Hub
-            const criticalMissions = cmds.filter(c => c.type === 'critical' && c.status !== 'Completed');
+            const criticalMissions = cmds.filter(c => {
+                const s = (c.status || '').toLowerCase();
+                const t = (c.type || '').toLowerCase();
+                return (t === 'critical' || t === 'sos' || t === 'medical') && s !== 'completed';
+            });
             const hub = document.getElementById('criticalOperationsHub');
             const hubList = document.getElementById('criticalTasksList');
 
@@ -4603,9 +4753,25 @@
         }
 
         async function closeTaskByAdmin(fullId) {
-            if (!confirm(`Are you sure you want to manually mark ${fullId} as completed?`)) return;
+            if (!fullId) {
+                alert("Cannot close: Invalid Task ID");
+                return;
+            }
+            if (!confirm(`Are you sure you want to mark ${fullId} as completed?`)) return;
             
             const dbId = fullId.replace('CMD-', '');
+            
+            // Handle dummy tasks
+            if (dbId.startsWith('DUMMY-')) {
+                if (window._mockData_cmds) {
+                    window._mockData_cmds = window._mockData_cmds.filter(c => c.id !== dbId);
+                    showAdminToast(`Test Task ${fullId} closed (removed from session)`);
+                    fetchCommands();
+                    closeTaskDetails();
+                    return;
+                }
+            }
+
             try {
                 const res = await fetch(`${API_BASE}/commands/${dbId}/status`, {
                     method: 'PUT',
@@ -4615,13 +4781,17 @@
                 
                 if (res.ok) {
                     showAdminToast(`Task ${fullId} closed successfully`);
-                    fetchCommands(); // Refresh list
-                    fetchRescueRequests(); // Refresh linked SOS status
+                    await fetchCommands(); 
+                    await fetchRescueRequests(); 
+                    closeTaskDetails(); 
+                    updateTacticalMap(); // Force map refresh
                 } else {
-                    alert("Failed to close task");
+                    const errData = await res.json().catch(() => ({}));
+                    alert("Failed to close task: " + (errData.message || res.statusText));
                 }
             } catch (err) {
                 console.error("Error closing task", err);
+                alert("Connection error while closing task. Please try again.");
             }
         }
 
@@ -4948,7 +5118,7 @@
                 <tr>
                     <td style="font-weight: 800; color: var(--text-muted);">${String(index + 1).padStart(2, '0')}</td>
                     <td>
-                        <img src="${m.photo_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.name) + '&background=random'}" 
+                        <img src="${m.photo_url || 'official_rescuer_icon.png'}" 
                              style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid var(--border);" />
                     </td>
                     <td style="font-weight:700; color:var(--accent); font-family: monospace;">${m.device_id || m.serial_number || 'N/A'}</td>
@@ -5230,6 +5400,116 @@
             fetchCommands();
             fetchRefreshSetting();
         };
+        // --- Dummy Task Logic for Testing ---
+        function createDummyTestTask() {
+            console.log("[TEST] Creating dummy tactical mission data...");
+            
+            // 1. Coordinates near the center of map (Chennai area usually used in this project)
+            const baseLat = 13.0827;
+            const baseLng = 80.2707;
+            
+            // Rescuer position (Starting point)
+            const rescuerPos = [baseLat - 0.005, baseLng - 0.005];
+            // Task position (Target point)
+            const taskPos = [baseLat + 0.005, baseLng + 0.005];
+            
+            const testRescuerPhone = 'TEST-UNIT-001';
+            const testIdRaw = Date.now().toString().slice(-6);
+            const testReqId = 'DUMMY-REQ-' + testIdRaw;
+            const testCmdIdRaw = 'DUMMY-' + testIdRaw;
+            const testCmdIdFormatted = 'CMD-' + testCmdIdRaw;
+
+            const dummyRescuer = {
+                id: 9999,
+                name: "Test Rescuer Alpha",
+                phone: testRescuerPhone,
+                role: "rescuer",
+                lat: rescuerPos[0],
+                lng: rescuerPos[1],
+                status: "online",
+                live_connected: true,
+                serial_number: "RSC-TEST-01"
+            };
+
+            const dummyReq = {
+                id: testReqId,
+                type: "medical",
+                lat: taskPos[0],
+                lng: taskPos[1],
+                status: "accepted",
+                sector: "Sector 7",
+                rescuer_phone: testRescuerPhone,
+                serial_number: "SOS-TEST-" + testIdRaw,
+                assigned_user_id: 9999,
+                created_at: new Date().toISOString()
+            };
+
+            const dummyCmd = {
+                id: testCmdIdRaw,
+                command_type: "sos",
+                priority: "critical",
+                status: "accepted",
+                target_phone: testRescuerPhone,
+                command_payload: JSON.stringify({
+                    message: "URGENT: Test tactical move to medical emergency",
+                    rescue_req_id: testReqId,
+                    sector: "Sector 7"
+                }),
+                created_at: new Date().toISOString()
+            };
+
+            // Global update logic (Since map update re-fetches, we wrap the fetch for this session)
+            if (!window._isMockingActive) {
+                window._isMockingActive = true;
+                const originalFetch = window.fetch;
+                window._mockedRescuers = [];
+                window._mockedReqs = [];
+                window._mockedCmds = [];
+
+                window.fetch = async (...args) => {
+                    const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+                    
+                    try {
+                        if (url.includes('/users?role=rescuer')) {
+                            const res = await originalFetch(...args).catch(() => ({ json: () => [] }));
+                            const data = await (res.json ? res.json() : []);
+                            return new Response(JSON.stringify([...data, ...window._mockedRescuers]));
+                        }
+                        if (url.includes('/rescue-requests')) {
+                            const res = await originalFetch(...args).catch(() => ({ json: () => [] }));
+                            const data = await (res.json ? res.json() : []);
+                            return new Response(JSON.stringify([...data, ...window._mockedReqs]));
+                        }
+                        if (url.includes('/commands')) {
+                            const res = await originalFetch(...args).catch(() => ({ json: () => [] }));
+                            const data = await (res.json ? res.json() : []);
+                            return new Response(JSON.stringify([...data, ...window._mockedCmds]));
+                        }
+                    } catch (e) {
+                        console.warn("[MOCK] Fetch interception failed, falling back", e);
+                    }
+                    
+                    return originalFetch(...args);
+                };
+            }
+
+            window._mockedRescuers.push(dummyRescuer);
+            window._mockedReqs.push(dummyReq);
+            window._mockedCmds.push(dummyCmd);
+
+            showAdminToast("Dummy Tactical Mission generated!");
+            
+            // Trigger refresh
+            if (typeof fetchCommands === 'function') fetchCommands();
+            if (typeof fetchRescueRequests === 'function') fetchRescueRequests();
+            if (typeof updateTacticalMap === 'function') updateTacticalMap();
+            
+            // Auto-select the dummy task after a short delay to trigger flyTo and tracking line
+            setTimeout(() => {
+                if (typeof selectTask === 'function') selectTask(testCmdIdFormatted);
+            }, 800);
+        }
+
     </script>
 </body>
 

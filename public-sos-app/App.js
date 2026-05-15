@@ -14,7 +14,8 @@ const Store = {
 };
 const AsyncStorage = Store;
 
-const API_URL = 'http://192.168.1.11:3001/api'; // UPDATED with current laptop IP
+const API_URL = 'https://antigravity-rescue.loca.lt/api';
+const WS_URL = 'wss://antigravity-rescue.loca.lt';
 const { width } = Dimensions.get('window');
 
 const C = {

@@ -520,7 +520,7 @@
             <!-- SCREEN 1: LOGIN -->
             <div class="screen active" id="screenLogin">
                 <div class="brand-logo" style="background:none; box-shadow:none; border:none;">
-                    <img src="field_rescuer_logo_new_1778175407124.png" style="width:100%; height:100%; border-radius:24px; object-fit:cover;">
+                    <img src="official_rescuer_icon.png" style="width:100%; height:100%; border-radius:24px; object-fit:cover;">
                 </div>
                 <h1 class="brand-name">Rescuer Ops</h1>
                 <p class="brand-tagline">Emergency Field Operations</p>
@@ -569,14 +569,14 @@
                     </div>
 
                     <div class="notif-label" style="margin-top:10px;">
-                        <span>🚨 Critical Response Feed</span>
+                        <span>🚨 Current Critical Mission</span>
                     </div>
                     <div id="homeListCritical">
                         <!-- Critical Dispatches -->
                     </div>
                     
                     <div class="notif-label" style="margin-top:20px;">
-                        <span>📦 Normal Logistics Feed</span>
+                        <span>📦 Current Normal Mission</span>
                     </div>
                     <div id="homeListNormal">
                         <!-- Normal Dispatches -->
@@ -585,29 +585,29 @@
 
                 <div class="bottom-nav">
                     <div class="nav-link active" onclick="core.nav('Home')"><i>🏠</i><span>Home</span></div>
-                    <div class="nav-link" onclick="core.nav('Tasks')"><i>📡</i><span>Tasks</span></div>
+                    <div class="nav-link" onclick="core.nav('Tasks')"><i>📡</i><span>Current Tasks</span></div>
                     <div class="nav-link" onclick="core.nav('History')"><i>📋</i><span>History</span></div>
                     <div class="nav-link" onclick="core.nav('Settings')"><i>⚙️</i><span>Settings</span></div>
                 </div>
             </div>
 
-            <!-- SCREEN 2B: TASKS -->
+            <!-- SCREEN 2B: CURRENT TASKS -->
             <div class="screen" id="screenTasks">
                 <div class="dashboard-header">
-                    <h2 style="font-size: 22px; font-weight: 900;">Mission Tasks</h2>
+                    <h2 style="font-size: 22px; font-weight: 900;">Current Tasks</h2>
                     <div class="control-btn" onclick="core.refresh()">🔄</div>
                 </div>
                 
                 <div class="notif-section" id="tasksSection" style="padding: 20px; padding-bottom: 90px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;">
                     <div class="notif-label">
-                        <span>🚨 Critical Response Feed</span>
+                        <span>🚨 Current Critical Mission</span>
                     </div>
                     <div id="tasksListCritical">
                         <!-- Critical Dispatches -->
                     </div>
                     
                     <div class="notif-label" style="margin-top:20px;">
-                        <span>📦 Normal Logistics Feed</span>
+                        <span>📦 Current Normal Mission</span>
                     </div>
                     <div id="tasksListNormal">
                         <!-- Normal Dispatches -->
@@ -616,7 +616,7 @@
 
                 <div class="bottom-nav">
                     <div class="nav-link" onclick="core.nav('Home')"><i>🏠</i><span>Home</span></div>
-                    <div class="nav-link active" onclick="core.nav('Tasks')"><i>📡</i><span>Tasks</span></div>
+                    <div class="nav-link active" onclick="core.nav('Tasks')"><i>📡</i><span>Current Tasks</span></div>
                     <div class="nav-link" onclick="core.nav('History')"><i>📋</i><span>History</span></div>
                     <div class="nav-link" onclick="core.nav('Settings')"><i>⚙️</i><span>Settings</span></div>
                 </div>
@@ -654,7 +654,7 @@
 
                 <div class="bottom-nav">
                     <div class="nav-link" onclick="core.nav('Home')"><i>🏠</i><span>Home</span></div>
-                    <div class="nav-link" onclick="core.nav('Tasks')"><i>📡</i><span>Tasks</span></div>
+                    <div class="nav-link" onclick="core.nav('Tasks')"><i>📡</i><span>Current Tasks</span></div>
                     <div class="nav-link active" onclick="core.nav('History')"><i>📋</i><span>History</span></div>
                     <div class="nav-link" onclick="core.nav('Settings')"><i>⚙️</i><span>Settings</span></div>
                 </div>
@@ -713,7 +713,7 @@
 
                 <div class="bottom-nav">
                     <div class="nav-link" onclick="core.nav('Home')"><i>🏠</i><span>Home</span></div>
-                    <div class="nav-link" onclick="core.nav('Tasks')"><i>📡</i><span>Tasks</span></div>
+                    <div class="nav-link" onclick="core.nav('Tasks')"><i>📡</i><span>Current Tasks</span></div>
                     <div class="nav-link" onclick="core.nav('History')"><i>📋</i><span>History</span></div>
                     <div class="nav-link active" onclick="core.nav('Settings')"><i>⚙️</i><span>Settings</span></div>
                 </div>
@@ -737,8 +737,8 @@
          */
         
         const core = {
-            API: `http://${window.location.hostname}:3001/api`,
-            WS_URL: `ws://${window.location.hostname}:3001`,
+            API: `http://192.168.1.8:3001/api`,
+            WS_URL: `ws://192.168.1.8:3001`,
             user: null,
             map: null,
             rescuerMarker: null,
@@ -762,28 +762,38 @@
                 const pin = document.getElementById('inpPin').value;
                 const err = document.getElementById('loginError');
                 
+                let localDeviceId = localStorage.getItem('rescuer_device_id');
+                if (!localDeviceId) {
+                    localDeviceId = 'RESDEV-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+                    localStorage.setItem('rescuer_device_id', localDeviceId);
+                }
+
+                console.log('[LOGIN] Attempting Rescuer login...', { idOrPhone: phone, pin, deviceId: localDeviceId });
                 this.showLoader(true);
                 try {
-                    const res = await fetch(`${this.API}/login`, {
+                    const res = await fetch(`${this.API}/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phone, password: pin })
+                        body: JSON.stringify({ idOrPhone: phone, pin, deviceId: localDeviceId })
                     });
+                    console.log('[LOGIN] Response status:', res.status);
                     
                     if (res.ok) {
-                        this.user = await res.json();
+                        const data = await res.json();
+                        this.user = data.user;
+                        localStorage.setItem('rescuer_token', data.token);
                         localStorage.setItem('rescue_user_v3', JSON.stringify(this.user));
                         this.showScreen('screenHome');
                         this.bootstrap();
                     } else {
+                        const errData = await res.json();
+                        err.innerText = errData.error || "ACCESS DENIED";
                         err.style.display = 'block';
                     }
                 } catch (e) {
-                    // Fallback for demo
-                    this.user = { id: 1, name: 'Officer Rajan', phone, serial_number: 'MEM-01', role: 'rescuer' };
-                    localStorage.setItem('rescue_user_v3', JSON.stringify(this.user));
-                    this.showScreen('screenHome');
-                    this.bootstrap();
+                    console.error("Login Error:", e);
+                    err.innerText = "NETWORK ERROR - CHECK CONNECTION";
+                    err.style.display = 'block';
                 } finally {
                     this.showLoader(false);
                 }
@@ -860,8 +870,8 @@
                 
                 const icon = L.divIcon({
                     className: 'custom-marker',
-                    html: `<div style="background:var(--primary); width:36px; height:36px; border-radius:50%; border:3px solid white; display:flex; align-items:center; justify-content:center; font-size:18px;">🚁</div>`,
-                    iconSize: [40, 40]
+                    html: `<div style="background:url('official_rescuer_icon.png'); background-size:cover; width:48px; height:48px; border-radius:50%; border:3px solid white; box-shadow:0 0 20px rgba(220, 38, 38, 0.6);"></div>`,
+                    iconSize: [48, 48]
                 });
                 
                 this.rescuerMarker = L.marker([this.pos.lat, this.pos.lng], { icon }).addTo(this.map);
@@ -1366,7 +1376,7 @@
                     if (lat && lng) {
                         this.activeMission = { id: 'CMD-'+id, type: 'command', sector: 'Direct HQ Order', lat, lng };
                         document.getElementById('missionBanner').style.display = 'flex';
-                        document.getElementById('missType').innerText = \`HQ COMMAND\`;
+                        document.getElementById('missType').innerText = `HQ COMMAND`;
                         document.getElementById('missLoc').innerText = 'Proceed to Target Point';
                         if (this.navPolyline) this.map.removeLayer(this.navPolyline);
                         this.navPolyline = L.polyline([[this.pos.lat, this.pos.lng], [lat, lng]], {
@@ -1419,6 +1429,7 @@
         style.innerHTML = `.leaflet-container { background: #f1f5f9 !important; } .leaflet-bar { border: none !important; } .leaflet-bar a { background: white !important; border: 1px solid #e2e8f0 !important; color: #1e293b !important; }`;
         document.head.appendChild(style);
 
+        window.core = core;
         window.onload = () => core.init();
     </script>
 </body>

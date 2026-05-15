@@ -1034,14 +1034,19 @@ app.post('/api/rescue-requests', async (req, res) => {
         const bufferMinutes = bufferSetting ? parseInt(bufferSetting.value) || 0 : 0;
         
         if (bufferMinutes > 0) {
-            const lastReq = await get(`SELECT created_at FROM rescue_requests WHERE phone = ? OR device_id = ? ORDER BY created_at DESC LIMIT 1`, [phone, device_id]);
+            const lastReq = await get(`SELECT status, created_at FROM rescue_requests WHERE phone = ? OR device_id = ? ORDER BY created_at DESC LIMIT 1`, [phone, device_id]);
             if (lastReq) {
-                const lastTime = new Date(lastReq.created_at).getTime();
-                const now = new Date().getTime();
-                const diffMinutes = (now - lastTime) / (1000 * 60);
-                if (diffMinutes < bufferMinutes) {
-                    const waitTime = Math.ceil(bufferMinutes - diffMinutes);
-                    return res.status(429).json({ error: `SOS BUFFER ACTIVE. Please wait ${waitTime} more minute(s) before submitting another request.` });
+                // If the last request is already completed or declined, bypass the buffer check
+                if (lastReq.status === 'completed' || lastReq.status === 'declined') {
+                    // Bypass buffer
+                } else {
+                    const lastTime = new Date(lastReq.created_at).getTime();
+                    const now = new Date().getTime();
+                    const diffMinutes = (now - lastTime) / (1000 * 60);
+                    if (diffMinutes < bufferMinutes) {
+                        const waitTime = Math.ceil(bufferMinutes - diffMinutes);
+                        return res.status(429).json({ error: `SOS BUFFER ACTIVE. Please wait ${waitTime} more minute(s) before submitting another request.` });
+                    }
                 }
             }
         }
