@@ -195,6 +195,7 @@ function DashboardScreen({ user, onLogout }) {
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [criticalAlert, setCriticalAlert] = useState(null); // { id, message, cmdId }
+  const [interruptedTask, setInterruptedTask] = useState(null);
   const notifAnim = useRef(new Animated.Value(0)).current;
   const mapRef = useRef(null);
   const [region, setRegion] = useState({
@@ -261,6 +262,21 @@ function DashboardScreen({ user, onLogout }) {
         const firstNotif = data.notifications[0];
         showNotif(`📢 HQ: ${firstNotif.message}`, firstNotif.action_required === 1);
       }
+
+      // Restore interrupted task if backend has it and we don't have an active task
+      if (data.user?.interrupted_task_id && !activeTask && !interruptedTask) {
+        // Try to find the interrupted task in current task list
+        const restored = tasks.find(t => t.id === data.user.interrupted_task_id);
+        if (restored) {
+          setActiveTask(restored);
+          showNotif("Restoring interrupted normal task...", false);
+        } else {
+            // If not in current tasks, we might need to fetch it or just wait for next fetchTasks
+            // For now, let's trigger fetchTasks
+            fetchTasks();
+        }
+      }
+
       // Handle incoming commands — detect critical ones for popup
       if (data.commands?.length > 0) {
         const critCmd = data.commands.find(c => c.command_type === 'critical' && c.status === 'pending');
@@ -325,6 +341,18 @@ function DashboardScreen({ user, onLogout }) {
     setActiveTask(task);
     showNotif(`Navigating to ${(task.type || 'command').toUpperCase()} task`, false);
 
+    // If this is a critical task and we had a normal task active, mark it as interrupted
+    if (task.urgency === 'critical' && activeTask && activeTask.urgency !== 'critical') {
+      setInterruptedTask(activeTask);
+      try {
+        await fetch(`${API_URL}/users/${user.id}/interrupted-task`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ task_id: activeTask.id }),
+        });
+      } catch { }
+    }
+
     // Focus Map
     if (mapRef.current && task.lat && task.lng) {
       mapRef.current.animateToRegion({
@@ -373,9 +401,38 @@ function DashboardScreen({ user, onLogout }) {
         });
       } catch { }
     }
+    
+    const isCriticalCompletion = task.urgency === 'critical';
+
     if (activeTask?.id === taskId) setActiveTask(null);
     setTasks(prev => prev.filter(t => t.id !== taskId));
     showNotif('✅ Mission Completed successfully', false);
+
+    // If we just completed a critical mission and have an interrupted task, reopen it
+    if (isCriticalCompletion && interruptedTask) {
+      setTimeout(() => {
+        setActiveTask(interruptedTask);
+        setInterruptedTask(null);
+        showNotif("Reopening previous normal task...", true);
+        
+        // Clear interrupted task in backend
+        fetch(`${API_URL}/users/${user.id}/interrupted-task`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task_id: null }),
+        }).catch(() => {});
+
+        if (mapRef.current && interruptedTask.lat && interruptedTask.lng) {
+          mapRef.current.animateToRegion({
+            latitude: interruptedTask.lat,
+            longitude: interruptedTask.lng,
+            latitudeDelta: 0.015,
+            longitudeDelta: 0.015,
+          }, 1000);
+        }
+      }, 2000);
+      return;
+    }
 
     // Reset Map View
     if (mapRef.current) {
@@ -522,7 +579,7 @@ function DashboardScreen({ user, onLogout }) {
                   setCriticalAlert(null);
                   showNotif('🚨 Critical task accepted — proceed immediately!', true);
                   // Trigger acceptance logic (focus map etc)
-                  acceptTask(criticalAlert.cmdId);
+                  acceptTask(`cmd_${criticalAlert.cmdId}`);
                 }}>
                 <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>✓ ACCEPT</Text>
               </TouchableOpacity>

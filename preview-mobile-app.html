@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
-    <title>Public SOS App - Citizen Support</title>
+    <title>Citizen ARDMS APP</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -862,7 +862,7 @@
                     <div class="notif-icon" id="globalNotifIcon">📡</div>
                     <div class="notif-content">
                         <div class="notif-title" id="globalNotifTitle">System Ready</div>
-                        <div class="notif-body" id="globalNotifBody">Connected to Rescue Network</div>
+                        <div class="notif-body" id="globalNotifBody">Connected to ARDMS Network</div>
                     </div>
                     <div class="notif-badge" id="globalNotifStatus">Live</div>
                 </div>
@@ -874,7 +874,7 @@
                     <img src="citizen_sos_logo_1778175366035.png"
                         style="width:100%; height:100%; border-radius:24px; object-fit:cover;">
                 </div>
-                <h1 class="brand-name">Citizen Connect</h1>
+                <h1 class="brand-name">Citizen ARDMS APP</h1>
                 <p class="brand-tagline">Emergency Assistance Hub</p>
 
                 <div class="input-group">
@@ -911,11 +911,12 @@
                     <p style="font-size:12px; font-weight:700; color:var(--text-muted); margin:5px 0 0 0;">Details Captured • Tactical Standby</p>
                 </div>
 
-                <div class="sos-container">
-                    <div style="width:100%">
-                        <h2 style="font-size:20px; font-weight:900; margin-bottom:10px;">Emergency Trigger</h2>
-                        <p style="font-size:14px; color:var(--text-muted); font-weight:600;">Hold the button for 2
-                            seconds to alert nearby rescue teams immediately.</p>
+                    <div style="width:100%; margin-top:15px; background:white; padding:15px; border-radius:18px; border:1px solid #eef2f6; box-shadow: var(--shadow-sm);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <span style="font-size:11px; font-weight:900; color:var(--text-main); letter-spacing:0.5px;">SITUATIONAL DETAILS</span>
+                            <span style="font-size:10px; font-weight:700; color:var(--primary);">Ready</span>
+                        </div>
+                        <p style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:12px;">All details and media captured in the previous step will be transmitted.</p>
                     </div>
 
                     <div class="sos-btn-outer">
@@ -1171,7 +1172,7 @@
 
                     <p
                         style="text-align:center; margin-top:30px; font-size:11px; font-weight:700; color:var(--text-muted);">
-                        PUBLIC SOS APP v3.1.0<br>CITIZEN SUPPORT OPERATIONS
+                        Citizen ARDMS APP v3.1.0<br>CITIZEN SUPPORT OPERATIONS
                     </p>
                 </div>
                 <div class="bottom-nav">
@@ -1226,8 +1227,8 @@
 
     <script>
         const core = {
-            API: `http://192.168.1.8:3001/api`,
-            WS_URL: `ws://192.168.1.8:3001`,
+            API: `http://${window.location.hostname || 'localhost'}:3001/api`,
+            WS_URL: `ws://${window.location.hostname || 'localhost'}:3001`,
             user: null,
             sosTimer: null,
             socket: null,
@@ -1565,8 +1566,8 @@
                 }
                 if (type === 'RESCUE_REQUEST_COMPLETED') {
                     // Check if it's our request (the system sync might be more robust, but this provides instant feedback)
-                    this.updateStatusUI('COMPLETED', 'Mission accomplished by Rescue Team', '✅');
-                    this.toast('Rescue operation marked as completed!', '✅');
+                    this.updateStatusUI('COMPLETED', 'Mission accomplished by Citizen ARDMS Team', '✅');
+                    this.toast('Citizen ARDMS operation marked as completed!', '✅');
                     if (this.rescuerMarker) {
                         this.map.removeLayer(this.rescuerMarker);
                         this.rescuerMarker = null;
@@ -1859,6 +1860,30 @@
                 clearTimeout(this.sosTimer);
             },
 
+            sosImageData: null,
+            handleSOSImage(input) {
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.sosImageData = e.target.result;
+                        const preview = document.getElementById('sosImagePreview');
+                        if (preview) {
+                            preview.style.backgroundImage = `url(${e.target.result})`;
+                            preview.style.display = 'block';
+                        }
+                        this.toast('PHOTO CAPTURED', '📸');
+                    };
+                    reader.readAsDataURL(input.files[0]);
+                }
+            },
+            clearSOSImage() {
+                this.sosImageData = null;
+                const preview = document.getElementById('sosImagePreview');
+                if (preview) preview.style.display = 'none';
+                const input = document.getElementById('sosFileInput');
+                if (input) input.value = '';
+            },
+
             async triggerSOS() {
                 this.updateStatusUI('TRIGGERED', 'SOS initiated locally', '🚨');
 
@@ -1874,6 +1899,8 @@
                     console.log("[SOS] Using Manual Coordinate Override:", finalLat, finalLng);
                 }
 
+                const customDetails = document.getElementById('inpLoc')?.value.trim() || '';
+
                 const payload = {
                     phone: this.user ? this.user.phone : 'Unknown',
                     device_id: this.user ? this.user.serial_number : 'Unknown',
@@ -1882,12 +1909,13 @@
                     lng: finalLng,
                     details: JSON.stringify({
                         needs: this.needs,
-                        photo: this.needs.photo,
                         route: this.needs.route || 'Not Defined',
-                        sector: document.getElementById('inpLoc').value.trim()
+                        sector: customDetails,
+                        comments: customDetails
                     }),
+                    image_data: this.needs.photo,
                     urgency: 'critical',
-                    sector: (document.getElementById('inpLoc').value || 'Detected Location').trim()
+                    sector: customDetails || 'Detected Location'
                 };
 
                 if (navigator.onLine) {
@@ -1995,6 +2023,25 @@
                     card.className = 'config-card';
                     card.style.marginBottom = '16px';
                     const colors = { pending: 'var(--warning)', accepted: 'var(--primary)', completed: 'var(--secondary)' };
+                    let commentHtml = '';
+                    if (it.details) {
+                        try {
+                            const d = typeof it.details === 'string' ? JSON.parse(it.details) : it.details;
+                            if (d.comments) {
+                                commentHtml = `<p style="font-size:11px; color:var(--text-main); font-style:italic; margin-top:6px; border-left: 2px solid var(--primary); padding-left: 6px;">"${d.comments}"</p>`;
+                            }
+                        } catch(e) {
+                            if (it.details.length > 0) commentHtml = `<p style="font-size:11px; color:var(--text-main); font-style:italic; margin-top:6px; border-left: 2px solid var(--primary); padding-left: 6px;">"${it.details}"</p>`;
+                        }
+                    }
+                    
+                    let evidenceHtml = '';
+                    if (it.image_url) {
+                        evidenceHtml = `<div style="margin-top:8px; width:100%; height:100px; border-radius:8px; overflow:hidden; border:1px solid var(--border);">
+                            <img src="http://${window.location.hostname}:3001${it.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                        </div>`;
+                    }
+
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                             <span style="font-weight:900; font-size:16px;">${it.type.toUpperCase()} RESCUE</span>
@@ -2002,6 +2049,8 @@
                         </div>
                         <p style="font-size:13px; color:var(--text-muted); font-weight:600;">Sector: ${it.sector || 'Coordinate'}</p>
                         <p style="font-size:11px; color:var(--text-muted); margin-top:4px;">Request ID: #REQ-${it.id} • ${new Date(it.created_at).toLocaleTimeString()}</p>
+                        ${commentHtml}
+                        ${evidenceHtml}
                     `;
                     list.appendChild(card);
                 });

@@ -1385,6 +1385,19 @@
                                 style="font-size: 10px; color: #1e40af; font-weight: 600; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.4); padding: 6px; border-radius: 4px;">
                                 <i data-lucide="package" style="width:12px; height:12px;"></i> <span id="reqItemsList">No items</span>
                             </div>
+                            <!-- Evidence & Comments -->
+                            <div id="tdRequesterEvidence" style="margin-top:10px; padding-top:10px; border-top:1px solid #bfdbfe;">
+                                <b style="color:#64748b; font-size:8px; display:block; text-transform:uppercase; margin-bottom:4px;">SITUATIONAL EVIDENCE:</b>
+                                <div id="tdEvidenceImageContainer" style="width:100%; height:160px; background:#dbeafe; border-radius:6px; overflow:hidden; margin-bottom:8px; display:flex; align-items:center; justify-content:center; border:1px solid #bfdbfe; cursor:pointer;" onclick="window.open(this.querySelector('img').src)">
+                                    <span style="color:#1d4ed8; font-size:10px;">No Image Provided</span>
+                                </div>
+                                <div id="tdRequesterComments" style="font-size: 11px; color: #1e3a8a; font-style: italic; background: white; padding: 8px; border-radius: 4px; border: 1px solid #dbeafe; margin-bottom: 8px;">
+                                    "No additional comments provided by citizen."
+                                </div>
+                                <button id="btnDownloadEvidence" class="btn btn-outline" style="width:100%; font-size:10px; padding:6px; border-color:#1d4ed8; color:#1d4ed8; font-weight:700;" onclick="window.downloadEvidence()">
+                                    <i data-lucide="download" style="width:12px; margin-right:4px;"></i> DOWNLOAD ATTACHED IMAGE
+                                </button>
+                            </div>
                         </div>
                         <div id="tdActionContainer" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
                             <button class="btn btn-primary btn-block" style="background:#10b981; border-color:#10b981; padding:10px; font-weight:700; font-size:12px;" 
@@ -1670,9 +1683,9 @@
             <div class="db-split-layout">
                 <main class="db-main" style="padding: 24px; max-width: 1200px; margin: 0 auto;">
                     <div class="db-header" style="border:none; padding:0 0 20px 0;">
-                        <h2 style="margin:0; font-size: 18px;">Public Users Directory</h2>
+                        <h2 style="margin:0; font-size: 18px;">Citizen Users Directory</h2>
                         <button class="btn btn-primary" onclick="openPublicModal()">
-                            <i data-lucide="user-plus" style="width:16px;"></i> Add New Public User
+                            <i data-lucide="user-plus" style="width:16px;"></i> Add New Citizen User
                         </button>
                     </div>
                     <div class="card" style="padding:0; overflow:hidden;">
@@ -1842,7 +1855,7 @@
                 <div class="card" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                            <h3 style="margin: 0;">Public app Network Re connect Sync</h3>
+                            <h3 style="margin: 0;">Citizen ARDMS APP Network Re connect Sync</h3>
                             <div id="activeRetryBadge" style="background: rgba(37, 99, 235, 0.1); color: var(--accent); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; border: 1.5px solid var(--accent); box-shadow: 0 2px 5px rgba(37, 99, 235, 0.05);">
                                 <i data-lucide="history" style="width: 10px; height: 10px;"></i>
                                 Last Set Value: <span id="activeRetryValue">...</span>
@@ -2545,8 +2558,8 @@
     </div>
 
     <script>
-        const SERVER_IP = '192.168.1.8'; // Your PC's current IP address
-        const API_BASE = 'http://192.168.1.8:3001/api';
+        const SERVER_IP = window.location.hostname || 'localhost'; // Your PC's current IP address
+        const API_BASE = `http://${window.location.hostname || 'localhost'}:3001/api`;
         let operations = [];
         let rescueRequests = [];
         let cmds = [];
@@ -2557,7 +2570,7 @@
         // 0. WebSocket & Global Helpers
         let socket;
         function initWebSocket() {
-            const wsUrl = 'ws://192.168.1.8:3001';
+            const wsUrl = `ws://${window.location.hostname || 'localhost'}:3001`;
             console.log(`[Admin] Connecting to WebSocket: ${wsUrl}`);
             socket = new WebSocket(wsUrl);
 
@@ -3080,6 +3093,10 @@
 
         function initMap() {
             map = L.map('map', { zoomControl: false }).setView([13.0827, 80.2707], 13);
+            
+            // Track user interaction to pause auto-follow
+            map.on('movestart', () => { window.userInteractedWithMap = true; });
+            document.getElementById('map').addEventListener('dblclick', () => { window.userInteractedWithMap = false; });
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -3391,10 +3408,12 @@
                         // Helper to check if rescuer is in a specific group
                         const isInGroup = (groupId) => r.groups && r.groups.some(g => g.id === groupId);
 
-                        // Draw lines for assigned critical commands
+                        // Draw lines for assigned commands (Critical always shown, others when selected)
                         activeCmds.forEach(c => {
                             const isCriticalCmd = c.command_type === 'critical' || c.priority === 'critical' || c.command_type === 'sos';
-                            if (isCriticalCmd && c.status !== 'completed' && (c.target_phone === r.phone || isInGroup(c.group_id))) {
+                            const isSelected = (window.selectedTrackingCmdId === 'CMD-' + c.id);
+                            
+                            if ((isCriticalCmd || isSelected) && c.status !== 'completed' && (c.target_phone === r.phone || isInGroup(c.group_id))) {
                                 // Find the target request location
                                 let targetLat, targetLng;
                                 const payload = JSON.parse(c.command_payload || '{}');
@@ -3416,7 +3435,7 @@
                                     if (isSelected || isRescuerMatch || isInGroup(c.group_id)) {
                                         const lineOptions = isSelected ? {
                                             color: isOffline ? '#9ca3af' : '#2563eb', 
-                                            weight: 5,
+                                            weight: 6,
                                             dashArray: isOffline ? '10, 10' : null,
                                             opacity: 1,
                                             className: 'tracking-pulse-line'
@@ -3433,6 +3452,11 @@
                                         if (isSelected && window.selectedTrackingBounds) {
                                             window.selectedTrackingBounds.extend([r.lat, r.lng]);
                                             window.selectedTrackingBounds.extend([targetLat, targetLng]);
+                                            
+                                            // Real-time follow: Keep both in view as they move
+                                            if (!window.userInteractedWithMap) {
+                                                map.fitBounds(window.selectedTrackingBounds, { padding: [80, 80], animate: true });
+                                            }
                                         }
                                     }
                                 }
@@ -3680,7 +3704,7 @@
 
             document.getElementById('tdId').innerText = `${cmd.id} • ${cmd.type.toUpperCase()}`;
             document.getElementById('tdDesc').innerText = cmd.desc;
-            document.getElementById('tdMeta').innerHTML = `<b>Assigned Team:</b> ${cmd.team} <br><br> <b>Target Zone:</b><br> ${cmd.zone}`;
+            document.getElementById('tdMeta').innerHTML = `<b>Assigned To:</b> ${cmd.team} <br><br> <b>Target Zone:</b><br> ${cmd.zone}`;
             document.getElementById('tdStatus').innerHTML = `<span class="tag ${getTagForStatus(cmd.status)}">${cmd.status}</span>`;
 
             // Public / Requester Details
@@ -3716,6 +3740,41 @@
                 }
                 const itemsListEl = document.getElementById('reqItemsList');
                 if (itemsListEl) itemsListEl.innerHTML = itemsHtml;
+
+                // Evidence Rendering
+                const imgContainer = document.getElementById('tdEvidenceImageContainer');
+                const commentBox = document.getElementById('tdRequesterComments');
+                const downloadBtn = document.getElementById('btnDownloadEvidence');
+
+                if (cmd.requesterImageUrl) {
+                    const fullUrl = `http://${window.location.hostname}:3001${cmd.requesterImageUrl}`;
+                    imgContainer.innerHTML = `<img src="${fullUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+                    downloadBtn.style.display = 'block';
+                    window.downloadEvidence = () => {
+                        const link = document.createElement('a');
+                        link.href = fullUrl;
+                        link.download = `Evidence_REQ_${cmd.rescueReqId}.jpg`;
+                        link.click();
+                    };
+                } else {
+                    imgContainer.innerHTML = `<span style="color:#1d4ed8; font-size:10px;">No Image Provided</span>`;
+                    downloadBtn.style.display = 'none';
+                }
+
+                if (cmd.details) {
+                    try {
+                        const d = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
+                        if (d.comments) {
+                            commentBox.innerText = `"${d.comments}"`;
+                        } else {
+                            commentBox.innerText = "No additional comments provided by citizen.";
+                        }
+                    } catch(e) { 
+                        commentBox.innerText = "No additional comments provided by citizen.";
+                    }
+                } else {
+                    commentBox.innerText = "No additional comments provided by citizen.";
+                }
             } else {
                 reqSection.style.display = 'none';
             }
@@ -3758,6 +3817,7 @@
             }
             window.selectedTrackingCmdId = null;
             window.selectedTrackingBounds = null;
+            window.userInteractedWithMap = false;
             updateTacticalMap(); // Refresh map to remove tracking lines
         }
 
@@ -3802,10 +3862,29 @@
                 const isCrit = c.priority === 'critical' || ['sos', 'medical', 'pregnancy', 'critical', 'rescue'].includes((c.type || '').toLowerCase());
                 const isReassignable = s !== 'completed';
 
+                let infoText = '-';
+                if (c.details) {
+                    try {
+                        const d = typeof c.details === 'string' ? JSON.parse(c.details) : c.details;
+                        infoText = d.comments || d.sector || '-';
+                    } catch(e) {
+                        infoText = c.details;
+                    }
+                }
+                // Truncate infoText if it's too long
+                if (infoText.length > 30) infoText = infoText.substring(0, 30) + '...';
+                
+                let evidenceThumb = '-';
+                if (c.requesterImageUrl) {
+                    evidenceThumb = `<img src="http://${window.location.hostname}:3001${c.requesterImageUrl}" style="width:30px; height:30px; border-radius:4px; object-fit:cover; border:1px solid var(--border);">`;
+                }
+
                 let row = `<tr onclick="selectTask('${c.id}')" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                     <td style="font-weight: 800; color: var(--text-muted);">{SNO}</td>
                     <td style="font-weight:700;">${c.id}</td>
                     <td>${c.desc}</td>
+                    <td style="font-size:11px; color:var(--text-muted);">${infoText}</td>
+                    <td>${evidenceThumb}</td>
                     <td>
                         <span class="tag ${getTagForType(c.type)}">${(c.type || 'N/A').toUpperCase()}</span>
                     </td>
@@ -3816,6 +3895,7 @@
                     <td><span class="tag ${getTagForStatus(c.status)}">${c.status}</span></td>
                     <td>
                         <div style="display:flex; gap:4px;">
+                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background:var(--accent); border-color:var(--accent);" onclick="event.stopPropagation(); selectTask('${c.id}')">👁️ View</button>
                             ${isReassignable ? `<button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Re-Assign</button>` : ''}
                             ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #10b981; border-color: #10b981;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ Close</button>` : ''}
                         </div>
@@ -3840,6 +3920,8 @@
                     <td style="font-weight: 800; color: var(--text-muted);">{SNO}</td>
                     <td style="font-weight:700;">${c.id}</td>
                     <td>${c.desc}</td>
+                    <td style="font-size:11px; color:var(--text-muted);">${infoText}</td>
+                    <td>${evidenceThumb}</td>
                     <td>
                         <span class="tag ${getTagForType(c.type)}">${(c.type || 'N/A').toUpperCase()}</span>
                     </td>
@@ -3850,10 +3932,11 @@
                     <td><span class="tag ${getTagForStatus(c.status)}">${c.status}</span></td>
                     <td>
                         <div style="display:flex; gap:4px;">
+                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background:var(--accent); border-color:var(--accent);" onclick="event.stopPropagation(); selectTask('${c.id}')">👁️ View</button>
                             ${isOngoing ? `
                                 <button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Re-Assign</button>
                                 <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #10b981; border-color: #10b981;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ Close</button>
-                            ` : (isReassignable ? `<button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Re-Assign</button>` : '-')}
+                            ` : (isReassignable ? `<button class="btn btn-outline" style="padding:4px 8px; font-size:10px;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Re-Assign</button>` : '')}
                         </div>
                     </td>
                 </tr>`;
@@ -3892,7 +3975,9 @@
             const tableHeader = `<tr>
                 <th style="width: 50px;">S.NO</th>
                 <th style="width: 90px;">ID</th>
-                <th style="width: 250px;">TASK / DESCRIPTION</th>
+                <th style="width: 200px;">TASK / DESCRIPTION</th>
+                <th style="width: 150px;">INFORMATION</th>
+                <th style="width: 80px;">EVIDENCE</th>
                 <th style="width: 100px;">TYPE</th>
                 <th style="width: 150px;">ZONE / AREA</th>
                 <th style="width: 150px;">ASSIGNED TO</th>
@@ -4808,13 +4893,24 @@
                     let payload = {};
                     try { payload = JSON.parse(c.command_payload); } catch (e) { }
 
+                    let assignedTo = 'Unassigned';
+                    if (c.assigned_officer_name) {
+                        assignedTo = `👤 ${c.assigned_officer_name}`;
+                    } else if (c.assigned_group_name) {
+                        assignedTo = `👥 ${c.assigned_group_name}`;
+                    } else if (c.target_phone) {
+                        assignedTo = c.target_phone;
+                    } else if (c.group_id) {
+                        assignedTo = `Group ${c.group_id}`;
+                    }
+
                     return {
                         id: 'CMD-' + c.id,
                         desc: payload.message || c.command_payload,
                         type: c.command_type,
                         priority: c.priority || 'normal',
                         zone: payload.sector || payload.zone || 'N/A',
-                        team: c.target_phone || (c.group_id ? `Group ${c.group_id}` : 'Unassigned'),
+                        team: assignedTo,
                         time: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                         status: (c.status || 'pending').charAt(0).toUpperCase() + (c.status || 'pending').slice(1),
                         rescueReqId: payload.rescue_req_id || c.requester_db_id || null,
@@ -4825,6 +4921,7 @@
                         requesterLng: c.requester_lng || null,
                         requesterUrgency: c.requester_urgency || null,
                         details: c.requester_details || payload.details || null,
+                        requesterImageUrl: c.requester_image_url || null,
                         reqTime: c.request_time ? new Date(c.request_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null
                     };
                 });

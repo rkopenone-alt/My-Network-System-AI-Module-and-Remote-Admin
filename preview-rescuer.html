@@ -737,13 +737,14 @@
          */
         
         const core = {
-            API: `http://192.168.1.8:3001/api`,
-            WS_URL: `ws://192.168.1.8:3001`,
+            API: `http://${window.location.hostname || 'localhost'}:3001/api`,
+            WS_URL: `ws://${window.location.hostname || 'localhost'}:3001`,
             user: null,
             map: null,
             rescuerMarker: null,
             taskMarkers: {},
             activeMission: null,
+            interruptedMission: null,
             navPolyline: null,
             pos: { lat: 13.0750, lng: 80.2600 },
             allHistory: [],
@@ -912,13 +913,14 @@
             
             async refresh() {
                 try {
-                    const resHistory = await fetch(`${this.API}/users/${this.user.id}/history`).catch(() => ({ ok: false, json: () => [] }));
+                    // Use combined-history to get both rescue requests and direct commands
+                    const resHistory = await fetch(`${this.API}/users/${this.user.id}/combined-history`).catch(() => ({ ok: false, json: () => [] }));
                     const historyData = resHistory.ok ? await resHistory.json() : [];
                     
-                    historyData.sort((a, b) => new Date(b.created_at || b.time) - new Date(a.created_at || a.time));
+                    historyData.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
 
                     // Show all tasks that are assigned, accepted, or ongoing
-                    const activeData = historyData.filter(t => t.status === 'assigned' || t.status === 'accepted' || t.status === 'ongoing');
+                    const activeData = historyData.filter(t => ['assigned', 'accepted', 'ongoing', 'in_progress', 'acknowledged'].includes(t.status.toLowerCase()));
                     
                     this.renderDispatches(activeData);
                 } catch (e) { console.error(e); }
@@ -958,10 +960,10 @@
                     let badgeHtml = '';
                     
                     if (isOngoing) {
-                        btnHtml = `<button class="btn-action" style="background:var(--secondary); color:white; width:100%;" onclick="core.completeTask('${t.id}')">COMPLETE MISSION</button>`;
+                        btnHtml = `<button class="btn-action" style="background:var(--secondary); color:white; width:100%;" onclick="core.completeTask('${t.id}', '${t.source}')">COMPLETE MISSION</button>`;
                         badgeHtml = `<span class="notif-badge" style="background:var(--warning); color:white;">ONGOING - ${t.type.toUpperCase()}</span>`;
                     } else {
-                        btnHtml = `<button class="btn-action btn-primary" onclick="core.accept('${t.id}', '${t.type}', '${t.sector}', ${t.lat}, ${t.lng})">ACCEPT</button>
+                        btnHtml = `<button class="btn-action btn-primary" onclick="core.accept('${t.id}', '${t.type}', '${t.sector}', ${t.lat}, ${t.lng}, '${t.source}')">ACCEPT</button>
                                    <button class="btn-action btn-secondary" onclick="core.declineTask('${t.id}', event)">IGNORE</button>`;
                         badgeHtml = `<span class="notif-badge badge-${t.type}">${t.type}</span>`;
                     }
@@ -970,6 +972,23 @@
                     card.className = 'notif-card';
                     if (isOngoing) card.style.borderLeft = '4px solid var(--warning)';
                     
+                    let evidenceHtml = '';
+                    if (t.image_url) {
+                        evidenceHtml += `<div style="width:100%; height:120px; border-radius:12px; overflow:hidden; margin-bottom:12px; border:1px solid var(--border);">
+                            <img src="http://${window.location.hostname}:3001${t.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                        </div>`;
+                    }
+                    
+                    let commentHtml = '';
+                    if (t.details) {
+                        try {
+                            const d = typeof t.details === 'string' ? JSON.parse(t.details) : t.details;
+                            if (d.comments) {
+                                commentHtml = `<p style="font-size:12px; color:var(--primary); font-style:italic; margin-bottom:12px; background:var(--primary-light); padding:8px; border-radius:8px;">"${d.comments}"</p>`;
+                            }
+                        } catch(e) {}
+                    }
+
                     card.innerHTML = `
                         <div class="notif-top">
                             ${badgeHtml}
@@ -977,6 +996,8 @@
                         </div>
                         <h4 class="notif-title">${t.type.toUpperCase()} ${isCrit ? 'EMERGENCY' : 'DISPATCH'}</h4>
                         <p class="notif-loc">📍 ${t.sector || 'Coordinate Point'}</p>
+                        ${commentHtml}
+                        ${evidenceHtml}
                         <div class="notif-btns">
                             ${btnHtml}
                         </div>
@@ -1004,16 +1025,30 @@
                 this.taskMarkers[t.id] = m;
             },
             
-            async accept(id, type, sector, lat, lng) {
+            async accept(id, type, sector, lat, lng, source = 'request') {
                 this.showLoader(true);
                 try {
-                    await fetch(`${this.API}/rescue-requests/${id}/status`, {
+                    const endpoint = source === 'command' ? 'commands' : 'rescue-requests';
+                    await fetch(`${this.API}/${endpoint}/${id}/status`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'accepted', rescuer_phone: this.user.phone })
                     });
                     
-                    await this.startMission(id, type, sector, lat, lng);
+                    const isCrit = ['sos', 'medical', 'pregnancy', 'critical'].includes(type.toLowerCase());
+                    // If this is a critical task and we had a normal task active, mark it as interrupted
+                    if (isCrit && this.activeMission && !['sos', 'medical', 'pregnancy', 'critical'].includes(this.activeMission.type.toLowerCase())) {
+                        this.interruptedMission = { ...this.activeMission };
+                        try {
+                            await fetch(`${this.API}/users/${this.user.id}/interrupted-task`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ task_id: this.activeMission.id }),
+                            });
+                        } catch { }
+                    }
+
+                    await this.startMission(id, type, sector, lat, lng, source);
                 } catch (e) {
                     await this.startMission(id, type, sector, lat, lng); // Fallback
                 } finally {
@@ -1021,12 +1056,28 @@
                 }
             },
             
-            async startMission(id, type, sector, lat, lng) {
-                this.activeMission = { id, type, sector, lat: Number(lat), lng: Number(lng) };
+            async startMission(id, type, sector, lat, lng, source = 'request') {
+                let finalLat = Number(lat);
+                let finalLng = Number(lng);
+                let finalSector = sector;
+
+                // If coming from a command update, lat/lng might be in the command object itself
+                if (source === 'command' && (lat === 0 || !lat)) {
+                    try {
+                        const res = await fetch(`${this.API}/commands/${id}`);
+                        const cmd = await res.json();
+                        const payload = JSON.parse(cmd.command_payload);
+                        finalLat = Number(payload.lat);
+                        finalLng = Number(payload.lng);
+                        finalSector = payload.sector || sector;
+                    } catch (e) { console.error(e); }
+                }
+
+                this.activeMission = { id, type, sector: finalSector, lat: finalLat, lng: finalLng, source };
                 
                 document.getElementById('missionBanner').style.display = 'flex';
                 document.getElementById('missType').innerText = `${type.toUpperCase()} MISSION`;
-                document.getElementById('missLoc').innerText = sector;
+                document.getElementById('missLoc').innerText = finalSector;
                 
                 if (this.navPolyline) this.map.removeLayer(this.navPolyline);
                 if (this.missionZoneLayer) this.map.removeLayer(this.missionZoneLayer);
@@ -1076,13 +1127,14 @@
             
             async completeMission() {
                 if (!this.activeMission) return;
-                await this.completeTask(this.activeMission.id);
+                await this.completeTask(this.activeMission.id, this.activeMission.source);
             },
             
-            async completeTask(id) {
+            async completeTask(id, source = 'request') {
                 this.showLoader(true);
                 try {
-                    await fetch(`${this.API}/rescue-requests/${id}/status`, {
+                    const endpoint = (source === 'command' || this.activeMission?.source === 'command') ? 'commands' : 'rescue-requests';
+                    await fetch(`${this.API}/${endpoint}/${id}/status`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'completed', rescuer_phone: this.user.phone })
@@ -1094,6 +1146,25 @@
                         if (this.taskMarkers[id]) this.map.removeLayer(this.taskMarkers[id]);
                         delete this.taskMarkers[id];
                         this.refresh();
+                    }
+
+                    // If we just completed a critical mission and have an interrupted task, reopen it
+                    const isCritCompletion = ['sos', 'medical', 'pregnancy', 'critical'].includes(this.activeMission?.type?.toLowerCase() || '');
+                    if (isCritCompletion && this.interruptedMission) {
+                        setTimeout(async () => {
+                            const restored = this.interruptedMission;
+                            this.interruptedMission = null;
+                            this.toast("Restoring interrupted normal task...", '🔄');
+                            
+                            // Clear interrupted task in backend
+                            fetch(`${this.API}/users/${this.user.id}/interrupted-task`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ task_id: null }),
+                            }).catch(() => {});
+
+                            await this.startMission(restored.id, restored.type, restored.sector, restored.lat, restored.lng);
+                        }, 2000);
                     }
                 } catch (e) {
                     this.toast('MISSION COMPLETED (OFFLINE)', '✅');
@@ -1131,7 +1202,7 @@
                 list.innerHTML = '<div style="text-align:center; padding:20px;"><div class="spinner" style="width:24px; height:24px; margin:0 auto;"></div></div>';
                 
                 try {
-                    const res = await fetch(`${this.API}/users/${this.user.id}/history`);
+                    const res = await fetch(`${this.API}/users/${this.user.id}/combined-history`);
                     const rawHistory = await res.json();
                     
                     rawHistory.sort((a, b) => new Date(b.created_at || b.time) - new Date(a.created_at || a.time));
@@ -1163,13 +1234,35 @@
                     
                     const card = document.createElement('div');
                     card.className = 'hist-item';
+                    const sourcePrefix = h.source === 'command' ? 'CMD' : 'REQ';
+                    let histEvidence = '';
+                    if (h.image_url) {
+                        histEvidence = `<div style="width:50px; height:50px; border-radius:8px; overflow:hidden; border:1px solid var(--border); margin-left:10px;">
+                            <img src="http://${window.location.hostname}:3001${h.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                        </div>`;
+                    }
+                    
+                    let commentHtml = '';
+                    if (h.details) {
+                        try {
+                            const d = typeof h.details === 'string' ? JSON.parse(h.details) : h.details;
+                            if (d.comments) {
+                                commentHtml = `<p style="font-size:10px; color:var(--primary); font-style:italic; margin-top:6px; border-left: 2px solid var(--primary); padding-left: 6px;">"${d.comments}"</p>`;
+                            }
+                        } catch(e) {
+                            if (h.details.length > 0) commentHtml = `<p style="font-size:10px; color:var(--primary); font-style:italic; margin-top:6px; border-left: 2px solid var(--primary); padding-left: 6px;">"${h.details}"</p>`;
+                        }
+                    }
+
                     card.innerHTML = `
-                        <div class="hist-details">
+                        <div class="hist-details" style="flex:1;">
                             <h4>${h.type.toUpperCase()} • ${h.sector}</h4>
-                            <p>ID: #REQ-${h.id} • ${new Date(h.updated_at).toLocaleDateString()}</p>
+                            <p>ID: #${sourcePrefix}-${h.id} • ${new Date(h.updated_at).toLocaleDateString()}</p>
                             <p style="margin-top:4px; font-style:italic;">Finished: ${new Date(h.updated_at).toLocaleTimeString()}</p>
+                            ${commentHtml}
                         </div>
-                        <div class="hist-meta">
+                        ${histEvidence}
+                        <div class="hist-meta" style="margin-left:10px;">
                             <span class="hist-status status-done">${h.status}</span>
                         </div>
                     `;
@@ -1229,7 +1322,7 @@
                 }
             },
             
-            shownCommands: new Set(),
+            commandState: {},
             syncTimer: null,
             refreshInterval: 10,
 
@@ -1291,6 +1384,15 @@
                             })
                         });
                         const data = await res.json();
+                        
+                        // Restore interrupted task if backend has it and we don't have an active mission
+                        if (data.user?.interrupted_task_id && !this.activeMission && !this.interruptedMission) {
+                            // Fetch task list or search for this ID
+                            // For simplicity in web preview, we'll try to find it in history/active data next refresh
+                            // or just use the ID to fetch it if needed. 
+                            // In this preview, we usually rely on 'refresh' to populate task list.
+                        }
+
                         if (data.commands) data.commands.forEach(c => this.handleCommand(c));
                         
                         // Update refresh interval from server
@@ -1315,11 +1417,20 @@
                 ws.onopen = () => {
                     console.log('Connected to WS');
                     ws.send(JSON.stringify({ type: 'REGISTER', deviceId: this.user?.device_id || 'RESCUER_' + Date.now() }));
+                    this.refresh();
                 };
                 ws.onmessage = (e) => {
                     const msg = JSON.parse(e.data);
-                    if (msg.type === 'NEW_RESCUE_REQUEST' || msg.type === 'COMMAND_STATUS_UPDATE' || msg.type === 'RESCUE_REQUEST_UPDATE') {
+                    const updateTypes = ['NEW_RESCUE_REQUEST', 'COMMAND_STATUS_UPDATE', 'RESCUE_REQUEST_UPDATE', 'RESCUE_REQUEST_ACCEPTED', 'NEW_COMMAND'];
+                    
+                    if (updateTypes.includes(msg.type)) {
                         this.refresh();
+                        
+                        // If it's a direct command, handle the modal/notification
+                        if (msg.type === 'NEW_COMMAND' && msg.data) {
+                            this.handleCommand(msg.data);
+                        }
+                        
                         // If current mission is completed by admin, clear it
                         if (msg.type === 'COMMAND_STATUS_UPDATE' && msg.data?.status === 'completed') {
                            if (this.activeMission && (this.activeMission.id === msg.data.id || ('CMD-'+this.activeMission.id) === msg.data.id)) {
@@ -1335,9 +1446,34 @@
             },
             
             handleCommand(c) {
-                if (c.status === 'completed' || c.status === 'declined' || c.status === 'accepted') return;
-                if (this.shownCommands.has(c.id)) return;
-                this.shownCommands.add(c.id);
+                if (c.status === 'completed' || c.status === 'declined') return;
+                
+                // Security/Targeting check: only show if for this rescuer or their group
+                const myPhone = this.user?.phone;
+                const myDeviceId = this.user?.device_id;
+                const myGroups = this.user?.group_ids || [];
+                
+                const isTargeted = (c.target_phone && (c.target_phone === myPhone || c.target_phone === myDeviceId));
+                const isGroupTargeted = (c.group_id && myGroups.includes(c.group_id));
+                const isGeneral = (!c.target_phone && !c.group_id);
+
+                if (!isTargeted && !isGroupTargeted && !isGeneral) {
+                    return; // Not for us
+                }
+                
+                // Track commands by ID and timestamp to handle updates
+                const lastSeen = this.commandState[c.id];
+                if (lastSeen === c.updated_at) return;
+                this.commandState[c.id] = c.updated_at;
+
+                // Silent update if it's the current active mission
+                if (this.activeMission && (String(this.activeMission.id) === String(c.id))) {
+                    this.toast('MISSION UPDATED BY HQ', 'ℹ️');
+                    this.startMission(c.id, this.activeMission.type, this.activeMission.sector, 0, 0, 'command'); // startMission will parse payload
+                    return;
+                }
+                
+                if (c.status === 'accepted' || c.status === 'ongoing') return;
 
                 let payload = {};
                 try { payload = JSON.parse(c.command_payload); } catch (e) {}
@@ -1354,6 +1490,23 @@
                     <div style="background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid ${isCrit ? '#ef4444' : '#3b82f6'}; width: 100%; max-width: 400px; text-align: center;">
                         <h2 style="color: ${isCrit ? '#ef4444' : '#3b82f6'}; margin-top: 0;">${isCrit ? '🚨 CRITICAL DIRECTIVE' : '📢 NEW TASK'}</h2>
                         <p style="color: #fff; font-size: 16px; margin: 10px 0;">${payload.message || 'New task assigned from HQ'}</p>
+                        
+                        ${c.image_url ? `
+                            <div style="width:100%; height:140px; border-radius:8px; overflow:hidden; margin-bottom:12px; border:1px solid #334155;">
+                                <img src="http://${window.location.hostname}:3001${c.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                            </div>
+                        ` : ''}
+
+                        ${c.rescue_details ? (() => {
+                            try {
+                                const d = typeof c.rescue_details === 'string' ? JSON.parse(c.rescue_details) : c.rescue_details;
+                                if (d.comments) {
+                                    return `<p style="font-size:12px; color:#cbd5e1; font-style:italic; margin-bottom:12px; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px;">"${d.comments}"</p>`;
+                                }
+                            } catch(e) {}
+                            return '';
+                        })() : ''}
+
                         <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Priority: ${c.priority || c.command_type || 'normal'}</p>
                         <div style="display: flex; gap: 10px; justify-content: center;">
                             <button class="btn-action btn-primary" onclick="core.acceptCommandFromModal('${c.id}', ${payload.lat || 0}, ${payload.lng || 0}); this.closest('div').parentElement.parentElement.remove();">ACCEPT</button>
@@ -1372,6 +1525,17 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'accepted', rescuer_phone: this.user.phone })
                     });
+
+                    const isCrit = c.priority === 'critical' || c.command_type === 'critical';
+                    if (isCrit && this.activeMission && !['sos', 'medical', 'pregnancy', 'critical'].includes(this.activeMission.type.toLowerCase())) {
+                        this.interruptedMission = { ...this.activeMission };
+                        fetch(`${this.API}/users/${this.user.id}/interrupted-task`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ task_id: this.activeMission.id }),
+                        }).catch(() => {});
+                    }
+
                     this.refresh();
                     if (lat && lng) {
                         this.activeMission = { id: 'CMD-'+id, type: 'command', sector: 'Direct HQ Order', lat, lng };

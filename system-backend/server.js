@@ -12,8 +12,15 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Serve root directory files (previews) for easy local testing
 app.use('/', express.static(path.join(__dirname, '..')));
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
@@ -129,7 +136,8 @@ db.serialize(() => {
         password TEXT,
         status TEXT DEFAULT 'active',
         last_seen DATETIME,
-        registered_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        interrupted_task_id TEXT
     )`);
     // Alter existing table to add columns if not exists
     db.run(`ALTER TABLE users ADD COLUMN password TEXT`, (err) => { /* ignore */ });
@@ -499,14 +507,9 @@ app.post('/api/auth/login', async (req, res) => {
         }
 
         if (deviceId) {
-            if (user.device_id && user.device_id !== deviceId) {
-                await logCommand('LOGIN_REJECTED', 'System', idOrPhone, { reason: 'Duplicate device login attempt' });
-                return res.status(403).json({ error: 'Account already bound to another device' });
-            }
-            if (!user.device_id) {
-                await run(`UPDATE users SET device_id = ? WHERE id = ?`, [deviceId, user.id]);
-                user.device_id = deviceId;
-            }
+            // Always update device ID to the current one so notifications reach the active session
+            await run(`UPDATE users SET device_id = ? WHERE id = ?`, [deviceId, user.id]);
+            user.device_id = deviceId;
         }
         
         // Generate JWT token
@@ -515,7 +518,7 @@ app.post('/api/auth/login', async (req, res) => {
         // Audit log
         await logCommand('LOGIN_SUCCESS', user.name, user.serial_number, { role: user.role, deviceId });
         
-        res.json({ token, user: { id: user.id, name: user.name, role: user.role, serial_number: user.serial_number, phone: user.phone, device_id: user.device_id } });
+        res.json({ token, user: { id: user.id, name: user.name, role: user.role, serial_number: user.serial_number, phone: user.phone, device_id: user.device_id, interrupted_task_id: user.interrupted_task_id } });
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Internal server error' });
@@ -667,18 +670,30 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/users/:id/combined-history', async (req, res) => {
     try {
         const userId = req.params.id;
-        const user = await get(`SELECT phone, device_id FROM users WHERE id = ?`, [userId]);
+        const user = await get(`SELECT * FROM users WHERE id = ?`, [userId]);
         if (!user) return res.status(404).json({ error: 'User not found' });
 
         const groups = await all(`SELECT group_id FROM group_members WHERE user_id = ?`, [userId]);
         const groupIds = groups.map(g => g.group_id);
 
-        // Personal Rescue Requests
-        const personalReqs = await all(`SELECT 'request' as source, id, type, sector, status, lat, lng, created_at, updated_at FROM rescue_requests WHERE assigned_user_id = ?`, [userId]);
+        // Personal & Group Rescue Requests
+        let personalReqQuery = `SELECT 'request' as source, id, type, sector, status, lat, lng, created_at, updated_at, image_url, details FROM rescue_requests WHERE (assigned_user_id = ?)`;
+        let reqParams = [userId];
+        if (groupIds.length > 0) {
+            personalReqQuery += ` OR (assigned_group_id IN (${groupIds.map(() => '?').join(',')}))`;
+            reqParams = reqParams.concat(groupIds);
+        }
+        const personalReqs = await all(personalReqQuery, reqParams);
 
-        // Group & Personal Commands
-        let commandQuery = `SELECT 'command' as source, id, command_type as type, 'HQ Order' as sector, status, created_at, updated_at, command_payload FROM command_queue WHERE (target_phone = ?)`;
-        let params = [user.phone || user.device_id];
+        // Group & Personal Commands (Normalize phone matching)
+        const cleanPhone = (user.phone || '').replace(/\D/g, '').slice(-10); // Last 10 digits
+        const cleanDeviceId = (user.device_id || '').replace(/\D/g, '').slice(-10);
+        
+        let commandQuery = `SELECT 'command' as source, cq.id, cq.command_type as type, 'HQ Order' as sector, cq.status, cq.created_at, cq.updated_at, cq.command_payload, rr.image_url, rr.details as rescue_details 
+                           FROM command_queue cq
+                           LEFT JOIN rescue_requests rr ON CAST(rr.id AS TEXT) = CAST(json_extract(cq.command_payload, '$.rescue_req_id') AS TEXT)
+                           WHERE (REPLACE(REPLACE(cq.target_phone, '+', ''), ' ', '') LIKE ?)`;
+        let params = [`%${cleanPhone || cleanDeviceId}%`];
 
         if (groupIds.length > 0) {
             commandQuery += ` OR (group_id IN (${groupIds.map(() => '?').join(',')}))`;
@@ -695,8 +710,14 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
                 source: c.source,
                 id: c.id,
                 type: c.type,
-                sector: payload.message || c.sector,
+                sector: payload.sector || payload.message || c.sector,
                 status: c.status,
+                lat: payload.lat || null,
+                lng: payload.lng || null,
+                image_url: c.image_url,
+                details: c.rescue_details || payload.details || null,
+                requester_phone: payload.requester_phone || null,
+                requester_name: payload.requester_name || null,
                 created_at: c.created_at,
                 updated_at: c.updated_at
             };
@@ -957,7 +978,12 @@ app.post('/api/sync', async (req, res) => {
     }
 
     const [commands, zones, setting, notifs, myRequests, refreshSetting] = await Promise.all([
-        all(`SELECT * FROM command_queue WHERE status = 'pending'`),
+        all(`
+            SELECT cq.*, rr.image_url, COALESCE(rr.details, json_extract(cq.command_payload, '$.details')) as details
+            FROM command_queue cq
+            LEFT JOIN rescue_requests rr ON CAST(rr.id AS TEXT) = CAST(json_extract(cq.command_payload, '$.rescue_req_id') AS TEXT)
+            WHERE cq.status NOT IN ('completed', 'declined', 'finished')
+        `),
         all(`SELECT * FROM operation_zones WHERE status = 'active'`),
         get(`SELECT value FROM settings WHERE key = 'sos_interval'`),
         all(`SELECT * FROM notifications WHERE (device_id = ? OR device_id = ?) AND read = 0`, [effectiveDeviceId, phone || effectiveDeviceId]),
@@ -970,9 +996,14 @@ app.post('/api/sync', async (req, res) => {
         await run(`UPDATE notifications SET read = 1 WHERE device_id = ? OR device_id = ?`, [effectiveDeviceId, phone || effectiveDeviceId]);
     }
 
+    const cleanInputPhone = phone ? phone.replace(/\D/g, '').slice(-10) : null;
+    const cleanDeviceId = effectiveDeviceId ? effectiveDeviceId.replace(/\D/g, '').slice(-10) : null;
+
     // Filter commands: return commands targeting this user's phone or their group
     const filteredCommands = commands.filter(c => {
-        if (c.target_phone && phone && c.target_phone === phone) return true;
+        const cPhone = c.target_phone ? c.target_phone.replace(/\D/g, '').slice(-10) : null;
+        if (cPhone && cleanInputPhone && cPhone === cleanInputPhone) return true;
+        if (cPhone && cleanDeviceId && cPhone === cleanDeviceId) return true;
         if (c.target_phone && c.target_phone === effectiveDeviceId) return true;
         if (!c.target_phone && (!c.group_id || userGroupIds.includes(c.group_id))) return true;
         return false;
@@ -985,7 +1016,14 @@ app.post('/api/sync', async (req, res) => {
         refresh_interval: refreshSetting ? refreshSetting.value : '5',
         notifications: notifs,
         my_requests: myRequests,
-        user: user ? { id: user.id, name: user.name, role: user.role, phone: user.phone } : null
+        user: user ? { 
+            id: user.id, 
+            name: user.name, 
+            role: user.role, 
+            phone: user.phone, 
+            interrupted_task_id: user.interrupted_task_id,
+            group_ids: userGroupIds 
+        } : null
     });
 });
 
@@ -1013,15 +1051,22 @@ app.get('/api/rescuers', async (req, res) => {
 app.get('/api/rescue-requests', async (req, res) => {
     const { status } = req.query;
     try {
-        let query = `SELECT * FROM rescue_requests`;
+        let query = `
+            SELECT rr.*, 
+                   u_assigned.name as assigned_officer_name,
+                   g_assigned.group_name as assigned_group_name
+            FROM rescue_requests rr
+            LEFT JOIN users u_assigned ON rr.assigned_user_id = u_assigned.id
+            LEFT JOIN groups g_assigned ON rr.assigned_group_id = g_assigned.id
+        `;
         let params = [];
         if (status === 'active') {
-            query += ` WHERE status != 'completed' AND status != 'declined'`;
+            query += ` WHERE rr.status != 'completed' AND rr.status != 'declined'`;
         } else if (status) {
-            query += ` WHERE status = ?`;
+            query += ` WHERE rr.status = ?`;
             params.push(status);
         }
-        query += ` ORDER BY urgency DESC, created_at DESC`;
+        query += ` ORDER BY rr.urgency DESC, rr.created_at DESC`;
         res.json(await all(query, params));
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1051,8 +1096,27 @@ app.post('/api/rescue-requests', async (req, res) => {
             }
         }
 
-        const result = await run(`INSERT INTO rescue_requests (device_id, phone, type, lat, lng, details, urgency, sector) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [device_id, phone, type || 'pregnancy', lat, lng, details, urgency || 'high', sector || 'Unknown Zone']);
+        let imageUrl = null;
+        if (req.body.image_data) {
+            const matches = req.body.image_data.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
+            if (matches && matches.length === 3) {
+                const extension = matches[1].toLowerCase();
+                const base64Data = matches[2];
+                
+                // Server-side validation: only JPEG/PNG
+                if (['jpeg', 'jpg', 'png'].includes(extension)) {
+                    const fileName = `sos_${Date.now()}.${extension === 'png' ? 'png' : 'jpg'}`;
+                    const uploadPath = path.join(__dirname, 'uploads', fileName);
+                    fs.writeFileSync(uploadPath, base64Data, 'base64');
+                    imageUrl = `/uploads/${fileName}`;
+                } else {
+                    console.warn(`[SOS] Invalid image format attempted: ${extension}`);
+                }
+            }
+        }
+
+        const result = await run(`INSERT INTO rescue_requests (device_id, phone, type, lat, lng, details, urgency, sector, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [device_id, phone, type || 'pregnancy', lat, lng, details, urgency || 'high', sector || 'Unknown Zone', imageUrl]);
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [result.lastID]);
         broadcast('NEW_RESCUE_REQUEST', reqData);
         await logCommand('RESCUE_REQUEST_CREATED', phone || device_id, 'Command Center', reqData);
@@ -1127,6 +1191,13 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
             [reqData.device_id, 'rescue_dispatched', `Update: ${assignedName} has been assigned to your ${reqData.type} request. Stay safe!`, 0]);
 
         broadcast('RESCUE_REQUEST_ACCEPTED', { ...reqData, assignedName, assigned_phone: assignedPhone, priority: commandType });
+        
+        // Fetch the full command object to broadcast to the rescuer
+        const cmdData = await get(`SELECT * FROM command_queue WHERE id = (SELECT last_insert_rowid())`);
+        if (cmdData) {
+            broadcast('NEW_COMMAND', cmdData);
+        }
+
         await logCommand('RESCUE_REQUEST_ACCEPTED', 'Commander', `Request ID: ${req.params.id}`, { assigned_user_id, assigned_group_id, commandType });
         res.json(reqData);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1171,8 +1242,8 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
         await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, req.params.id]);
         
         // Auto-update any associated commands in command_queue
-        await run(`UPDATE command_queue SET status = ? WHERE command_payload LIKE ?`, [finalStatus, `%"rescue_req_id":${req.params.id}%`]);
-        await run(`UPDATE command_queue SET status = ? WHERE command_payload LIKE ?`, [finalStatus, `%"rescue_req_id":"${req.params.id}"%`]);
+        await run(`UPDATE command_queue SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE command_payload LIKE ?`, [finalStatus, `%"rescue_req_id":${req.params.id}%`]);
+        await run(`UPDATE command_queue SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE command_payload LIKE ?`, [finalStatus, `%"rescue_req_id":"${req.params.id}"%`]);
 
         reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
 
@@ -1235,10 +1306,15 @@ app.get('/api/commands', async (req, res) => {
                    rr.lat as requester_lat,
                    rr.lng as requester_lng,
                    rr.urgency as requester_urgency,
-                   rr.created_at as request_time
+                   rr.created_at as request_time,
+                   rr.image_url as requester_image_url,
+                   u_assigned.name as assigned_officer_name,
+                   g.group_name as assigned_group_name
             FROM command_queue cq
             LEFT JOIN rescue_requests rr ON CAST(rr.id AS TEXT) = CAST(json_extract(cq.command_payload, '$.rescue_req_id') AS TEXT)
             LEFT JOIN users u ON u.device_id = rr.device_id OR u.phone = rr.phone
+            LEFT JOIN users u_assigned ON cq.target_phone = u_assigned.phone OR cq.target_phone = u_assigned.device_id
+            LEFT JOIN groups g ON cq.group_id = g.id
             GROUP BY cq.id
             ORDER BY cq.created_at DESC
         `);
@@ -1312,6 +1388,22 @@ app.get('/api/rescue-requests/by-phone/:phone', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Manage interrupted tasks
+app.put('/api/users/:id/interrupted-task', async (req, res) => {
+    const { task_id } = req.body;
+    try {
+        await run(`UPDATE users SET interrupted_task_id = ? WHERE id = ?`, [task_id || null, req.params.id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/users/:id/interrupted-task', async (req, res) => {
+    try {
+        const user = await get(`SELECT interrupted_task_id FROM users WHERE id = ?`, [req.params.id]);
+        res.json({ interrupted_task_id: user?.interrupted_task_id || null });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Acknowledge command as processed
 app.put('/api/commands/:id/acknowledge', async (req, res) => {
     try {
@@ -1345,7 +1437,7 @@ app.put('/api/commands/:id/status', async (req, res) => {
             }
         }
 
-        await run(`UPDATE command_queue SET status = ? WHERE id = ?`, [finalStatus, req.params.id]);
+        await run(`UPDATE command_queue SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, req.params.id]);
         cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
 
         // Propagation: If this command is linked to a rescue_request, update that too
@@ -1403,7 +1495,7 @@ app.put('/api/commands/:id/reassign', async (req, res) => {
             if (user) effectivePhone = user.phone || user.device_id;
         }
 
-        await run(`UPDATE command_queue SET target_phone = ?, group_id = ?, status = 'pending' WHERE id = ?`, [effectivePhone || null, effectiveGroupId || null, req.params.id]);
+        await run(`UPDATE command_queue SET target_phone = ?, group_id = ?, status = 'pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [effectivePhone || null, effectiveGroupId || null, req.params.id]);
         const cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
 
         // Notify new target
