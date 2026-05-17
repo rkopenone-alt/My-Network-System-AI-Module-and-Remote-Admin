@@ -1204,8 +1204,10 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
                 assignedDeviceId = user.device_id;
                 assignedName = user.name;
 
+                const notifDevice = assignedDeviceId || assignedPhone || 'unknown_device';
+                const safeTypeStr = (reqData.type || 'Request').toUpperCase();
                 await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
-                    [assignedDeviceId || assignedPhone, 'dispatch', `NEW DISPATCH: ${reqData.type.toUpperCase()} at ${reqData.sector}. Urgency: ${reqData.urgency}. Please proceed immediately.`, 1]);
+                    [notifDevice, 'dispatch', `NEW DISPATCH: ${safeTypeStr} at ${reqData.sector || 'Unknown'}. Urgency: ${reqData.urgency || 'High'}. Please proceed immediately.`, 1]);
             }
         }
 
@@ -1213,7 +1215,8 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
         // Priority from request or heuristic fallback
         let commandType = req.body.priority || 'critical';
         if (!req.body.priority) {
-            if (['food', 'delivery', 'supply'].includes(reqData.type.toLowerCase())) {
+            const lowType = (reqData.type || '').toLowerCase();
+            if (['food', 'delivery', 'supply'].some(t => lowType.includes(t))) {
                 commandType = 'normal';
             } else if (reqData.urgency === 'low' || reqData.urgency === 'medium') {
                 commandType = 'normal';
@@ -1221,24 +1224,27 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
         }
 
         // AUTO-CREATE COMMAND FOR ACCEPTED REQUEST
+        const safeTypeStr2 = (reqData.type || 'Request').toUpperCase();
         const cmdPayload = JSON.stringify({
-            message: `${reqData.type.toUpperCase()} ${commandType === 'normal' ? 'TASK' : 'RESCUE'} at ${reqData.sector}`,
-            sector: reqData.sector,
-            lat: reqData.lat,
-            lng: reqData.lng,
-            urgency: reqData.urgency,
+            message: `${safeTypeStr2} ${commandType === 'normal' ? 'TASK' : 'RESCUE'} at ${reqData.sector || 'Unknown'}`,
+            sector: reqData.sector || 'Unknown',
+            lat: reqData.lat || 0,
+            lng: reqData.lng || 0,
+            urgency: reqData.urgency || 'high',
             rescue_req_id: reqData.id,
-            requester_name: reqData.name,
-            requester_phone: reqData.phone,
-            details: reqData.details // Include quantities if available
+            requester_name: reqData.name || 'Citizen',
+            requester_phone: reqData.phone || 'Unknown',
+            details: reqData.details || ''
         });
 
         await run(`INSERT INTO command_queue (group_id, target_phone, command_type, command_payload, status, priority) VALUES (?, ?, ?, ?, 'assigned', ?)`,
             [assigned_group_id || null, assignedPhone || assignedDeviceId || null, commandType, cmdPayload, commandType]);
 
         // Notify the original requester
-        await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
-            [reqData.device_id, 'rescue_dispatched', `Update: ${assignedName} has been assigned to your ${reqData.type} request. Stay safe!`, 0]);
+        if (reqData.device_id) {
+            await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
+                [reqData.device_id, 'rescue_dispatched', `Update: ${assignedName} has been assigned to your request. Stay safe!`, 0]);
+        }
 
         broadcast('RESCUE_REQUEST_ACCEPTED', { ...reqData, assignedName, assigned_phone: assignedPhone, priority: commandType });
         
@@ -1250,7 +1256,10 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
 
         await logCommand('RESCUE_REQUEST_ACCEPTED', 'Commander', `Request ID: ${req.params.id}`, { assigned_user_id, assigned_group_id, commandType });
         res.json(reqData);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+        console.error("Error accepting request:", e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.put('/api/rescue-requests/:id/decline', async (req, res) => {

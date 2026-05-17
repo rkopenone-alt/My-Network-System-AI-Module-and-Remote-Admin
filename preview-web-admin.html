@@ -5519,7 +5519,7 @@
             try {
                 if (rawId.startsWith('CMD_REF:')) {
                     const cmdId = rawId.split(':')[1];
-                    await fetch(`${API_BASE}/commands/${cmdId}/reassign`, {
+                    const res = await fetch(`${API_BASE}/commands/${cmdId}/reassign`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -5527,10 +5527,14 @@
                             assigned_group_id: groupId || null
                         })
                     });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.error || 'Failed to reassign');
+                    }
                     showAdminToast('Task successfully reassigned!');
                 } else {
                     const priority = document.querySelector('#assignModal .modal-title').innerText.toLowerCase().includes('normal') ? 'normal' : 'critical';
-                    await fetch(`${API_BASE}/rescue-requests/${rawId}/accept`, {
+                    const res = await fetch(`${API_BASE}/rescue-requests/${rawId}/accept`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -5539,12 +5543,16 @@
                             priority: priority
                         })
                     });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.error || 'Failed to assign task');
+                    }
                 }
                 closeModal('assignModal');
                 refreshAllModules();
             } catch (e) {
                 console.error("Error dispatching assignment", e);
-                showAdminToast("Failed to dispatch assignment.");
+                showAdminToast("Error: " + e.message);
             }
         }
 
