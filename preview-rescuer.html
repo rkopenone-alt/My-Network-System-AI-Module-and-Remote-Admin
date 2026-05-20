@@ -1036,6 +1036,32 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
+
+        // Timezone conversion helpers
+        function formatLocalTime(dbTimeStr) {
+            if (!dbTimeStr) return '--:--';
+            let t = dbTimeStr.trim();
+            if (!t.includes('T')) t = t.replace(' ', 'T');
+            if (!t.endsWith('Z') && !t.includes('+')) t += 'Z';
+            try {
+                const d = new Date(t);
+                if (isNaN(d)) return dbTimeStr;
+                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch(e) { return dbTimeStr; }
+        }
+
+        function formatLocalDate(dbTimeStr) {
+            if (!dbTimeStr) return '--/--/----';
+            let t = dbTimeStr.trim();
+            if (!t.includes('T')) t = t.replace(' ', 'T');
+            if (!t.endsWith('Z') && !t.includes('+')) t += 'Z';
+            try {
+                const d = new Date(t);
+                if (isNaN(d)) return dbTimeStr;
+                return d.toLocaleString();
+            } catch(e) { return dbTimeStr; }
+        }
+
         /**
          * ANTIGRAVITY RESCUER PRO
          * Professional Realtime Emergency Response Platform
@@ -1395,7 +1421,7 @@
                     card.innerHTML = `
                         <div class="notif-top">
                             ${badgeHtml}
-                            <span class="notif-time">${new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span class="notif-time">${formatLocalTime(t.created_at)}</span>
                         </div>
                         <h4 class="notif-title">${t.type.toUpperCase()} ${isCrit ? 'EMERGENCY' : 'DISPATCH'}</h4>
                         <p class="notif-loc">📍 ${t.sector || 'Coordinate Point'}</p>
@@ -1866,8 +1892,8 @@
                     card.innerHTML = `
                         <div class="hist-details" style="flex:1;">
                             <h4>${h.type.toUpperCase()} • ${h.sector}</h4>
-                            <p>ID: #${sourcePrefix}-${h.id} • ${new Date(h.updated_at).toLocaleDateString()}</p>
-                            <p style="margin-top:4px; font-style:italic;">Finished: ${new Date(h.updated_at).toLocaleTimeString()}</p>
+                            <p>ID: #${sourcePrefix}-${h.id} • ${formatLocalDate(h.updated_at)}</p>
+                            <p style="margin-top:4px; font-style:italic;">Finished: ${formatLocalTime(h.updated_at)}</p>
                             ${commentHtml}
                         </div>
                         ${histEvidence}
