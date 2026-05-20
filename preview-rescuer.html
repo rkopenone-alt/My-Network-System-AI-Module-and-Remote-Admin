@@ -1124,6 +1124,7 @@
                 this.updateNetUI(navigator.onLine);
 
                 // Listen for native GPS updates from App.js
+                let initialFix = false;
                 window.addEventListener('message', (event) => {
                     try {
                         const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
@@ -1131,6 +1132,10 @@
                             this.pos.lat = msg.lat;
                             this.pos.lng = msg.lng;
                             if (this.rescuerMarker) this.rescuerMarker.setLatLng([msg.lat, msg.lng]);
+                            if (!initialFix && this.map) {
+                                this.map.flyTo([msg.lat, msg.lng], 15, { animate: false });
+                                initialFix = true;
+                            }
                         }
                     } catch (e) {}
                 });

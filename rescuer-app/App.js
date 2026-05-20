@@ -24,6 +24,18 @@ export default function App() {
       }
 
       if (status === 'granted') {
+        try {
+          const initialLoc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+          if (webViewRef.current) {
+            const payload = JSON.stringify({
+              type: 'GPS_UPDATE',
+              lat: initialLoc.coords.latitude,
+              lng: initialLoc.coords.longitude
+            });
+            webViewRef.current.injectJavaScript(`window.postMessage(${payload}, '*'); true;`);
+          }
+        } catch (e) {}
+
         locationSubscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,

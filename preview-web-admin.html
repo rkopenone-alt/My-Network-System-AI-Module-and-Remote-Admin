@@ -4372,7 +4372,13 @@
                 let evidenceThumb = '-';
                 if (c.requesterImageUrl) {
                     const thumbUrl = c.requesterImageUrl.startsWith('http') ? c.requesterImageUrl : `http://${window.location.hostname || 'localhost'}:3001${c.requesterImageUrl}`;
-                    evidenceThumb = `<img src="${thumbUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid ${isCrit ? '#ef4444' : 'var(--border) '};" onclick="event.stopPropagation(); window.open('${thumbUrl}', '_blank');">`;
+                    evidenceThumb = `<img src="${thumbUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid ${isCrit ? '#ef4444' : 'var(--border)'};" onclick="event.stopPropagation(); window.open('${thumbUrl}', '_blank');">`;
+                }
+
+                let closureThumb = '-';
+                if (c.completion_image_url) {
+                    const closureUrl = c.completion_image_url.startsWith('http') ? c.completion_image_url : `http://${window.location.hostname || 'localhost'}:3001${c.completion_image_url}`;
+                    closureThumb = `<img src="${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('${closureUrl}', '_blank');">`;
                 }
 
                 let row = `<tr onclick="selectTask('${c.id}')" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
@@ -4389,6 +4395,7 @@
                     <td style="color:var(--text-muted); font-size: 12px;">${c.reqTime || c.time}</td>
                     <td style="color:var(--text-muted); font-size: 12px;">${c.cmdTime || c.time}</td>
                     <td><span class="tag ${getTagForStatus(c.status)}">${c.status}</span></td>
+                    <td>${closureThumb}</td>
                     <td>
                         <div style="display:flex; gap:4px;">
                             ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ Close</button>` : ''}
@@ -4429,6 +4436,7 @@
                     <td style="color:var(--text-muted); font-size: 12px;">${c.reqTime || c.time}</td>
                     <td style="color:var(--text-muted); font-size: 12px;">${c.cmdTime || c.time}</td>
                     <td><span class="tag ${getTagForStatus(c.status)}">${c.status}</span></td>
+                    <td>${closureThumb}</td>
                     <td>
                         <div style="display:flex; gap:4px;">
                             ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ Close</button>` : ''}
@@ -4484,6 +4492,7 @@
                 <th style="width: 80px;">REQ</th>
                 <th style="width: 80px;">CMD</th>
                 <th style="width: 100px;">STATUS</th>
+                <th style="width: 100px;">CLOSURE REPORT</th>
                 <th style="width: 160px;">ACTION</th>
             </tr>`;
 
