@@ -1152,16 +1152,31 @@ app.post('/api/rescue-requests', async (req, res) => {
 
         let imageUrl = null;
         if (image_data) {
-            const matches = image_data.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
-            if (matches && matches.length === 3) {
-                const extension = matches[1].toLowerCase();
-                const base64Data = matches[2];
-                if (['jpeg', 'jpg', 'png'].includes(extension)) {
+            try {
+                // Remove data:image/...;base64, prefix and parse safely
+                const matches = image_data.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/s);
+                let extension = 'jpg';
+                let base64Data = '';
+
+                if (matches && matches.length === 3) {
+                    extension = matches[1].toLowerCase();
+                    base64Data = matches[2];
+                } else if (image_data.includes('base64,')) {
+                    const parts = image_data.split('base64,');
+                    base64Data = parts[1];
+                    if (parts[0].includes('png')) extension = 'png';
+                }
+
+                if (base64Data) {
+                    // Remove whitespace/newlines from base64 string
+                    base64Data = base64Data.replace(/\s+/g, '');
                     const fileName = `sos_${Date.now()}.${extension === 'png' ? 'png' : 'jpg'}`;
                     const uploadPath = path.join(__dirname, 'uploads', fileName);
                     fs.writeFileSync(uploadPath, base64Data, 'base64');
                     imageUrl = `/uploads/${fileName}`;
                 }
+            } catch (err) {
+                console.error('Image upload error:', err);
             }
         }
 
@@ -1349,6 +1364,17 @@ app.put('/api/rescue-requests/:id/location', async (req, res) => {
         await logCommand('RESCUE_LOCATION_UPDATE', 'Admin', `Request ID: ${req.params.id}`, { lat, lng });
         res.json(reqData);
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Get command by ID
+app.get('/api/commands/:id', async (req, res) => {
+    try {
+        const cmd = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
+        if (!cmd) return res.status(404).json({ error: 'Command not found' });
+        res.json(cmd);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // Get all commands for admin dashboard

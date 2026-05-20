@@ -1188,6 +1188,12 @@
                     // Filter: All active statuses
                     const activeData = historyData.filter(t => ['assigned', 'pending', 'accepted', 'ongoing', 'in_progress', 'acknowledged'].includes(t.status.toLowerCase()));
 
+                    // Check if there is an active mission that we should resume visually
+                    const ongoingTask = activeData.find(t => t.status === 'accepted' || t.status === 'ongoing' || t.status === 'in_progress');
+                    if (ongoingTask && !this.activeMission) {
+                        this.startMission(ongoingTask.id, ongoingTask.type, ongoingTask.sector, ongoingTask.lat, ongoingTask.lng, ongoingTask.source || 'request');
+                    }
+
                     this.renderDispatches(activeData);
                 } catch (e) { console.error("Refresh Error:", e); }
             },

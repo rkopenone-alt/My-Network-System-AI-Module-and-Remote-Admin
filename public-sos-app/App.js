@@ -187,6 +187,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
   const [needs, setNeeds] = useState([6, 2, 1, 2]);
   const [peopleCount, setPeopleCount] = useState('5');
   const [attachments, setAttachments] = useState({ voice: false, camera: false, note: false });
+  const [imageBase64, setImageBase64] = useState(null);
 
   const updateNeed = (idx, delta) => {
     setNeeds(prev => {
@@ -210,12 +211,52 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
       "Choose an option",
       [
         { text: "Take Photo", onPress: async () => {
-          let result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.5 });
-          if (!result.canceled) Alert.alert("Success", "Photo captured");
+          try {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert("Permission Required", "Camera permission is required to take photos.");
+              return;
+            }
+            let result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'],
+              quality: 0.4,
+              base64: true
+            });
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+              const asset = result.assets[0];
+              let mimeType = asset.mimeType || (asset.uri.endsWith('.png') ? 'image/png' : 'image/jpeg');
+              const base64Str = `data:${mimeType};base64,${asset.base64}`;
+              setImageBase64(base64Str);
+              Alert.alert("Success", "Photo captured and attached successfully!");
+            }
+          } catch (e) {
+            console.error(e);
+            Alert.alert("Error", "Failed to capture photo.");
+          }
         }},
         { text: "Choose from Gallery", onPress: async () => {
-          let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.5 });
-          if (!result.canceled) Alert.alert("Success", "Photo selected");
+          try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert("Permission Required", "Gallery permission is required to choose photos.");
+              return;
+            }
+            let result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              quality: 0.4,
+              base64: true
+            });
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+              const asset = result.assets[0];
+              let mimeType = asset.mimeType || (asset.uri.endsWith('.png') ? 'image/png' : 'image/jpeg');
+              const base64Str = `data:${mimeType};base64,${asset.base64}`;
+              setImageBase64(base64Str);
+              Alert.alert("Success", "Photo selected and attached successfully!");
+            }
+          } catch (e) {
+            console.error(e);
+            Alert.alert("Error", "Failed to select photo.");
+          }
         }},
         { text: "Cancel", style: "cancel" }
       ]
@@ -288,13 +329,18 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
           </View>
           <View style={{ flex: 2.5, gap: 6 }}>
             <TouchableOpacity 
-              style={[s.attachBtn, { width: '100%', flex: 1, height: undefined, borderRadius: 12, padding: 8 }, !imageEnabled && { opacity: 0.5, backgroundColor: '#f1f5f9' }]}
+              style={[
+                s.attachBtn, 
+                { width: '100%', flex: 1, height: undefined, borderRadius: 12, padding: 8 }, 
+                !imageEnabled && { opacity: 0.5, backgroundColor: '#f1f5f9' },
+                imageBase64 && s.attachBtnActive
+              ]}
               disabled={!imageEnabled}
               onPress={() => imageEnabled && handleCameraPress()}
             >
-              <Text style={{ fontSize: 20 }}>{imageEnabled ? '📷' : '🚫'}</Text>
-              <Text style={{ fontSize: 8, fontWeight: '900', color: imageEnabled ? C.primary : C.danger, textAlign: 'center' }}>
-                {imageEnabled ? 'ACTIVE' : 'DISABLED'}
+              <Text style={{ fontSize: 20 }}>{imageBase64 ? '✅' : (imageEnabled ? '📷' : '🚫')}</Text>
+              <Text style={{ fontSize: 8, fontWeight: '900', color: imageBase64 ? C.secondary : (imageEnabled ? C.primary : C.danger), textAlign: 'center' }}>
+                {imageBase64 ? 'ATTACHED' : (imageEnabled ? 'ACTIVE' : 'DISABLED')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity 
@@ -344,7 +390,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
 
         <TouchableOpacity
           style={[s.nextBtn, { marginTop: 'auto', padding: 18, borderRadius: 16 }]}
-          onPress={() => onNext({ transportMode, needs, peopleCount, attachments })}
+          onPress={() => onNext({ transportMode, needs, peopleCount, attachments, imageBase64 })}
         >
           <Text style={[s.nextBtnText, { fontSize: 16, fontWeight: '900' }]}>CONFIRM & PROCEED</Text>
         </TouchableOpacity>
@@ -473,15 +519,17 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
         // Fallback or handle missing location
       }
 
+      const { imageBase64, ...cleanDetails } = details;
       const payload = {
         phone: user.phone,
         device_id: user.serial_number || 'PUB-MOB',
         type: emergencyType,
         lat: location ? location.coords.latitude : 13.085,
         lng: location ? location.coords.longitude : 80.272,
-        details: JSON.stringify(details),
+        details: JSON.stringify(cleanDetails),
         urgency: 'critical',
-        sector: 'Detected via GPS'
+        sector: 'Detected via GPS',
+        image_data: imageBase64 || null
       };
 
       const res = await fetch(`${API_URL}/rescue-requests`, {
@@ -802,6 +850,65 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, onTrig
   const [loading, setLoading] = useState(false);
   const toastAnim = useRef(new Animated.Value(0)).current;
   const sosScale = useRef(new Animated.Value(1)).current;
+  const [imageBase64, setImageBase64] = useState(null);
+
+  const handleCameraPress = () => {
+    Alert.alert(
+      "Image Capture",
+      "Choose an option",
+      [
+        { text: "Take Photo", onPress: async () => {
+          try {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert("Permission Required", "Camera permission is required to take photos.");
+              return;
+            }
+            let result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'],
+              quality: 0.4,
+              base64: true
+            });
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+              const asset = result.assets[0];
+              let mimeType = asset.mimeType || (asset.uri.endsWith('.png') ? 'image/png' : 'image/jpeg');
+              const base64Str = `data:${mimeType};base64,${asset.base64}`;
+              setImageBase64(base64Str);
+              Alert.alert("Success", "Photo captured and attached successfully!");
+            }
+          } catch (e) {
+            console.error(e);
+            Alert.alert("Error", "Failed to capture photo.");
+          }
+        }},
+        { text: "Choose from Gallery", onPress: async () => {
+          try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert("Permission Required", "Gallery permission is required to choose photos.");
+              return;
+            }
+            let result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              quality: 0.4,
+              base64: true
+            });
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+              const asset = result.assets[0];
+              let mimeType = asset.mimeType || (asset.uri.endsWith('.png') ? 'image/png' : 'image/jpeg');
+              const base64Str = `data:${mimeType};base64,${asset.base64}`;
+              setImageBase64(base64Str);
+              Alert.alert("Success", "Photo selected and attached successfully!");
+            }
+          } catch (e) {
+            console.error(e);
+            Alert.alert("Error", "Failed to select photo.");
+          }
+        }},
+        { text: "Cancel", style: "cancel" }
+      ]
+    );
+  };
 
   const showToast = (msg, icon = '⏳', duration = 3000) => {
     setToast({ msg, icon });
@@ -842,7 +949,8 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, onTrig
         lng: location ? location.coords.longitude : 80.272,
         details: address.trim() || 'Critical Emergency Triggered',
         urgency: 'critical',
-        sector: 'Detected via GPS'
+        sector: 'Detected via GPS',
+        image_data: imageBase64 || null
       };
 
       const res = await fetch(`${API_URL}/rescue-requests`, {
@@ -926,9 +1034,18 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, onTrig
             />
             <View style={{ flexDirection: 'column', gap: 8 }}>
               {imageEnabled && (
-                <TouchableOpacity style={[s.mediaBtn, { borderColor: '#3b82f6', backgroundColor: '#eff6ff' }]} activeOpacity={0.8}>
-                  <Text style={{ fontSize: 18 }}>📷</Text>
-                  <Text style={{ fontSize: 7, fontWeight: '900', color: '#2563eb', marginTop: 1 }}>PHOTO</Text>
+                <TouchableOpacity 
+                  style={[
+                    s.mediaBtn, 
+                    { borderColor: imageBase64 ? C.secondary : '#3b82f6', backgroundColor: imageBase64 ? '#ecfdf5' : '#eff6ff' }
+                  ]} 
+                  activeOpacity={0.8}
+                  onPress={handleCameraPress}
+                >
+                  <Text style={{ fontSize: 18 }}>{imageBase64 ? '✅' : '📷'}</Text>
+                  <Text style={{ fontSize: 7, fontWeight: '900', color: imageBase64 ? C.secondary : '#2563eb', marginTop: 1 }}>
+                    {imageBase64 ? 'ATTACHED' : 'PHOTO'}
+                  </Text>
                 </TouchableOpacity>
               )}
               {micEnabled && (
