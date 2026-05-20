@@ -3646,7 +3646,7 @@
                 className: `custom-marker ${markerClass}`,
                 html: `
                     <div style="position:relative; width:34px; height:34px; display:flex; align-items:center; justify-content:center;">
-                        ${isPriority ? `<div class="marker-pulse" style="background:${type === 'command' ? '#ef4444' : '#3b82f6'}"></div>` : ''}
+                        ${isPriority ? `<div class="marker-pulse" style="background:${['command', 'sos', 'critical'].includes(type.toLowerCase()) ? '#ef4444' : '#3b82f6'}"></div>` : ''}
                         <div class="marker-inner" style="${isGrouped ? 'border-style: dashed !important;' : ''}">
                             ${iconHtml}
                         </div>
@@ -3874,7 +3874,7 @@
                         // Draw lines for assigned commands (Critical always shown, others when selected)
                         activeCmds.forEach(c => {
                             const isCriticalCmd = c.command_type === 'critical' || c.priority === 'critical' || c.command_type === 'sos';
-                            const isSelected = (window.selectedTrackingCmdId === 'CMD-' + c.id);
+                            const isSelected = (window.selectedTrackingCmdId == c.id);
 
                             if ((isCriticalCmd || isSelected) && (c.status !== 'completed' || isSelected) && (c.target_phone === r.phone || (r.id && c.target_phone === r.id.toString()) || isInGroup(c.group_id))) {
                                 // Find all target request locations
@@ -3978,6 +3978,8 @@
 
                 // 4. Render Active Commands (Crosshair markers)
                 activeCmds.forEach(c => {
+                    if (c.status === 'completed' || c.status === 'declined' || c.status === 'finished') return;
+
                     let cLat, cLng;
                     // Check if command has explicit coordinates in payload
                     try {
