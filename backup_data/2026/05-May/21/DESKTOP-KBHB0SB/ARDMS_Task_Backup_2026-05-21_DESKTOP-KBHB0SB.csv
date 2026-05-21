@@ -1,7 +1,7 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-05-21
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 22/5/2026, 1:59:25 am
+Generated At: , 22/5/2026, 2:16:08 am
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
@@ -16,6 +16,7 @@ Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Resp
 9,pregnancy,critical,completed,12.9945267,80.1956518,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-21 18:45:10,2026-05-21 19:10:09,DESKTOP-KBHB0SB
 10,medical,critical,declined,12.9943117,80.1956785,Critical Emergency Triggered,Unassigned,2026-05-21 19:47:33,2026-05-21 20:28:42,DESKTOP-KBHB0SB
 11,pregnancy,critical,completed,12.9942499,80.1957343,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-21 20:28:50,2026-05-21 20:29:24,DESKTOP-KBHB0SB
+12,Pregnancy Support,critical,completed,12.9942571,80.1957023,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-05-21 20:45:00,2026-05-21 20:46:07,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES
@@ -29,6 +30,7 @@ Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At
 7,N/A,919000000001,"{""message"":""MEDICAL RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943588,""lng"":80.1939576,""urgency"":""critical"",""rescue_req_id"":8,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-05-21 18:05:42,,DESKTOP-KBHB0SB
 8,N/A,919000000001,"{""message"":""PREGNANCY RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9945267,""lng"":80.1956518,""urgency"":""critical"",""rescue_req_id"":9,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-05-21 18:45:21,,DESKTOP-KBHB0SB
 9,N/A,919000000001,"{""message"":""PREGNANCY RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9942499,""lng"":80.1957343,""urgency"":""critical"",""rescue_req_id"":11,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-05-21 20:28:59,,DESKTOP-KBHB0SB
+10,N/A,919000000001,"{""message"":""PREGNANCY SUPPORT RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9942571,""lng"":80.1957023,""urgency"":""critical"",""rescue_req_id"":12,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}""}",critical,completed,2026-05-21 20:45:18,,DESKTOP-KBHB0SB
 
 
 SECTION 3: PUBLIC SOS ALERTS

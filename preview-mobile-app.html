@@ -1484,7 +1484,11 @@
                 const timerSpan = document.getElementById('bufferCooldownTimer');
                 if (!banner || !timerSpan) return;
 
-                const lockedUntil = parseInt(localStorage.getItem('sosLockedUntil') || '0');
+                const lastSOSTime = parseInt(localStorage.getItem('lastSOSTime') || '0');
+                const dynamicLockedUntil = lastSOSTime > 0 ? lastSOSTime + ((this.sosBufferMinutes || 15) * 60 * 1000) : 0;
+                const staticLockedUntil = parseInt(localStorage.getItem('sosLockedUntil') || '0');
+                const lockedUntil = Math.max(dynamicLockedUntil, staticLockedUntil);
+
                 const remaining = Math.max(0, Math.floor((lockedUntil - Date.now()) / 1000));
 
                 if (remaining > 0) {
@@ -2089,7 +2093,10 @@
             },
 
             nav(tab) {
-                const lockedUntil = parseInt(localStorage.getItem('sosLockedUntil') || '0');
+                const lastSOSTime = parseInt(localStorage.getItem('lastSOSTime') || '0');
+                const dynamicLockedUntil = lastSOSTime > 0 ? lastSOSTime + ((this.sosBufferMinutes || 15) * 60 * 1000) : 0;
+                const staticLockedUntil = parseInt(localStorage.getItem('sosLockedUntil') || '0');
+                const lockedUntil = Math.max(dynamicLockedUntil, staticLockedUntil);
                 const isLocked = lockedUntil > Date.now();
 
                 if (isLocked && (tab === 'Home' || tab === 'SOS' || tab === 'Form')) {
@@ -2355,7 +2362,7 @@
                             this.toast('SOS DELIVERED', '✅');
                             
                             const minutes = this.sosBufferMinutes || 15;
-                            localStorage.setItem('sosLockedUntil', (Date.now() + minutes * 60 * 1000).toString());
+                            localStorage.setItem('lastSOSTime', Date.now().toString());
                             this.updateBufferCooldown();
 
                             this.nav('Status');
