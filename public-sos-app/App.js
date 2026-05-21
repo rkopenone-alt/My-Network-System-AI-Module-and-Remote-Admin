@@ -10,8 +10,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.1.5:3001/api';
-const WS_URL = 'ws://192.168.1.5:3001';
+const API_URL = 'http://192.168.1.4:3001/api';
+const WS_URL = 'ws://192.168.1.4:3001';
 const { width } = Dimensions.get('window');
 
 const GlobalState = {

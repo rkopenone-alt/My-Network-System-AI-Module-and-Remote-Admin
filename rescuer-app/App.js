@@ -7,7 +7,7 @@ import { htmlString } from './htmlStr';
 // ─── Server Configuration ─────────────────────────────────────────────────────
 // Update SERVER_IP to your machine's Wi-Fi IP address.
 // Run: ipconfig  → look for IPv4 Address under Wi-Fi
-const SERVER_IP = '192.168.1.5';
+const SERVER_IP = '192.168.1.4';
 const SERVER_PORT = '3001';
 // ─────────────────────────────────────────────────────────────────────────────
 

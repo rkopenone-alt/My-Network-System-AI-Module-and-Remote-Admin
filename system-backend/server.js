@@ -585,7 +585,14 @@ const groupTasks = async () => {
 app.post('/api/auth/login', async (req, res) => {
     const { idOrPhone, pin, deviceId } = req.body;
     try {
-        const user = await get(`SELECT * FROM users WHERE (phone = ? OR serial_number = ?) AND password = ?`, [idOrPhone, idOrPhone, pin]);
+        const cleaned = (idOrPhone || '').replace(/\D/g, '');
+        const last10 = cleaned.length >= 10 ? cleaned.slice(-10) : null;
+        let user;
+        if (last10) {
+            user = await get(`SELECT * FROM users WHERE (phone = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ? OR serial_number = ?) AND password = ?`, [idOrPhone, `%${last10}`, idOrPhone, pin]);
+        } else {
+            user = await get(`SELECT * FROM users WHERE (phone = ? OR serial_number = ?) AND password = ?`, [idOrPhone, idOrPhone, pin]);
+        }
         
         if (!user) {
             await logCommand('LOGIN_FAILED', 'System', idOrPhone, { reason: 'Invalid credentials' });
@@ -757,7 +764,14 @@ app.delete('/api/groups/:id/members/:userId', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     const { phone, password } = req.body; // 'phone' here is the identifier (could be actual phone or SN)
     try {
-        const user = await get(`SELECT * FROM users WHERE (phone = ? OR serial_number = ?) AND password = ? AND status = 'active'`, [phone, phone, password]);
+        const cleaned = (phone || '').replace(/\D/g, '');
+        const last10 = cleaned.length >= 10 ? cleaned.slice(-10) : null;
+        let user;
+        if (last10) {
+            user = await get(`SELECT * FROM users WHERE (phone = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ? OR serial_number = ?) AND password = ? AND status = 'active'`, [phone, `%${last10}`, phone, password]);
+        } else {
+            user = await get(`SELECT * FROM users WHERE (phone = ? OR serial_number = ?) AND password = ? AND status = 'active'`, [phone, phone, password]);
+        }
         if (user) {
             // Fetch groups for user
             const userGroups = await all(`SELECT g.* FROM group_members gm JOIN groups g ON gm.group_id = g.id WHERE gm.user_id = ?`, [user.id]);
@@ -846,6 +860,7 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
                 details: c.type === 'group' ? JSON.stringify({ isGroup: true, missions: groupMissions, custom_polygon: payload.custom_polygon || null }) : (c.rescue_details || payload.details || null),
                 requester_phone: payload.requester_phone || null,
                 requester_name: payload.requester_name || null,
+                command_payload: c.command_payload,
                 created_at: c.created_at,
                 updated_at: c.updated_at
             };

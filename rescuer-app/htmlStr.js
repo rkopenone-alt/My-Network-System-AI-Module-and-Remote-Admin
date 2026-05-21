@@ -1004,6 +1004,7 @@ export const htmlString = `<!DOCTYPE html>
                         </div>
                     </div>
 
+                    <div class="logout-btn" onclick="core.clearCache()" style="background:var(--warning); color:var(--text-main); margin-bottom:10px;">CLEAR APP CACHE & REFRESH</div>
                     <div class="logout-btn" onclick="core.logout()">SECURE SESSION LOGOUT</div>
 
                     <div
@@ -1061,16 +1062,16 @@ export const htmlString = `<!DOCTYPE html>
                 }
                 return res;
             } catch (e) {
-                if (!navigator.onLine) {
-                    if (isMutation) {
-                        window.offlineQueue.push({ url, options });
-                        localStorage.setItem('offline_queue', JSON.stringify(window.offlineQueue));
-                        return new Response(JSON.stringify({ success: true, offline: true, id: Date.now() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-                    } else {
-                        const cached = localStorage.getItem('cache_' + url);
-                        if (cached) {
-                            return new Response(cached, { status: 200, headers: { 'Content-Type': 'application/json' } });
-                        }
+                // If the fetch fails for any reason (e.g. server unreachable despite Wi-Fi connection)
+                if (isMutation) {
+                    console.log('[OFFLINE FALLBACK] Queuing request due to fetch failure', url);
+                    window.offlineQueue.push({ url, options });
+                    localStorage.setItem('offline_queue', JSON.stringify(window.offlineQueue));
+                    return new Response(JSON.stringify({ success: true, offline: true, id: Date.now() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+                } else {
+                    const cached = localStorage.getItem('cache_' + url);
+                    if (cached) {
+                        return new Response(cached, { status: 200, headers: { 'Content-Type': 'application/json' } });
                     }
                 }
                 throw e;
@@ -1187,8 +1188,8 @@ export const htmlString = `<!DOCTYPE html>
          */
 
         const core = {
-            API: window.__API_BASE__ || \`http://\${window.location.hostname || '192.168.1.5'}:3001/api\`,
-            WS_URL: window.__WS_BASE__ || \`ws://\${window.location.hostname || '192.168.1.5'}:3001\`,
+            API: window.__API_BASE__ || \`http://\${window.location.hostname || '192.168.1.4'}:3001/api\`,
+            WS_URL: window.__WS_BASE__ || \`ws://\${window.location.hostname || '192.168.1.4'}:3001\`,
             user: null,
             map: null,
             rescuerMarker: null,
@@ -1254,6 +1255,11 @@ export const htmlString = `<!DOCTYPE html>
 
             logout() {
                 localStorage.removeItem('rescue_user_v3');
+                location.reload();
+            },
+
+            clearCache() {
+                localStorage.clear();
                 location.reload();
             },
 
@@ -1471,7 +1477,7 @@ export const htmlString = `<!DOCTYPE html>
                         return d && d.isGroup;
                     } catch(e) { return false; }
                 });
-                const critTasks = tasks.filter(t => !groupedTasks.includes(t) && (t.priority === 'critical' || ['sos', 'medical', 'pregnancy', 'critical'].includes(t.type.toLowerCase())));
+                const critTasks = tasks.filter(t => !groupedTasks.includes(t) && (t.priority === 'critical' || ['sos', 'medical', 'pregnancy', 'critical'].includes((t.type || '').toLowerCase())));
                 const normTasks = tasks.filter(t => !groupedTasks.includes(t) && !critTasks.includes(t));
 
                 // Draw group perimeters on map
@@ -2268,7 +2274,7 @@ export const htmlString = `<!DOCTYPE html>
                 // Security/Targeting check: only show if for this rescuer or their group
                 const myPhone = this.user?.phone;
                 const myDeviceId = this.user?.device_id;
-                const myGroups = this.user?.group_ids || [];
+                const myGroups = (this.user?.groups || []).map(g => Number(g.id || g.group_id));
 
                 // Match phone normalized (last 10 digits) or device_id directly
                 const myPhoneClean = (myPhone || '').replace(/\D/g,'').slice(-10);
