@@ -3921,7 +3921,7 @@
                                                (window.selectedTrackingCmdId === `CMD-${c.id}`) ||
                                                (typeof window.selectedTrackingCmdId === 'string' && window.selectedTrackingCmdId.replace('CMD-', '') == c.id);
 
-                            if ((isCriticalCmd || isSelected) && (c.status !== 'completed' || isSelected) && (c.target_phone === r.phone || c.target_phone === r.device_id || (r.id && c.target_phone === r.id.toString()) || isInGroup(c.group_id))) {
+                            if ((isCriticalCmd || isSelected) && (c.status !== 'completed' || isSelected) && (c.target_phone == r.phone || c.target_phone == r.device_id || (r.id && c.target_phone == r.id) || isInGroup(c.group_id))) {
                                 // Find all target request locations
                                 let targetLocations = [];
                                 const payload = JSON.parse(c.command_payload || '{}');
@@ -3933,11 +3933,18 @@
                                     });
                                 } else if (c.requester_lat && c.requester_lng) {
                                     targetLocations.push([c.requester_lat, c.requester_lng]);
-                                } else if (payload.rescue_req_id) {
-                                    const targetReq = tasks.find(t => t.id.toString() === payload.rescue_req_id.toString());
-                                    if (targetReq && targetReq.lat && targetReq.lng) targetLocations.push([targetReq.lat, targetReq.lng]);
-                                } else if (payload.lat && payload.lng) {
-                                    targetLocations.push([payload.lat, payload.lng]);
+                                } else {
+                                    let foundTarget = false;
+                                    if (payload.rescue_req_id) {
+                                        const targetReq = tasks.find(t => t.id.toString() === payload.rescue_req_id.toString());
+                                        if (targetReq && targetReq.lat && targetReq.lng) {
+                                            targetLocations.push([targetReq.lat, targetReq.lng]);
+                                            foundTarget = true;
+                                        }
+                                    }
+                                    if (!foundTarget && payload.lat && payload.lng) {
+                                        targetLocations.push([payload.lat, payload.lng]);
+                                    }
                                 }
 
                                 targetLocations.forEach(loc => {
