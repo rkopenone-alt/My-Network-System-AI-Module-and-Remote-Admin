@@ -3826,6 +3826,11 @@
                 const groups = await groupsRes.json();
                 groupedTasks = groups; // Update global state
 
+                // Reset tracking bounds to allow dynamic zoom-in as rescuer approaches
+                if (window.selectedTrackingCmdId) {
+                    window.selectedTrackingBounds = L.latLngBounds();
+                }
+
                 // Clear existing tactical layers
                 mapLayers.forEach(l => map.removeLayer(l));
                 mapLayers = [];
