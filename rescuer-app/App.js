@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, ActivityIndicator, Text, PermissionsAndroid, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { htmlString } from './htmlStr';
 
 // ─── Server Configuration ─────────────────────────────────────────────────────
@@ -112,11 +114,27 @@ export default function App() {
         allowUniversalAccessFromFileURLs={true}
         mixedContentMode="always"
         injectedJavaScriptBeforeContentLoaded={injectedJavaScript}
-        onMessage={(event) => {
+        onMessage={async (event) => {
           // Handle messages from WebView back to native if needed
           try {
             const data = JSON.parse(event.nativeEvent.data);
             console.log('[WebView Message]', data);
+
+            if (data.type === 'DOWNLOAD_PDF' && data.base64) {
+              const filename = data.filename || 'Mission_History.pdf';
+              const fileUri = FileSystem.documentDirectory + filename;
+              const base64Code = data.base64.split(',')[1] || data.base64;
+              
+              await FileSystem.writeAsStringAsync(fileUri, base64Code, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+              
+              if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(fileUri);
+              } else {
+                alert('Sharing is not available on this device');
+              }
+            }
           } catch (e) {}
         }}
       />

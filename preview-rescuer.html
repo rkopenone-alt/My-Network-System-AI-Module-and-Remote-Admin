@@ -1951,6 +1951,33 @@
                     delete this.capturedImages['__banner__'];
 
                     this.toast('MISSION SUCCESSFUL', '✅');
+
+                    // --- LOCAL HISTORY INJECTION ---
+                    try {
+                        const histCacheKey = 'cache_' + this.API + '/users/' + this.user.id + '/combined-history';
+                        let cachedHist = JSON.parse(localStorage.getItem(histCacheKey) || '[]');
+                        let existing = cachedHist.find(h => String(h.id) === String(id) && h.source === (source === 'command' ? 'command' : 'request'));
+                        if (existing) {
+                            existing.status = 'completed';
+                            existing.updated_at = new Date().toISOString();
+                        } else if (this.activeMission) {
+                            cachedHist.push({
+                                id: id,
+                                type: this.activeMission.type || 'unknown',
+                                sector: this.activeMission.sector || 'Unknown Sector',
+                                lat: this.activeMission.lat,
+                                lng: this.activeMission.lng,
+                                source: (source === 'command' ? 'command' : 'request'),
+                                status: 'completed',
+                                created_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString(),
+                                priority: ['sos', 'medical', 'pregnancy', 'critical'].includes((this.activeMission.type || '').toLowerCase()) ? 'critical' : 'normal'
+                            });
+                        }
+                        localStorage.setItem(histCacheKey, JSON.stringify(cachedHist));
+                    } catch (err) { console.error("History cache update failed", err); }
+                    // -------------------------------
+
                     if (this.activeMission && String(this.activeMission.id) === String(id)) {
                         this.endMission();
                     } else {
@@ -1979,6 +2006,33 @@
                     }
                 } catch (e) {
                     this.toast('MISSION COMPLETED (OFFLINE)', '✅');
+
+                    // --- LOCAL HISTORY INJECTION (OFFLINE FALLBACK) ---
+                    try {
+                        const histCacheKey = 'cache_' + this.API + '/users/' + this.user.id + '/combined-history';
+                        let cachedHist = JSON.parse(localStorage.getItem(histCacheKey) || '[]');
+                        let existing = cachedHist.find(h => String(h.id) === String(id) && h.source === (source === 'command' ? 'command' : 'request'));
+                        if (existing) {
+                            existing.status = 'completed';
+                            existing.updated_at = new Date().toISOString();
+                        } else if (this.activeMission) {
+                            cachedHist.push({
+                                id: id,
+                                type: this.activeMission.type || 'unknown',
+                                sector: this.activeMission.sector || 'Unknown Sector',
+                                lat: this.activeMission.lat,
+                                lng: this.activeMission.lng,
+                                source: (source === 'command' ? 'command' : 'request'),
+                                status: 'completed',
+                                created_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString(),
+                                priority: ['sos', 'medical', 'pregnancy', 'critical'].includes((this.activeMission.type || '').toLowerCase()) ? 'critical' : 'normal'
+                            });
+                        }
+                        localStorage.setItem(histCacheKey, JSON.stringify(cachedHist));
+                    } catch (err) { console.error("History cache update failed", err); }
+                    // --------------------------------------------------
+
                     if (this.activeMission && String(this.activeMission.id) === String(id)) this.endMission();
                 } finally {
                     this.showLoader(false);
@@ -2137,7 +2191,18 @@
                     jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
                 };
                 if (window.html2pdf) {
-                    html2pdf().set(opt).from(element).save();
+                    if (window.ReactNativeWebView) {
+                        this.toast("Preparing PDF for save...", '📄');
+                        html2pdf().set(opt).from(element).outputPdf('datauristring').then((pdfBase64) => {
+                            window.ReactNativeWebView.postMessage(JSON.stringify({
+                                type: 'DOWNLOAD_PDF',
+                                filename: opt.filename,
+                                base64: pdfBase64
+                            }));
+                        });
+                    } else {
+                        html2pdf().set(opt).from(element).save();
+                    }
                 } else {
                     window.print();
                 }
