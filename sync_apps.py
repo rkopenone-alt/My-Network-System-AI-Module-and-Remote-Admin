@@ -1,0 +1,79 @@
+import os
+import re
+import socket
+import json
+
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('10.254.254.254', 1))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = '192.168.1.5' # fallback
+    finally:
+        s.close()
+    return ip
+
+local_ip = get_local_ip()
+print(f"[*] Detected Local LAN IP: {local_ip}")
+
+# Files to update
+workspace_dir = r"c:\Users\Alienware\Desktop\Rescue Backup 26-04-2026"
+preview_rescuer = os.path.join(workspace_dir, "preview-rescuer.html")
+preview_mobile = os.path.join(workspace_dir, "preview-mobile-app.html")
+preview_admin = os.path.join(workspace_dir, "preview-web-admin.html")
+
+rescuer_app_js = os.path.join(workspace_dir, "rescuer-app", "App.js")
+rescuer_html_str = os.path.join(workspace_dir, "rescuer-app", "htmlStr.js")
+
+public_app_js = os.path.join(workspace_dir, "public-sos-app", "App.js")
+public_html_str = os.path.join(workspace_dir, "public-sos-app", "htmlStr.js")
+
+# Function to replace IPs
+def replace_ip_in_content(content, new_ip):
+    # Replace hardcoded IP 192.168.x.x
+    content = re.sub(r'192\.168\.\d{1,3}\.\d{1,3}', new_ip, content)
+    # Replace localhost if in endpoint format
+    content = content.replace("localhost:3001", f"{new_ip}:3001")
+    content = content.replace("127.0.0.1:3001", f"{new_ip}:3001")
+    return content
+
+# 1. Update preview files
+for filepath in [preview_rescuer, preview_mobile, preview_admin]:
+    if os.path.exists(filepath):
+        print(f"[*] Updating IP in preview file: {filepath}")
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+        content = replace_ip_in_content(content, local_ip)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+# 2. Update React Native App JS files
+for filepath in [rescuer_app_js, public_app_js]:
+    if os.path.exists(filepath):
+        print(f"[*] Updating IP in React Native file: {filepath}")
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+        content = replace_ip_in_content(content, local_ip)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+# 3. Generate htmlStr.js for rescuer-app
+if os.path.exists(preview_rescuer) and os.path.exists(rescuer_html_str):
+    print(f"[*] Compiling rescuer HTML string into htmlStr.js...")
+    with open(preview_rescuer, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    js_content = f"export const htmlString = {json.dumps(html_content)};\n"
+    with open(rescuer_html_str, 'w', encoding='utf-8') as f:
+        f.write(js_content)
+
+# 4. Generate htmlStr.js for public-sos-app
+if os.path.exists(preview_mobile) and os.path.exists(public_html_str):
+    print(f"[*] Compiling public mobile HTML string into htmlStr.js...")
+    with open(preview_mobile, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    js_content = f"export const htmlString = {json.dumps(html_content)};\n"
+    with open(public_html_str, 'w', encoding='utf-8') as f:
+        f.write(js_content)
+
+print("[+] Synchronizer Completed Successfully!")
