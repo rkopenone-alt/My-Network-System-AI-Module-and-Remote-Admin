@@ -8,6 +8,17 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
+const { runSystemBackup } = require('./backup_util');
+const triggerBackup = () => {
+    setTimeout(() => {
+        try {
+            runSystemBackup(path.join(__dirname, 'rescue.db'));
+        } catch (e) {
+            console.error('[Backup Error]:', e);
+        }
+    }, 800);
+};
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -33,8 +44,20 @@ const JWT_SECRET = 'rescue_secret_key_2026';
 
 // ─── Database Setup ──────────────────────────────────────────────────────────
 const db = new sqlite3.Database('./rescue.db', (err) => {
-    if (err) console.error('DB Error:', err);
-    else console.log('Connected to SQLite DB');
+    if (err) {
+        console.error('DB Error:', err);
+    } else {
+        console.log('Connected to SQLite DB');
+        db.serialize(() => {
+            db.run('PRAGMA journal_mode=WAL;', (err) => {
+                if (err) console.error('[DB WAL PRAGMA Error]:', err);
+                else console.log('[DB Config] SQLite Write-Ahead Logging (WAL) enabled.');
+            });
+            db.run('PRAGMA synchronous=NORMAL;', (err) => {
+                if (err) console.error('[DB Sync PRAGMA Error]:', err);
+            });
+        });
+    }
 });
 
 const run = (sql, params = []) => new Promise((res, rej) =>
@@ -347,6 +370,14 @@ db.serialize(() => {
             // Dummy rescue requests removed
         }
     });
+
+    // Production database indexing for high concurrency queries
+    db.run(`CREATE INDEX IF NOT EXISTS idx_rescue_requests_status ON rescue_requests(status)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_rescue_requests_phone ON rescue_requests(phone)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_command_queue_status ON command_queue(status)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_sos_alerts_status ON sos_alerts(status)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_rescuer_locations_group ON rescuer_locations(group_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_device_read ON notifications(device_id, read)`);
 });
 
 // ─── Real-Time Gateway (Enhanced WebSocket) ──────────────────────────────────
@@ -1052,6 +1083,7 @@ app.post('/api/sync', async (req, res) => {
                     const alertData = { id: this.lastID, deviceId: effectiveDeviceId, lat: sosAlert.lat, lng: sosAlert.lng, details: sosAlert.details, is_priority: isPriority };
                     broadcast('SOS_ALERT', alertData);
                     await logCommand('SOS_RECEIVED', effectiveDeviceId, 'Command Center', alertData);
+                    triggerBackup();
                     // Notify public user
                     const msg = isPriority
                         ? 'Your priority SOS request is received. A rescue team has been dispatched to your location.'
@@ -1228,6 +1260,7 @@ app.post('/api/rescue-requests', async (req, res) => {
         await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
             [device_id, 'rescue_ack', `Your priority ${type} rescue request is received. A team will be assigned shortly.`, 0]);
 
+        triggerBackup();
         res.json(reqData);
 
         // Trigger regrouping after new request for normal tasks
@@ -1308,6 +1341,7 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
         }
 
         await logCommand('RESCUE_REQUEST_ACCEPTED', 'Commander', `Request ID: ${req.params.id}`, { assigned_user_id, assigned_group_id, commandType });
+        triggerBackup();
         res.json(reqData);
     } catch (e) {
         console.error("Error accepting request:", e);
@@ -1322,6 +1356,7 @@ app.put('/api/rescue-requests/:id/decline', async (req, res) => {
 
         broadcast('RESCUE_REQUEST_DECLINED', reqData);
         await logCommand('RESCUE_REQUEST_DECLINED', 'Commander', `Request ID: ${req.params.id}`, {});
+        triggerBackup();
         res.json({ message: 'Request declined' });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1397,6 +1432,7 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
             await logCommand('RESCUE_STATUS_UPDATE', rescuer_phone || 'Rescuer', `Request ID: ${req.params.id}`, { status: finalStatus });
         }
 
+        triggerBackup();
         res.json(reqData);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1409,6 +1445,7 @@ app.put('/api/rescue-requests/:id/location', async (req, res) => {
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
         broadcast('RESCUE_REQUEST_LOCATION_UPDATED', reqData);
         await logCommand('RESCUE_LOCATION_UPDATE', 'Admin', `Request ID: ${req.params.id}`, { lat, lng });
+        triggerBackup();
         res.json(reqData);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1526,6 +1563,7 @@ app.post('/api/commands', async (req, res) => {
             broadcast('RESCUE_REQUESTS_UPDATED', { ids: [reqId], status: 'assigned', group_id, target_user_id });
         }
 
+        triggerBackup();
         res.json(cmd);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1624,6 +1662,7 @@ app.put('/api/commands/:id/status', async (req, res) => {
             await logCommand('COMMAND_STATUS_UPDATE', rescuer_phone || 'Rescuer', `Command ID: ${req.params.id}`, { status: finalStatus });
         }
 
+        triggerBackup();
         res.json(cmdData);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1646,6 +1685,7 @@ app.put('/api/commands/:id/location', async (req, res) => {
         const updatedCmd = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
         broadcast('COMMAND_LOCATION_UPDATED', updatedCmd);
         await logCommand('COMMAND_LOCATION_UPDATE', 'Admin', `Command ID: ${req.params.id}`, { lat, lng });
+        triggerBackup();
         res.json(updatedCmd);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1691,6 +1731,7 @@ app.put('/api/commands/:id/reassign', async (req, res) => {
 
         broadcast('COMMAND_REASSIGNED', cmdData);
         await logCommand('COMMAND_REASSIGNED', 'Commander', `Command ID: ${req.params.id}`, { target_phone, group_id });
+        triggerBackup();
         res.json(cmdData);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1785,4 +1826,7 @@ app.get('/api/export/log', async (req, res) => {
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 const PORT = 3001;
-server.listen(PORT, '0.0.0.0', () => console.log(`Rescue Backend running on http://0.0.0.0:${PORT}`));
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Rescue Backend running on http://0.0.0.0:${PORT}`);
+    triggerBackup();
+});

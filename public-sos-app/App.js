@@ -602,6 +602,11 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
         }
       }
     } catch (e) {
+      try {
+        const offlineList = JSON.parse(await AsyncStorage.getItem('offlineRequests')) || [];
+        offlineList.push({ payload, timestamp: Date.now() });
+        await AsyncStorage.setItem('offlineRequests', JSON.stringify(offlineList));
+      } catch (err) {}
       if (isMounted.current) showToast('Network error: Request queued for retry offline.', '⏳', 4000);
     } finally {
       if (isMounted.current) setLoading(false);
@@ -1052,7 +1057,12 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, onTrig
         }
       }
     } catch (e) {
-      if (isMounted.current) showToast('Network issue. Try again.', '❌');
+      try {
+        const offlineList = JSON.parse(await AsyncStorage.getItem('offlineRequests')) || [];
+        offlineList.push({ payload, timestamp: Date.now() });
+        await AsyncStorage.setItem('offlineRequests', JSON.stringify(offlineList));
+      } catch (err) {}
+      if (isMounted.current) showToast('Network issue. Request queued offline.', '⏳', 4000);
     } finally {
       if (isMounted.current) setLoading(false);
     }
@@ -1261,6 +1271,33 @@ export default function App() {
     });
 
     const fetchConfig = async () => {
+      try {
+        const offlineListStr = await AsyncStorage.getItem('offlineRequests');
+        if (offlineListStr) {
+          const offlineList = JSON.parse(offlineListStr);
+          if (offlineList.length > 0) {
+            let stillOffline = [];
+            for (let req of offlineList) {
+              try {
+                const res = await fetch(`${API_URL}/rescue-requests`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(req.payload)
+                });
+                if (!res.ok && res.status !== 429) {
+                  stillOffline.push(req);
+                }
+              } catch (e) {
+                stillOffline.push(req);
+              }
+            }
+            if (stillOffline.length !== offlineList.length) {
+              await AsyncStorage.setItem('offlineRequests', JSON.stringify(stillOffline));
+            }
+          }
+        }
+      } catch (e) {}
+
       try {
         const res = await fetch(`${API_URL}/settings`);
         if (res.ok) {

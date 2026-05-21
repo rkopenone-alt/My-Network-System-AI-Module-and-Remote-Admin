@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
-    <title>Citizen ARDMS APP</title>
+    <title>ARDMS-Public Support System</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -953,7 +953,7 @@
                     <img src="citizen_sos_logo_1778175366035.png"
                         style="width:100%; height:100%; border-radius:24px; object-fit:cover;">
                 </div>
-                <h1 class="brand-name">Citizen ARDMS APP</h1>
+                <h1 class="brand-name">ARDMS-Public Support System</h1>
                 <p class="brand-tagline">Emergency Assistance Hub</p>
 
                 <div class="input-group">
@@ -1319,7 +1319,7 @@
 
                     <p
                         style="text-align:center; margin-top:30px; font-size:11px; font-weight:700; color:var(--text-muted);">
-                        Citizen ARDMS APP v3.1.0<br>CITIZEN SUPPORT OPERATIONS
+                        ARDMS-Public Support System v3.1.0<br>CITIZEN SUPPORT OPERATIONS
                     </p>
                 </div>
                 <div class="bottom-nav">
@@ -1373,6 +1373,64 @@
     </div>
 
     <script>
+
+        // --- OFFLINE SYNC MANAGER ---
+        const originalFetch = window.fetch;
+        window.offlineQueue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+        window.fetch = async function(url, options) {
+            const isMutation = options && ['POST', 'PUT', 'DELETE'].includes(options.method);
+            if (!navigator.onLine && isMutation) {
+                console.log('[OFFLINE] Queuing request', url);
+                window.offlineQueue.push({ url, options });
+                localStorage.setItem('offline_queue', JSON.stringify(window.offlineQueue));
+                return new Response(JSON.stringify({ success: true, offline: true, id: Date.now() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            
+            try {
+                const res = await originalFetch(url, options);
+                if (options === undefined || options.method === 'GET' || !options.method) {
+                    if (url.includes('/history') || url.includes('/rescue-requests') || url.includes('/dashboard-stats') || url.includes('/zones') || url.includes('/users')) {
+                        const clone = res.clone();
+                        clone.text().then(data => {
+                            localStorage.setItem('cache_' + url, data);
+                        }).catch(() => {});
+                    }
+                }
+                return res;
+            } catch (e) {
+                if (!navigator.onLine) {
+                    if (isMutation) {
+                        window.offlineQueue.push({ url, options });
+                        localStorage.setItem('offline_queue', JSON.stringify(window.offlineQueue));
+                        return new Response(JSON.stringify({ success: true, offline: true, id: Date.now() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+                    } else {
+                        const cached = localStorage.getItem('cache_' + url);
+                        if (cached) {
+                            return new Response(cached, { status: 200, headers: { 'Content-Type': 'application/json' } });
+                        }
+                    }
+                }
+                throw e;
+            }
+        };
+
+        window.addEventListener('online', async () => {
+            console.log('[ONLINE] Syncing offline queue...');
+            const queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+            window.offlineQueue = [];
+            localStorage.setItem('offline_queue', '[]');
+            for (const req of queue) {
+                try {
+                    await originalFetch(req.url, req.options);
+                } catch (e) {
+                    console.error('Failed to sync', req, e);
+                }
+            }
+            if (window.core && window.core.refresh) window.core.refresh();
+            if (window.core && window.core.updateNetUI) window.core.updateNetUI(true);
+        });
+        // -----------------------------
+
 
         // Timezone conversion helpers
         function formatLocalTime(dbTimeStr) {

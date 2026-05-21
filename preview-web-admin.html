@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rescue Command Center - Professional Dashboard</title>
+    <title>ARDMS Command Center - Professional Dashboard</title>
     <!-- Leaflet & Icons -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
@@ -16,6 +16,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+        @keyframes clockPulse {
+            0% { opacity: 0.6; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 0.6; transform: scale(0.95); }
+        }
+        .pulsing-clock-icon {
+            animation: clockPulse 2s infinite ease-in-out;
+            display: inline-block;
+        }
 
         :root {
             --bg-body: #f1f5f9;
@@ -1112,7 +1122,7 @@
                     </div>
                     <h1 id="landingTitle"
                         style="margin: 0; font-size: 36px; font-weight: 900; color: var(--primary); letter-spacing: -1.5px; line-height: 1; margin-bottom: 12px;">
-                        Rescue<br>Command Center
+                        ARDMS<br>Command Center
                     </h1>
                     <div
                         style="width: 40px; height: 4px; background: var(--accent); border-radius: 2px; margin-bottom: 16px;">
@@ -1211,7 +1221,7 @@
         <div style="display:flex; flex-direction:column; align-items:flex-start; width: 300px;">
             <div class="nav-brand" style="margin-right: 0; padding-bottom:8px; font-size: 20px;">
                 <i data-lucide="shield" style="color:var(--accent); width:24px; height:24px;"></i>
-                <span id="navBrandTitle">COMMAND CENTER</span>
+                <span id="navBrandTitle">ARDMS Command Center</span>
             </div>
             <button class="btn btn-outline"
                 style="padding: 4px 10px; font-size: 12px; border:1px solid var(--border); background:var(--bg-body); color: var(--text-muted); height:auto;"
@@ -1235,7 +1245,10 @@
                         style="width:16px;"></i> Configuration Settings</button>
             </div>
         </div>
-        <div style="width: 300px;"></div>
+        <div style="width: 300px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-weight: 700; color: var(--text-main); font-size: 14px;">
+            <i data-lucide="clock" class="pulsing-clock-icon" style="color: var(--accent); width: 18px; height: 18px;"></i>
+            <span id="digitalClock" style="font-family: monospace; font-size: 15px; letter-spacing: 0.5px;">--:--:-- --</span>
+        </div>
     </header>
 
     <div id="appWrapper" style="display: none;">
@@ -1466,19 +1479,7 @@
                     </div>
 
                     <div class="cmd-content" id="cmd-live">
-                        <!-- DEV TEST BUTTON -->
-                        <div
-                            style="margin-bottom: 15px; padding: 12px; background: rgba(37, 99, 235, 0.05); border: 1px dashed var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-                            <div style="font-size: 12px; color: var(--accent); font-weight: 700;">
-                                <i data-lucide="beaker"
-                                    style="width:14px; vertical-align: middle; margin-right: 4px;"></i>
-                                TESTING MODE: Simulate a live mission to verify tracking lines.
-                            </div>
-                            <button class="btn btn-primary" onclick="createDummyTestTask()"
-                                style="padding: 6px 12px; font-size: 11px; font-weight: 800; border-radius: 6px;">
-                                <i data-lucide="plus-circle" style="width:12px;"></i> Generate Test Mission
-                            </button>
-                        </div>
+
 
                         <!-- Critical Operations Feed (NEW) -->
                         <div id="criticalOperationsHub" style="display:none; margin-bottom: 24px;">
@@ -1913,10 +1914,7 @@
                             disabled onclick="openBulkGroupView()">
                             <i data-lucide="users" style="width:14px; margin-right:6px;"></i> Group & Assign (0)
                         </button>
-                        <button class="btn btn-outline" style="font-size:11px; padding:6px 12px; background:white;"
-                            onclick="generateTestingBatch()">
-                            <i data-lucide="plus-square" style="width:14px; margin-right:4px;"></i> Test: Add 5 Req
-                        </button>
+                        <!-- Test Missions Generation Button Removed -->
                     </div>
                 </div>
 
@@ -2236,7 +2234,7 @@
                 <div class="grid-2" style="margin-bottom:12px;">
                     <div class="input-group" style="margin-bottom:0;">
                         <label class="input-label">System Name</label>
-                        <input type="text" id="sysNameInput" class="form-control" value="Rescue Command Center">
+                        <input type="text" id="sysNameInput" class="form-control" value="ARDMS Command Center">
                     </div>
                     <div class="input-group" style="margin-bottom:0;">
                         <label class="input-label">Commander Head Name</label>
@@ -3803,21 +3801,31 @@
             if (!map) return;
             try {
                 // Fetch All Data
-                const [zonesRes, rescuersRes, tasksRes, cmdsRes] = await Promise.all([
+                const [zonesRes, rescuersRes, tasksRes, cmdsRes, groupsRes] = await Promise.all([
                     fetch(`${API_BASE}/zones`),
                     fetch(`${API_BASE}/users?role=rescuer`),
                     fetch(`${API_BASE}/rescue-requests?status=active`),
-                    fetch(`${API_BASE}/commands`)
+                    fetch(`${API_BASE}/commands`),
+                    fetch(`${API_BASE}/groups`)
                 ]);
 
                 const zones = await zonesRes.json();
                 const rescuers = await rescuersRes.json();
                 const tasks = await tasksRes.json();
                 const activeCmds = await cmdsRes.json();
+                const groups = await groupsRes.json();
+                groupedTasks = groups; // Update global state
 
                 // Clear existing tactical layers
                 mapLayers.forEach(l => map.removeLayer(l));
                 mapLayers = [];
+
+                for (let id in groupPerimeters) {
+                    if (groupPerimeters[id]) {
+                        map.removeLayer(groupPerimeters[id]);
+                    }
+                }
+                groupPerimeters = {};
 
                 if (window.markerClusterGroup) {
                     map.removeLayer(window.markerClusterGroup);
@@ -3899,7 +3907,9 @@
                         // Draw lines for assigned commands (Critical always shown, others when selected)
                         activeCmds.forEach(c => {
                             const isCriticalCmd = c.command_type === 'critical' || c.priority === 'critical' || c.command_type === 'sos';
-                            const isSelected = (window.selectedTrackingCmdId == c.id);
+                            const isSelected = (window.selectedTrackingCmdId == c.id) ||
+                                               (window.selectedTrackingCmdId === `CMD-${c.id}`) ||
+                                               (typeof window.selectedTrackingCmdId === 'string' && window.selectedTrackingCmdId.replace('CMD-', '') == c.id);
 
                             if ((isCriticalCmd || isSelected) && (c.status !== 'completed' || isSelected) && (c.target_phone === r.phone || (r.id && c.target_phone === r.id.toString()) || isInGroup(c.group_id))) {
                                 // Find all target request locations
@@ -3963,6 +3973,36 @@
                             }
                         });
                     }
+                });
+
+                // 2.5 Render Group Perimeters for all active (non-Closed) groups
+                groups.filter(g => g.status !== 'Closed' && g.status !== 'completed').forEach(g => {
+                    const coords = g.requests ? g.requests.map(req => [parseFloat(req.lat), parseFloat(req.lng)]).filter(c => !isNaN(c[0])) : [];
+                    if (coords.length === 0) return;
+
+                    let isCompleted = g.status === 'Completed' || g.status === 'completed';
+                    let style = {
+                        color: isCompleted ? '#22c55e' : '#a855f7',
+                        fillColor: isCompleted ? '#22c55e' : '#a855f7',
+                        fillOpacity: 0.1,
+                        dashArray: '5, 8',
+                        weight: 2.5
+                    };
+
+                    const hull = g.custom_polygon || generateTacticalPolygon(coords);
+                    const poly = L.polygon(hull, style).addTo(map);
+                    groupPerimeters[g.id] = poly;
+                    mapLayers.push(poly);
+
+                    let assignedTo = g.assigned_to || 'Assigned';
+                    poly.bindPopup(`
+                        <div style="font-family:'Inter'; padding:5px; text-align:center;">
+                            <b style="color:var(--special); font-size:14px;">${g.name}</b><br>
+                            <span style="font-size:11px; color:var(--text-muted);">${g.requests.length} Requests Clustered</span><br>
+                            <span style="font-size:11px; color:var(--text-main); font-weight:600;">Status: ${g.status}</span><br>
+                            <span style="font-size:11px; color:var(--primary); font-weight:600;">Team: ${assignedTo}</span><br>
+                        </div>
+                    `);
                 });
 
                 // 3. Render Active Tasks (with Grouped styling)
@@ -5207,6 +5247,7 @@
                 renderRescueRequests();
                 updateNotifBadges();
                 if (typeof updateMgmtPage === 'function') updateMgmtPage();
+                if (typeof updateTacticalMap === 'function') updateTacticalMap();
             } catch (e) {
                 console.error("Error fetching rescue requests", e);
             }
@@ -6371,10 +6412,27 @@
 
 
 
+        function updateDigitalClock() {
+            const clockEl = document.getElementById('digitalClock');
+            if (!clockEl) return;
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            const hoursStr = String(hours).padStart(2, '0');
+            clockEl.innerText = `${hoursStr}:${minutes}:${seconds} ${ampm}`;
+        }
+
         // Initialize
         window.onload = () => {
             try { initWebSocket(); } catch (e) { console.error("WS Init Error", e); }
             try { initMap(); } catch (e) { console.error("Map Init Error", e); }
+
+            updateDigitalClock();
+            setInterval(updateDigitalClock, 1000);
 
             // Set periodic refreshes
             // Auto-refresh is now handled by startAutoRefresh(interval) triggered by fetchRefreshSetting()
@@ -6390,115 +6448,7 @@
             fetchCommands();
             fetchRefreshSetting();
         };
-        // --- Dummy Task Logic for Testing ---
-        function createDummyTestTask() {
-            console.log("[TEST] Creating dummy tactical mission data...");
 
-            // 1. Coordinates near the center of map (Chennai area usually used in this project)
-            const baseLat = 13.0827;
-            const baseLng = 80.2707;
-
-            // Rescuer position (Starting point)
-            const rescuerPos = [baseLat - 0.005, baseLng - 0.005];
-            // Task position (Target point)
-            const taskPos = [baseLat + 0.005, baseLng + 0.005];
-
-            const testRescuerPhone = 'TEST-UNIT-001';
-            const testIdRaw = Date.now().toString().slice(-6);
-            const testReqId = 'DUMMY-REQ-' + testIdRaw;
-            const testCmdIdRaw = 'DUMMY-' + testIdRaw;
-            const testCmdIdFormatted = 'CMD-' + testCmdIdRaw;
-
-            const dummyRescuer = {
-                id: 9999,
-                name: "Test Rescuer Alpha",
-                phone: testRescuerPhone,
-                role: "rescuer",
-                lat: rescuerPos[0],
-                lng: rescuerPos[1],
-                status: "online",
-                live_connected: true,
-                serial_number: "RSC-TEST-01"
-            };
-
-            const dummyReq = {
-                id: testReqId,
-                type: "medical",
-                lat: taskPos[0],
-                lng: taskPos[1],
-                status: "accepted",
-                sector: "Sector 7",
-                rescuer_phone: testRescuerPhone,
-                serial_number: "SOS-TEST-" + testIdRaw,
-                assigned_user_id: 9999,
-                created_at: new Date().toISOString()
-            };
-
-            const dummyCmd = {
-                id: testCmdIdRaw,
-                command_type: "sos",
-                priority: "critical",
-                status: "accepted",
-                target_phone: testRescuerPhone,
-                command_payload: JSON.stringify({
-                    message: "URGENT: Test tactical move to medical emergency",
-                    rescue_req_id: testReqId,
-                    sector: "Sector 7"
-                }),
-                created_at: new Date().toISOString()
-            };
-
-            // Global update logic (Since map update re-fetches, we wrap the fetch for this session)
-            if (!window._isMockingActive) {
-                window._isMockingActive = true;
-                const originalFetch = window.fetch;
-                window._mockedRescuers = [];
-                window._mockedReqs = [];
-                window._mockedCmds = [];
-
-                window.fetch = async (...args) => {
-                    const url = typeof args[0] === 'string' ? args[0] : args[0].url;
-
-                    try {
-                        if (url.includes('/users?role=rescuer')) {
-                            const res = await originalFetch(...args).catch(() => ({ json: () => [] }));
-                            const data = await (res.json ? res.json() : []);
-                            return new Response(JSON.stringify([...data, ...window._mockedRescuers]));
-                        }
-                        if (url.includes('/rescue-requests')) {
-                            const res = await originalFetch(...args).catch(() => ({ json: () => [] }));
-                            const data = await (res.json ? res.json() : []);
-                            return new Response(JSON.stringify([...data, ...window._mockedReqs]));
-                        }
-                        if (url.includes('/commands')) {
-                            const res = await originalFetch(...args).catch(() => ({ json: () => [] }));
-                            const data = await (res.json ? res.json() : []);
-                            return new Response(JSON.stringify([...data, ...window._mockedCmds]));
-                        }
-                    } catch (e) {
-                        console.warn("[MOCK] Fetch interception failed, falling back", e);
-                    }
-
-                    return originalFetch(...args);
-                };
-            }
-
-            window._mockedRescuers.push(dummyRescuer);
-            window._mockedReqs.push(dummyReq);
-            window._mockedCmds.push(dummyCmd);
-
-            showAdminToast("Dummy Tactical Mission generated!");
-
-            // Trigger refresh
-            if (typeof fetchCommands === 'function') fetchCommands();
-            if (typeof fetchRescueRequests === 'function') fetchRescueRequests();
-            if (typeof updateTacticalMap === 'function') updateTacticalMap();
-
-            // Auto-select the dummy task after a short delay to trigger flyTo and tracking line
-            setTimeout(() => {
-                if (typeof selectTask === 'function') selectTask(testCmdIdFormatted);
-            }, 800);
-        }
 
         // --- NEW TASK GROUPING & NOTIFICATION LOG LOGIC ---
 
@@ -7687,79 +7637,7 @@
             }
         }
 
-        // --- TESTING SUITE: GENERATE 5 REQUESTS FOR GROUPING TEST ---
-
-        function generateTestingBatch() {
-            if (!window._isMockingActive) {
-                // Initialize mocking if not active to ensure test data persists across UI refreshes
-                window._isMockingActive = true;
-                const originalFetch = window.fetch;
-                window._mockedRescuers = window._mockedRescuers || [];
-                window._mockedReqs = window._mockedReqs || [];
-                window._mockedCmds = window._mockedCmds || [];
-
-                window.fetch = async (...args) => {
-                    const url = typeof args[0] === 'string' ? args[0] : args[0].url;
-                    try {
-                        if (url.includes('/users?role=rescuer')) {
-                            const res = await originalFetch(...args).catch(() => ({ json: () => [] }));
-                            const data = await (res.json ? res.json() : []);
-                            return new Response(JSON.stringify([...data, ...window._mockedRescuers]));
-                        }
-                        if (url.includes('/rescue-requests')) {
-                            const res = await originalFetch(...args).catch(() => ({ json: () => [] }));
-                            const data = await (res.json ? res.json() : []);
-                            return new Response(JSON.stringify([...data, ...window._mockedReqs]));
-                        }
-                        if (url.includes('/commands')) {
-                            const res = await originalFetch(...args).catch(() => ({ json: () => [] }));
-                            const data = await (res.json ? res.json() : []);
-                            return new Response(JSON.stringify([...data, ...window._mockedCmds]));
-                        }
-                    } catch (e) {
-                        return originalFetch(...args);
-                    }
-                    return originalFetch(...args);
-                };
-            }
-
-            const basePos = [26.8467, 80.9462]; // Lucknow Base Area for clustering
-            const batch = [
-                { type: 'SOS', priority: 'Critical', name: 'Aman V.' },
-                { type: 'SOS', priority: 'Critical', name: 'Suresh K.' },
-                { type: 'Supplies', priority: 'Normal', name: 'Rina D.' },
-                { type: 'Supplies', priority: 'Normal', name: 'Vikram S.' },
-                { type: 'Supplies', priority: 'Normal', name: 'Priya M.' }
-            ];
-
-            batch.forEach((item, index) => {
-                const id = 10000 + index + Math.floor(Math.random() * 1000);
-                const req = {
-                    id: id,
-                    type: item.type === 'SOS' ? 'medical' : 'food',
-                    lat: basePos[0] + (Math.random() - 0.5) * 0.008, // Tight cluster
-                    lng: basePos[1] + (Math.random() - 0.5) * 0.008,
-                    status: "pending",
-                    sector: "Sector 4 Cluster",
-                    location_name: "Street " + (index + 1) + ", Sector 4",
-                    requester_name: item.name,
-                    requester_phone: "9190000" + id,
-                    serial_number: (item.type === 'SOS' ? 'SOS' : 'SUP') + "-" + id,
-                    priority: item.priority,
-                    urgency: item.priority.toLowerCase(),
-                    created_at: new Date().toISOString()
-                };
-                window._mockedReqs.push(req);
-            });
-
-            showAdminToast("Tactical Test: 5 Cluster Requests generated in Sector 4.");
-
-            // Trigger refresh across all modules (Synchronous for testing)
-            refreshAllModules();
-
-            // Navigate to management page to show results
-            switchPage('notif-mgmt');
-        }
+        // --- TESTING SUITE REMOVED ---
 
     </script>
 </body>

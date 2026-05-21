@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Field Rescuer App - Professional Platform</title>
+    <title>ARDMS-Rescue Officer App</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -789,7 +789,7 @@
                     <img src="official_rescuer_icon.png"
                         style="width:100%; height:100%; border-radius:24px; object-fit:cover;">
                 </div>
-                <h1 class="brand-name">Rescuer Ops</h1>
+                <h1 class="brand-name">ARDMS-Rescue Officer App</h1>
                 <p class="brand-tagline">Emergency Field Operations</p>
 
                 <div class="input-group">
@@ -1037,6 +1037,64 @@
 
     <script>
 
+        // --- OFFLINE SYNC MANAGER ---
+        const originalFetch = window.fetch;
+        window.offlineQueue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+        window.fetch = async function(url, options) {
+            const isMutation = options && ['POST', 'PUT', 'DELETE'].includes(options.method);
+            if (!navigator.onLine && isMutation) {
+                console.log('[OFFLINE] Queuing request', url);
+                window.offlineQueue.push({ url, options });
+                localStorage.setItem('offline_queue', JSON.stringify(window.offlineQueue));
+                return new Response(JSON.stringify({ success: true, offline: true, id: Date.now() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            
+            try {
+                const res = await originalFetch(url, options);
+                if (options === undefined || options.method === 'GET' || !options.method) {
+                    if (url.includes('/history') || url.includes('/rescue-requests') || url.includes('/dashboard-stats') || url.includes('/zones') || url.includes('/users')) {
+                        const clone = res.clone();
+                        clone.text().then(data => {
+                            localStorage.setItem('cache_' + url, data);
+                        }).catch(() => {});
+                    }
+                }
+                return res;
+            } catch (e) {
+                if (!navigator.onLine) {
+                    if (isMutation) {
+                        window.offlineQueue.push({ url, options });
+                        localStorage.setItem('offline_queue', JSON.stringify(window.offlineQueue));
+                        return new Response(JSON.stringify({ success: true, offline: true, id: Date.now() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+                    } else {
+                        const cached = localStorage.getItem('cache_' + url);
+                        if (cached) {
+                            return new Response(cached, { status: 200, headers: { 'Content-Type': 'application/json' } });
+                        }
+                    }
+                }
+                throw e;
+            }
+        };
+
+        window.addEventListener('online', async () => {
+            console.log('[ONLINE] Syncing offline queue...');
+            const queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+            window.offlineQueue = [];
+            localStorage.setItem('offline_queue', '[]');
+            for (const req of queue) {
+                try {
+                    await originalFetch(req.url, req.options);
+                } catch (e) {
+                    console.error('Failed to sync', req, e);
+                }
+            }
+            if (window.core && window.core.refresh) window.core.refresh();
+            if (window.core && window.core.updateNetUI) window.core.updateNetUI(true);
+        });
+        // -----------------------------
+
+
         // Timezone conversion helpers
         function formatLocalTime(dbTimeStr) {
             if (!dbTimeStr) return '--:--';
@@ -1062,6 +1120,67 @@
             } catch(e) { return dbTimeStr; }
         }
 
+        function getConvexHull(points) {
+            if (points.length <= 2) return points;
+            const pts = points.slice().sort((a, b) => a[0] !== b[0] ? a[0] - b[0] : a[1] - b[1]);
+            const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+            const lower = [];
+            for (let i = 0; i < pts.length; i++) {
+                while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], pts[i]) <= 0) lower.pop();
+                lower.push(pts[i]);
+            }
+            const upper = [];
+            for (let i = pts.length - 1; i >= 0; i--) {
+                while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], pts[i]) <= 0) upper.pop();
+                upper.push(pts[i]);
+            }
+            upper.pop();
+            lower.pop();
+            return lower.concat(upper);
+        }
+
+        function generateTacticalPolygon(coords) {
+            if (!coords || coords.length === 0) return [];
+            const offset = 0.0001; // ~10 meters
+            if (coords.length >= 3) {
+                const hull = getConvexHull(coords);
+                const centerLat = hull.reduce((sum, p) => sum + p[0], 0) / hull.length;
+                const centerLng = hull.reduce((sum, p) => sum + p[1], 0) / hull.length;
+                return hull.map(p => {
+                    const dLat = p[0] - centerLat;
+                    const dLng = p[1] - centerLng;
+                    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+                    if (dist === 0) return [p[0] + offset, p[1] + offset];
+                    const ratio = (dist + offset) / dist;
+                    return [centerLat + dLat * ratio, centerLng + dLng * ratio];
+                });
+            }
+            if (coords.length === 2) {
+                const bounds = L.latLngBounds(coords);
+                const n = bounds.getNorth() + offset;
+                const s = bounds.getSouth() - offset;
+                const e = bounds.getEast() + offset;
+                const w = bounds.getWest() - offset;
+                return [
+                    [n, w],
+                    [n, e],
+                    [s, e],
+                    [s, w]
+                ];
+            }
+            if (coords.length === 1) {
+                const lat = coords[0][0];
+                const lng = coords[0][1];
+                return [
+                    [lat + offset, lng - offset],
+                    [lat + offset, lng + offset],
+                    [lat - offset, lng + offset],
+                    [lat - offset, lng - offset]
+                ];
+            }
+            return [];
+        }
+
         /**
          * ANTIGRAVITY RESCUER PRO
          * Professional Realtime Emergency Response Platform
@@ -1074,6 +1193,7 @@
             map: null,
             rescuerMarker: null,
             taskMarkers: {},
+            groupPerimeters: {},
             activeMission: null,
             interruptedMission: null,
             navPolyline: null,
@@ -1285,7 +1405,7 @@
                     historyData.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
 
                     // Filter: All active statuses
-                    const activeData = historyData.filter(t => ['assigned', 'pending', 'accepted', 'ongoing', 'in_progress', 'acknowledged'].includes(t.status.toLowerCase()));
+                    const activeData = historyData.filter(t => t.status && !['completed', 'resolved', 'inactive'].includes(t.status.toLowerCase()));
 
                     // Deduplicate identical tasks (Requests vs Commands)
                     const reqIdsInCmds = new Set();
@@ -1324,6 +1444,21 @@
                 tasksNorm.innerHTML = '';
                 if (tasksGrouped) tasksGrouped.innerHTML = '';
 
+                // Clear old task markers from map
+                for (let key in this.taskMarkers) {
+                    if (this.taskMarkers[key]) {
+                        this.map.removeLayer(this.taskMarkers[key]);
+                    }
+                }
+                this.taskMarkers = {};
+
+                // Clear old group perimeters from map
+                for (let gid in this.groupPerimeters) {
+                    if (this.groupPerimeters[gid]) {
+                        this.map.removeLayer(this.groupPerimeters[gid]);
+                    }
+                }
+                this.groupPerimeters = {};
 
                 const groupedTasks = tasks.filter(t => {
                     if (t.type === 'group') return true;
@@ -1334,6 +1469,34 @@
                 });
                 const critTasks = tasks.filter(t => !groupedTasks.includes(t) && (t.priority === 'critical' || ['sos', 'medical', 'pregnancy', 'critical'].includes(t.type.toLowerCase())));
                 const normTasks = tasks.filter(t => !groupedTasks.includes(t) && !critTasks.includes(t));
+
+                // Draw group perimeters on map
+                groupedTasks.forEach(g => {
+                    let d = null;
+                    try {
+                        d = typeof g.details === 'string' ? JSON.parse(g.details) : g.details;
+                    } catch(e) {}
+
+                    if (d && d.isGroup && d.missions && d.missions.length > 0) {
+                        const coords = d.missions.map(m => [parseFloat(m.lat), parseFloat(m.lng)]).filter(c => !isNaN(c[0]));
+                        if (coords.length === 0) return;
+
+                        let style = {
+                            color: '#a855f7',
+                            fillColor: '#a855f7',
+                            fillOpacity: 0.1,
+                            dashArray: '5, 8',
+                            weight: 2.5
+                        };
+
+                        const hull = d.custom_polygon || generateTacticalPolygon(coords);
+                        if (hull && hull.length > 0) {
+                            const poly = L.polygon(hull, style).addTo(this.map);
+                            poly.bindPopup(`<b>${g.sector || 'Group Cluster'}</b><br>${d.missions.length} Clusters`);
+                            this.groupPerimeters[g.id] = poly;
+                        }
+                    }
+                });
 
                 if (critTasks.length === 0) {
                     homeCrit.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No critical alerts</div>';
@@ -1812,6 +1975,14 @@
                 if (event && event.target) {
                     const card = event.target.closest('.notif-card');
                     if (card) card.remove();
+                }
+                if (this.taskMarkers[id]) {
+                    this.map.removeLayer(this.taskMarkers[id]);
+                    delete this.taskMarkers[id];
+                }
+                if (this.groupPerimeters[id]) {
+                    this.map.removeLayer(this.groupPerimeters[id]);
+                    delete this.groupPerimeters[id];
                 }
             },
 
