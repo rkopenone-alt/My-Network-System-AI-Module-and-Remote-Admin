@@ -7409,13 +7409,14 @@
                 return;
             }
 
-            const targetName = document.querySelector(`#${type === 'group' ? 'bulkGroupSelect' : 'bulkIndivSelect'} option[value="${targetId}"]`).textContent;
+            const selectEl = document.getElementById(type === 'group' ? 'bulkGroupSelect' : 'bulkIndivSelect');
+            const targetName = selectEl && selectEl.options[selectEl.selectedIndex] ? selectEl.options[selectEl.selectedIndex].textContent : 'Unknown';
 
             if (!confirm(`INITIALIZE TACTICAL MISSION CLUSTER?\n\nGroup Name: ${name}\nAssign To: ${targetName}\nMissions: ${selectedIds.length}\n\nConfirm Dispatch?`)) return;
 
             isConfirmingBulk = true;
             try {
-                const selectedMissions = selectedIds.map(id => rescueRequests.find(r => r.id.toString() === id.toString()));
+                const selectedMissions = selectedIds.map(id => rescueRequests.find(r => r.id.toString() === id.toString())).filter(r => !!r);
                 const isCritical = selectedMissions.some(r => r && r.priority === 'Critical');
 
                 const newGroupEntry = {
@@ -7445,7 +7446,7 @@
                     priority: isCritical ? 'critical' : 'normal',
                     details: JSON.stringify({
                         cluster_count: selectedIds.length,
-                        missions: newGroupEntry.requests.map(r => r.serial_number).join(', ')
+                        missions: newGroupEntry.requests.map(r => r.serial_number || ('#' + r.id)).join(', ')
                     })
                 };
                 cmds.unshift(historyEntry);
@@ -7480,7 +7481,7 @@
                                 name: name,
                                 is_group_mission: true,
                                 request_ids: selectedIds,
-                                serial_numbers: newGroupEntry.requests.map(r => r.serial_number),
+                                serial_numbers: newGroupEntry.requests.map(r => r.serial_number || ('#' + r.id)),
                                 custom_polygon: window.customBulkPolygon || null
                             },
                             actor: 'Commander'
@@ -7699,8 +7700,9 @@
                             </table>
                         </div>
                     `}
-                </div>
+                ${(isGroup || (data.status === 'Assigned')) ? `
                 <div style="padding:32px; background:white; border-top:1px solid var(--border); display:flex; gap:16px; box-shadow:0 -4px 12px rgba(0,0,0,0.02);">
+                    ${isGroup ? `
                     <button class="btn btn-primary" style="flex:1; padding:18px; border-radius:14px; font-weight:800; font-size:15px; background:${data.status === 'Assigned' ? '#eab308' : 'var(--accent)'}; border-color:${data.status === 'Assigned' ? '#eab308' : 'var(--accent)'}; box-shadow:0 10px 20px -5px rgba(37,99,235,0.3);" 
                         onclick="assignFromMgmt('${data.id}', ${isGroup})">
                         <i data-lucide="${data.status === 'Assigned' ? 'refresh-cw' : 'user-plus'}" style="width:20px; margin-right:8px;"></i> 
@@ -7710,14 +7712,15 @@
                         onclick="closeFromMgmt('${data.id}', ${isGroup})">
                         <i data-lucide="check-circle" style="width:20px; margin-right:8px;"></i> RESOLVE & CLOSE
                     </button>
+                    ` : ''}
                     ${data.status === 'Assigned' ? `
                     <button class="btn btn-primary" style="flex:1; padding:18px; border-radius:14px; font-weight:800; font-size:15px; background:#0ea5e9; border-color:#0ea5e9; box-shadow:0 10px 20px -5px rgba(14,165,233,0.3);" 
                         onclick="event.stopPropagation(); const cmdId = cmds.find(c => c.rescueReqId == '${data.id}')?.id; if(cmdId) selectTask(cmdId); else showAdminToast('Command reference not found.', 'error');">
                         <i data-lucide="map" style="width:20px; margin-right:8px;"></i> VIEW ON MAP
                     </button>
                     ` : ''}
-
                 </div>
+                ` : ''}
             `;
             lucide.createIcons();
 
