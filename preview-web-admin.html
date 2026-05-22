@@ -7794,7 +7794,15 @@
                 if (typeSel) typeSel.value = 'rescue';
                 setTargetType('group');
             } else {
-                openAssignModal(id);
+                const req = rescueRequests.find(r => r.id.toString() === id.toString());
+                if (req) {
+                    const safeType = (req.type || 'RESCUE');
+                    const safeSector = (req.sector || 'Sector 4 Default');
+                    const num = req.id.toString().slice(-2);
+                    openAssignModal(req.id, safeType, safeSector, req.urgency || req.priority || 'Normal', num);
+                } else {
+                    openAssignModal(id, 'Rescue Request', 'Sector 4 Default', 'Normal');
+                }
             }
         }
 

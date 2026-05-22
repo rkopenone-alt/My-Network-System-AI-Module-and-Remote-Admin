@@ -640,7 +640,7 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
       <ScrollView contentContainerStyle={{ padding: 20, alignItems: 'center' }}>
         <Text style={s.sectionLabel}>SELECT SOS CATEGORY</Text>
         <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginBottom: 24, justifyContent: 'center' }}>
-          {[['sos', '📢', 'General SOS'], ['supplies', '📦', 'Supplies Needed']].map(([type, icon, label]) => (
+          {[['sos', '📢', 'General Rescue'], ['supplies', '📦', 'Supplies Needed']].map(([type, icon, label]) => (
             <TouchableOpacity
               key={type}
               style={[s.medBtn, emergencyType === type && s.medBtnActive]}
