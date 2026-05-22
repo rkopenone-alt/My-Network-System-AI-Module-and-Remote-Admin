@@ -1434,6 +1434,14 @@
                                     onclick="window.open(this.querySelector('img').src)">
                                     <span style="color:#1d4ed8; font-size:10px;">No Image Provided</span>
                                 </div>
+                                <div id="tdEvidenceAudioContainer"
+                                    style="width:100%; padding:10px; background:#dbeafe; border-radius:6px; overflow:hidden; margin-bottom:8px; display:none; flex-direction:column; align-items:center; justify-content:center; border:1px solid #bfdbfe; gap:8px;">
+                                    <b style="color:#1d4ed8; font-size:10px; text-transform:uppercase; display:flex; align-items:center; gap:4px;">🔊 REQUEST AUDIO MESSAGE</b>
+                                    <audio id="tdEvidenceAudioPlayer" controls style="width:100%;">
+                                        Your browser does not support the audio element.
+                                    </audio>
+                                    <a id="btnDownloadAudio" href="#" target="_blank" style="font-size:10px; font-weight:800; color:#1d4ed8; text-decoration:none;">📥 DOWNLOAD AUDIO FILE</a>
+                                </div>
                                 <div id="tdRequesterComments"
                                     style="font-size: 11px; color: #1e3a8a; font-style: italic; background: white; padding: 8px; border-radius: 4px; border: 1px solid #dbeafe; margin-bottom: 8px;">
                                     "No additional comments provided by citizen."
@@ -3604,18 +3612,6 @@
                 addMarker(m.lat, m.lng, m.type, `<i data-lucide="${m.icon}" style="width:16px;height:16px;${isHex ? 'fill:white' : ''}"></i>`, m.details, null, false, false, m.id, false, m.status);
             });
 
-            // Add a cluster example
-            let clusterIcon = L.divIcon({
-                className: 'cluster-marker',
-                html: '5',
-                iconSize: [38, 38],
-                iconAnchor: [19, 19]
-            });
-            let cl = L.marker([13.08, 80.28], { icon: clusterIcon }).addTo(map);
-            cl._icon.style.borderColor = 'var(--pending)';
-            cl._icon.style.color = 'var(--pending)';
-            cl.bindPopup('<div style="font-family:Inter;font-size:13px;font-weight:700;">5 Pending Requests in Cluster</div>');
-
             // Map interaction for drawing
             map.on('mousedown', onMapClick);
 
@@ -3825,6 +3821,28 @@
                 const activeCmds = await cmdsRes.json();
                 const groups = await groupsRes.json();
                 groupedTasks = groups; // Update global state
+
+                // Auto-Erase Tracked Route if completed/closed/removed
+                if (window.selectedTrackingCmdId) {
+                    const trackingIdNum = typeof window.selectedTrackingCmdId === 'string' 
+                        ? window.selectedTrackingCmdId.replace('CMD-', '') 
+                        : window.selectedTrackingCmdId;
+                    
+                    const activeCmd = activeCmds.find(c => c.id.toString() === trackingIdNum.toString());
+                    if (!activeCmd || activeCmd.status === 'completed' || activeCmd.status === 'declined' || activeCmd.status === 'finished') {
+                        window.selectedTrackingCmdId = null;
+                        window.selectedTrackingBounds = null;
+                        window.userInteractedWithMap = false;
+                        if (selectedCmdLayer) {
+                            map.removeLayer(selectedCmdLayer);
+                            selectedCmdLayer = null;
+                        }
+                        const detailsPanel = document.getElementById('commandDetailsPanel');
+                        const formPanel = document.getElementById('commandFormPanel');
+                        if (detailsPanel) detailsPanel.style.display = 'none';
+                        if (formPanel) formPanel.style.display = 'block';
+                    }
+                }
 
                 // Reset tracking bounds to allow dynamic zoom-in as rescuer approaches
                 if (window.selectedTrackingCmdId) {
@@ -4337,6 +4355,22 @@
                     downloadBtn.style.display = 'none';
                 }
 
+                const audioContainer = document.getElementById('tdEvidenceAudioContainer');
+                const audioPlayer = document.getElementById('tdEvidenceAudioPlayer');
+                const downloadAudioLink = document.getElementById('btnDownloadAudio');
+                if (audioContainer && audioPlayer && downloadAudioLink) {
+                    if (cmd.requesterAudioUrl) {
+                        const audioFullUrl = `http://${window.location.hostname || 'localhost'}:3001${cmd.requesterAudioUrl}`;
+                        audioPlayer.src = audioFullUrl;
+                        downloadAudioLink.href = audioFullUrl;
+                        downloadAudioLink.download = `Audio_REQ_${cmd.rescueReqId || 'N_A'}.wav`;
+                        audioContainer.style.display = 'flex';
+                    } else {
+                        audioPlayer.src = '';
+                        audioContainer.style.display = 'none';
+                    }
+                }
+
                 if (cmd.details) {
                     try {
                         const d = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
@@ -4466,6 +4500,19 @@
                     evidenceThumb = `<img src="${thumbUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid ${isCrit ? '#ef4444' : 'var(--border)'};" onclick="event.stopPropagation(); window.open('${thumbUrl}', '_blank');">`;
                 }
 
+                let evidenceAudio = '-';
+                if (c.requesterAudioUrl) {
+                    const audioUrl = c.requesterAudioUrl.startsWith('http') ? c.requesterAudioUrl : `http://${window.location.hostname || 'localhost'}:3001${c.requesterAudioUrl}`;
+                    evidenceAudio = `<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 140px;">
+                        <audio controls style="width:130px; height:24px;" onclick="event.stopPropagation();">
+                            <source src="${audioUrl}" type="audio/wav">
+                            <source src="${audioUrl}" type="audio/mpeg">
+                            Your browser does not support audio.
+                        </audio>
+                        <a href="${audioUrl}" target="_blank" onclick="event.stopPropagation();" style="font-size:10px; font-weight:800; color:var(--primary); text-decoration:none;">📥 Download</a>
+                    </div>`;
+                }
+
                 let closureThumb = '-';
                 if (c.completion_image_url) {
                     const closureUrl = c.completion_image_url.startsWith('http') ? c.completion_image_url : `http://${window.location.hostname || 'localhost'}:3001${c.completion_image_url}`;
@@ -4478,6 +4525,7 @@
                     <td>${c.desc}</td>
                     <td style="font-size:11px; color:var(--text-muted);">${infoText}</td>
                     <td>${evidenceThumb}</td>
+                    <td>${evidenceAudio}</td>
                     <td>
                         <span class="tag ${getTagForType(c.type)}">${(c.type || 'N/A').toUpperCase()}</span>
                     </td>
@@ -4519,6 +4567,7 @@
                     <td>${c.desc}</td>
                     <td style="font-size:11px; color:var(--text-muted);">${infoText}</td>
                     <td>${evidenceThumb}</td>
+                    <td>${evidenceAudio}</td>
                     <td>
                         <span class="tag ${getTagForType(c.type)}">${(c.type || 'N/A').toUpperCase()}</span>
                     </td>
@@ -4576,7 +4625,8 @@
                 <th style="width: 90px;">ID</th>
                 <th style="width: 200px;">TASK / DESCRIPTION</th>
                 <th style="width: 150px;">INFORMATION</th>
-                <th style="width: 80px;">EVIDENCE</th>
+                <th style="width: 80px;">IMAGE</th>
+                <th style="width: 150px;">AUDIO</th>
                 <th style="width: 100px;">TYPE</th>
                 <th style="width: 150px;">ZONE / AREA</th>
                 <th style="width: 150px;">ASSIGNED TO</th>
@@ -4593,14 +4643,14 @@
                 thead.innerHTML = tableHeader;
             });
 
-            document.getElementById('liveCmdBodyCritical').innerHTML = liveCritHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No critical commands</td></tr>';
-            document.getElementById('liveCmdBodyNormal').innerHTML = liveNormHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No normal commands</td></tr>';
-            document.getElementById('liveCmdBodyGrouped').innerHTML = liveGroupedHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No grouped commands</td></tr>';
+            document.getElementById('liveCmdBodyCritical').innerHTML = liveCritHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No critical commands</td></tr>';
+            document.getElementById('liveCmdBodyNormal').innerHTML = liveNormHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No normal commands</td></tr>';
+            document.getElementById('liveCmdBodyGrouped').innerHTML = liveGroupedHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No grouped commands</td></tr>';
             const compTbody = document.getElementById('compCmdBody');
-            if (compTbody) compTbody.innerHTML = compHtml || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted)">No completed commands</td></tr>';
+            if (compTbody) compTbody.innerHTML = compHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No completed commands</td></tr>';
 
-            document.getElementById('historyTbodyCritical').innerHTML = histCriticalHtml || '<tr><td colspan="12" style="text-align:center;color:var(--text-muted)">No critical history found</td></tr>';
-            document.getElementById('historyTbodyNormal').innerHTML = histNormalHtml || '<tr><td colspan="12" style="text-align:center;color:var(--text-muted)">No normal history found</td></tr>';
+            document.getElementById('historyTbodyCritical').innerHTML = histCriticalHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No critical history found</td></tr>';
+            document.getElementById('historyTbodyNormal').innerHTML = histNormalHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No normal history found</td></tr>';
 
             // Populate Group History
             const histGroupHtml = cmds.filter(c => c.type === 'group').map((c, i) => {
@@ -4620,12 +4670,14 @@
                     <td style="font-weight:700; color:var(--special);">${c.desc}</td>
                     <td style="font-size:11px; color:var(--text-muted);">${groupDetails}</td>
                     <td>-</td>
+                    <td>-</td>
                     <td><span class="tag tag-purple">GROUP</span></td>
                     <td>${c.zone}</td>
                     <td>${c.team}</td>
                     <td style="color:var(--text-muted); font-size: 11px;">-</td>
                     <td style="color:var(--text-muted); font-size: 11px;">${c.time}</td>
                     <td><span class="tag ${getTagForStatus(c.status)}">${c.status}</span></td>
+                    <td>-</td>
                     <td style="display:flex; gap:6px;">
                         <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ CLOSE</button>
                         <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 RE-ASSIGN</button>
@@ -4636,7 +4688,7 @@
             }).join('');
 
             const groupTbody = document.getElementById('historyTbodyGrouped');
-            if (groupTbody) groupTbody.innerHTML = histGroupHtml || '<tr><td colspan="12" style="text-align:center;color:var(--text-muted)">No tactical group history available</td></tr>';
+            if (groupTbody) groupTbody.innerHTML = histGroupHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No tactical group history available</td></tr>';
 
             // Handle Critical Operations Hub
             const criticalMissions = cmds.filter(c => {
@@ -5791,6 +5843,7 @@
                         requesterUrgency: c.requester_urgency || null,
                         details: detailSummary,
                         requesterImageUrl: c.requester_image_url || null,
+                        requesterAudioUrl: c.requester_audio_url || null,
                         completion_image_url: c.completion_image_url || null,
                         reqTime: c.request_time ? formatLocalTime(c.request_time) : null
                     };

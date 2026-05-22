@@ -1,0 +1,20 @@
+ARDMS SYSTEM BACKUP REPORT - DATE: 2026-05-22
+Device Hostname: , DESKTOP-KBHB0SB
+Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
+Generated At: , 22/5/2026, 7:46:14 pm
+
+SECTION 1: RESCUE REQUESTS & TASKS
+Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
+15,pregnancy,critical,completed,12.9942986,80.1957328,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-22 03:42:00,2026-05-22 03:42:52,DESKTOP-KBHB0SB
+16,pregnancy,critical,completed,12.9944627,80.1956549,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-22 04:35:07,2026-05-22 04:36:40,DESKTOP-KBHB0SB
+
+
+SECTION 2: RESCUER COMMAND DISPATCHES
+Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
+13,N/A,919000000001,"{""message"":""PREGNANCY RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9942986,""lng"":80.1957328,""urgency"":""critical"",""rescue_req_id"":15,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-05-22 03:42:25,,DESKTOP-KBHB0SB
+14,N/A,919000000001,"{""message"":""PREGNANCY RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9944627,""lng"":80.1956549,""urgency"":""critical"",""rescue_req_id"":16,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-05-22 04:35:26,,DESKTOP-KBHB0SB
+
+
+SECTION 3: PUBLIC SOS ALERTS
+SOS ID,Device ID,Phone,Latitude,Longitude,Details,Status,Priority,Alert Time,Device Node
+NO SOS ALERTS FOR THIS DATE

@@ -1188,8 +1188,8 @@
          */
 
         const core = {
-            API: window.__API_BASE__ || `http://${window.location.hostname || '192.168.1.4'}:3001/api`,
-            WS_URL: window.__WS_BASE__ || `ws://${window.location.hostname || '192.168.1.4'}:3001`,
+            API: window.__API_BASE__ || `http://${window.location.hostname || '10.45.0.1'}:3001/api`,
+            WS_URL: window.__WS_BASE__ || `ws://${window.location.hostname || '10.45.0.1'}:3001`,
             user: null,
             map: null,
             rescuerMarker: null,
@@ -1259,8 +1259,13 @@
             },
 
             clearCache() {
+                const session = localStorage.getItem('rescue_user_v3');
                 localStorage.clear();
-                location.reload();
+                if (session) {
+                    localStorage.setItem('rescue_user_v3', session);
+                }
+                this.toast("CACHE CLEARED", "⚡");
+                setTimeout(() => location.reload(), 1000);
             },
 
             bootstrap() {
@@ -2102,7 +2107,7 @@
 
                 rawHistory.sort((a, b) => new Date(b.updated_at || b.created_at || b.time) - new Date(a.updated_at || a.created_at || a.time));
 
-                this.allHistory = rawHistory.filter(h => h.status === 'completed' || h.status === 'declined');
+                this.allHistory = rawHistory;
                 this.renderHistory(this.allHistory);
             },
 
@@ -2149,16 +2154,40 @@
                         }
                     }
 
+                    const safeStatus = (h.status || '').toLowerCase();
+                    let badgeBg = '#f1f5f9';
+                    let badgeColor = '#475569';
+                    if (['completed', 'resolved', 'done', 'success'].includes(safeStatus)) {
+                        badgeBg = '#d1fae5';
+                        badgeColor = 'var(--secondary)';
+                    } else if (['declined', 'cancelled', 'rejected', 'failed'].includes(safeStatus)) {
+                        badgeBg = '#fee2e2';
+                        badgeColor = '#991b1b';
+                    } else if (['assigned', 'pending'].includes(safeStatus)) {
+                        badgeBg = '#fef3c7';
+                        badgeColor = '#92400e';
+                    } else if (['accepted', 'ongoing', 'in_progress', 'moving'].includes(safeStatus)) {
+                        badgeBg = '#dbeafe';
+                        badgeColor = '#1e40af';
+                    }
+
+                    let timeLabel = 'Finished';
+                    if (['assigned', 'pending', 'accepted', 'ongoing', 'in_progress', 'moving'].includes(safeStatus)) {
+                        timeLabel = 'Updated';
+                    }
+
+                    const recordTime = h.updated_at || h.created_at || h.time;
+
                     card.innerHTML = `
                         <div class="hist-details" style="flex:1;">
                             <h4>${h.type.toUpperCase()} • ${h.sector}</h4>
-                            <p>ID: #${sourcePrefix}-${h.id} • ${formatLocalDate(h.updated_at)}</p>
-                            <p style="margin-top:4px; font-style:italic;">Finished: ${formatLocalTime(h.updated_at)}</p>
+                            <p>ID: #${sourcePrefix}-${h.id} • ${formatLocalDate(recordTime)}</p>
+                            <p style="margin-top:4px; font-style:italic;">${timeLabel}: ${formatLocalTime(recordTime)}</p>
                             ${commentHtml}
                         </div>
                         ${histEvidence}
                         <div class="hist-meta" style="margin-left:10px;">
-                            <span class="hist-status status-done">${h.status}</span>
+                            <span class="hist-status" style="background: ${badgeBg}; color: ${badgeColor};">${h.status}</span>
                         </div>
                     `;
                     targetList.appendChild(card);

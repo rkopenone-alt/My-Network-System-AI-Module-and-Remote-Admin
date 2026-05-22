@@ -324,6 +324,7 @@ db.serialize(() => {
     )`);
     db.run(`ALTER TABLE rescue_requests ADD COLUMN priority TEXT DEFAULT 'normal'`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE rescue_requests ADD COLUMN image_url TEXT`, (err) => { /* ignore */ });
+    db.run(`ALTER TABLE rescue_requests ADD COLUMN audio_url TEXT`, (err) => { /* ignore */ });
 
     db.run(`CREATE TABLE IF NOT EXISTS operation_history (
         id TEXT PRIMARY KEY,
@@ -792,11 +793,11 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
         const groups = await all(`SELECT group_id FROM group_members WHERE user_id = ?`, [userId]);
         const groupIds = groups.map(g => g.group_id);
 
-        // Personal & Group Rescue Requests (include status='assigned' tasks)
-        let personalReqQuery = `SELECT 'request' as source, id, type, sector, status, lat, lng, created_at, updated_at, image_url, completion_image_url, details, priority FROM rescue_requests WHERE (assigned_user_id = ? AND status NOT IN ('completed','resolved','declined'))`;
+        // Personal & Group Rescue Requests (include active and resolved tasks)
+        let personalReqQuery = `SELECT 'request' as source, id, type, sector, status, lat, lng, created_at, updated_at, image_url, audio_url, completion_image_url, details, priority FROM rescue_requests WHERE (assigned_user_id = ?)`;
         let reqParams = [userId];
         if (groupIds.length > 0) {
-            personalReqQuery += ` OR (assigned_group_id IN (${groupIds.map(() => '?').join(',')}) AND status NOT IN ('completed','resolved','declined'))`;
+            personalReqQuery += ` OR (assigned_group_id IN (${groupIds.map(() => '?').join(',')}))`;
             reqParams = reqParams.concat(groupIds);
         }
         const personalReqs = await all(personalReqQuery, reqParams);
@@ -822,13 +823,13 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
 
         const matchClause = phoneOrDeviceClauses.length > 0 ? `(${phoneOrDeviceClauses.join(' OR ')})` : '1=0';
 
-        let commandQuery = `SELECT 'command' as source, cq.id, cq.command_type as type, 'HQ Order' as sector, cq.status, cq.created_at, cq.updated_at, cq.command_payload, cq.priority, rr.image_url, cq.completion_image_url, rr.details as rescue_details 
+        let commandQuery = `SELECT 'command' as source, cq.id, cq.command_type as type, 'HQ Order' as sector, cq.status, cq.created_at, cq.updated_at, cq.command_payload, cq.priority, rr.image_url, rr.audio_url, cq.completion_image_url, rr.details as rescue_details 
                            FROM command_queue cq
                            LEFT JOIN rescue_requests rr ON CAST(rr.id AS TEXT) = CAST(json_extract(cq.command_payload, '$.rescue_req_id') AS TEXT)
-                           WHERE cq.status NOT IN ('completed','declined') AND (${matchClause})`;
+                           WHERE (${matchClause})`;
 
         if (groupIds.length > 0) {
-            commandQuery += ` OR (cq.group_id IN (${groupIds.map(() => '?').join(',')}) AND cq.status NOT IN ('completed','declined'))`;
+            commandQuery += ` OR (cq.group_id IN (${groupIds.map(() => '?').join(',')}))`;
             params = params.concat(groupIds);
         }
 
@@ -855,6 +856,7 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
                 lat: payload.lat || (groupMissions.length > 0 ? groupMissions[0].lat : null),
                 lng: payload.lng || (groupMissions.length > 0 ? groupMissions[0].lng : null),
                 image_url: c.image_url,
+                audio_url: c.audio_url || (personalReqs.find(pr => String(pr.id) === String(payload.rescue_req_id))?.audio_url) || null,
                 completion_image_url: c.completion_image_url || (personalReqs.find(pr => String(pr.id) === String(payload.rescue_req_id))?.completion_image_url) || null,
                 priority: c.priority || 'normal',
                 details: c.type === 'group' ? JSON.stringify({ isGroup: true, missions: groupMissions, custom_polygon: payload.custom_polygon || null }) : (c.rescue_details || payload.details || null),
@@ -1281,8 +1283,42 @@ app.post('/api/rescue-requests', async (req, res) => {
             }
         }
 
-        const result = await run(`INSERT INTO rescue_requests (device_id, phone, type, lat, lng, details, urgency, priority, sector, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [device_id, phone, type || 'pregnancy', lat, lng, details, urgency || 'high', priority || 'normal', sector || 'Unknown Zone', imageUrl]);
+        let audioUrl = null;
+        if (req.body.audio_data) {
+            try {
+                const audio_data = req.body.audio_data;
+                const matches = audio_data.match(/^data:audio\/([a-zA-Z0-9+]+);base64,(.+)$/s);
+                let extension = 'm4a'; // default
+                let base64Data = '';
+
+                if (matches && matches.length === 3) {
+                    extension = matches[1].toLowerCase();
+                    base64Data = matches[2];
+                } else if (audio_data.includes('base64,')) {
+                    const parts = audio_data.split('base64,');
+                    base64Data = parts[1];
+                    if (parts[0].includes('mp3')) extension = 'mp3';
+                    else if (parts[0].includes('wav')) extension = 'wav';
+                    else if (parts[0].includes('3gp')) extension = '3gp';
+                    else if (parts[0].includes('webm')) extension = 'webm';
+                } else {
+                    base64Data = audio_data;
+                }
+
+                if (base64Data) {
+                    base64Data = base64Data.replace(/\s+/g, '');
+                    const fileName = `sos_audio_${Date.now()}.${extension}`;
+                    const uploadPath = path.join(__dirname, 'uploads', fileName);
+                    fs.writeFileSync(uploadPath, base64Data, 'base64');
+                    audioUrl = `/uploads/${fileName}`;
+                }
+            } catch (err) {
+                console.error('Audio upload error:', err);
+            }
+        }
+
+        const result = await run(`INSERT INTO rescue_requests (device_id, phone, type, lat, lng, details, urgency, priority, sector, image_url, audio_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [device_id, phone, type || 'pregnancy', lat, lng, details, urgency || 'high', priority || 'normal', sector || 'Unknown Zone', imageUrl, audioUrl]);
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [result.lastID]);
         broadcast('NEW_RESCUE_REQUEST', reqData);
         await logCommand('RESCUE_REQUEST_CREATED', phone || device_id, 'Command Center', reqData);

@@ -10,8 +10,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.1.4:3001/api';
-const WS_URL = 'ws://192.168.1.4:3001';
+const API_URL = 'http://10.45.0.1:3001/api';
+const WS_URL = 'ws://10.45.0.1:3001';
 const { width } = Dimensions.get('window');
 
 const GlobalState = {
@@ -145,7 +145,7 @@ function LoginScreen({ onLogin }) {
         <View style={s.logoCircle}>
           <Text style={{ fontSize: 44 }}>🆘</Text>
         </View>
-        <Text style={s.loginTitle}>Citizen Rescue App</Text>
+        <Text style={s.loginTitle}>ARDMS-Public Support System</Text>
         <Text style={s.loginSub}>Secure Portal</Text>
 
         <Text style={s.label}>MOBILE NUMBER</Text>
@@ -488,7 +488,19 @@ function ProfileScreen({ user, onLogout }) {
         </View>
 
         <TouchableOpacity 
-          style={[s.loginBtn, { backgroundColor: '#fee2e2', shadowColor: C.danger, marginTop: 40 }]} 
+          style={[s.loginBtn, { backgroundColor: '#f1f5f9', shadowColor: C.dark, marginTop: 20 }]} 
+          onPress={async () => {
+            const phone = user?.phone || user?.serial_number;
+            await AsyncStorage.removeItem(`cachedHistory_${phone}`);
+            await AsyncStorage.removeItem('offlineRequests');
+            Alert.alert("Cache Cleared", "Stale mission history and offline queues have been erased. Active session is kept intact.");
+          }}
+        >
+          <Text style={{ color: C.dark, fontWeight: '900', fontSize: 16 }}>⚡ CLEAR CACHE</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[s.loginBtn, { backgroundColor: '#fee2e2', shadowColor: C.danger, marginTop: 15 }]} 
           onPress={onLogout}
         >
           <Text style={{ color: C.danger, fontWeight: '900', fontSize: 16 }}>SECURE LOGOUT</Text>
@@ -561,7 +573,8 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
       if (!isMounted.current) return;
 
       const { imageBase64, ...cleanDetails } = details || {};
-      const payload = {
+      let payload = null;
+      payload = {
         phone: user.phone,
         device_id: user.serial_number || 'PUB-MOB',
         type: emergencyType,
@@ -676,17 +689,27 @@ function HistoryScreen({ user, onBack }) {
 
   useEffect(() => {
     const fetchHistory = async () => {
+      const phone = user?.phone || user?.serial_number;
       try {
-        const phone = user?.phone || user?.serial_number;
         const res = await fetch(`${API_URL}/rescue-requests/by-phone/${phone}`);
         if (res.ok) {
           const items = await res.json();
           const active = items.filter(i => i.status !== 'completed');
           const history = items.filter(i => i.status === 'completed');
           setData({ myActive: active, myHistory: history });
+          await AsyncStorage.setItem(`cachedHistory_${phone}`, JSON.stringify(items));
         }
       } catch (e) {
         console.error("Failed to fetch history:", e);
+        try {
+          const cached = await AsyncStorage.getItem(`cachedHistory_${phone}`);
+          if (cached) {
+            const items = JSON.parse(cached);
+            const active = items.filter(i => i.status !== 'completed');
+            const history = items.filter(i => i.status === 'completed');
+            setData({ myActive: active, myHistory: history });
+          }
+        } catch (err) {}
       }
     };
     fetchHistory();
@@ -807,7 +830,7 @@ function HistoryScreen({ user, onBack }) {
 }
 
 // ─── Screen 2A: SOS Selection ────────────────────────────────────────────────
-function SelectionScreen({ onSelect, onBack }) {
+function SelectionScreen({ onSelect, onBack, isSosLocked, countdown }) {
   const [selected, setSelected] = useState(null); // 'critical' | 'normal'
   const fadeIn = useRef(new Animated.Value(0)).current;
 
@@ -825,6 +848,31 @@ function SelectionScreen({ onSelect, onBack }) {
       </View>
 
       <Animated.ScrollView contentContainerStyle={{ padding: 20, flexGrow: 1, justifyContent: 'center' }} style={{ opacity: fadeIn }}>
+        {isSosLocked && (
+          <View style={{
+            backgroundColor: '#fff1f2',
+            borderRadius: 12,
+            borderWidth: 1.5,
+            borderColor: '#f43f5e',
+            padding: 15,
+            marginBottom: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            shadowColor: '#f43f5e',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 6,
+            elevation: 2
+          }}>
+            <Text style={{ fontSize: 24, marginRight: 12 }}>⏳</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '900', color: '#e11d48' }}>SOS BUFFER ACTIVE</Text>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#9f1239', marginTop: 2 }}>
+                Please wait {Math.floor(countdown / 60)}m {countdown % 60}s before triggering another request.
+              </Text>
+            </View>
+          </View>
+        )}
         <View style={{ alignItems: 'center', marginBottom: 30 }}>
           <Text style={{ fontSize: 26, fontWeight: '900', color: C.dark, textAlign: 'center' }}>Select Emergency Type</Text>
           <Text style={{ fontSize: 13, fontWeight: '700', color: C.light, marginTop: 6, textAlign: 'center' }}>Choose the severity of your situation</Text>
@@ -1016,7 +1064,8 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, onTrig
 
       if (!isMounted.current) return;
 
-      const payload = {
+      let payload = null;
+      payload = {
         phone: user.phone,
         device_id: user.serial_number || 'PUB-MOB',
         type: selectedType,
@@ -1348,7 +1397,7 @@ export default function App() {
   const renderScreen = () => {
     switch(screen) {
       case 'selection':
-        return <SelectionScreen onSelect={(type) => {
+        return <SelectionScreen isSosLocked={isSosLocked} countdown={sosCountdown} onSelect={(type) => {
           if (type === 'critical') {
             setScreen('critical_sos');
           } else {

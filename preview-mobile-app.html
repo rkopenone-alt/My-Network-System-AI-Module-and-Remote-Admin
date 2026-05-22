@@ -923,7 +923,7 @@
     <div class="phone-mockup">
         <div class="phone-inner">
             <div id="appHeader" class="app-header">
-                <div style="font-size: 19px; font-weight: 900; color: #1e293b; letter-spacing: -0.5px;">Citizen SOS</div>
+                <div style="font-size: 19px; font-weight: 900; color: #1e293b; letter-spacing: -0.5px;">ARDMS-Public Support System</div>
                 <div style="display: flex; align-items: center; gap: 12px; text-align: right;">
                     <div style="display: flex; flex-direction: column;">
                         <div id="headerUserName" style="font-size: 13px; font-weight: 900; color: #1e293b; line-height: 1.1;">...</div>
@@ -991,6 +991,13 @@
                 </div>
 
                 <div class="form-content" style="padding: 10px 20px; display: flex; flex-direction: column; gap: 15px; justify-content: center;">
+                    <div id="selectionBufferCooldownBanner" style="display: none; background: #fff1f2; border: 1.5px solid #f43f5e; border-radius: 12px; padding: 15px; margin-bottom: 5px; flex-direction: row; align-items: center; gap: 12px;">
+                        <span style="font-size: 24px;">⏳</span>
+                        <div style="text-align: left; flex: 1;">
+                            <div style="font-size: 13px; font-weight: 900; color: #e11d48; text-transform: uppercase;">SOS Buffer Active</div>
+                            <div id="selectionBufferCooldownText" style="font-size: 11px; font-weight: 700; color: #9f1239; margin-top: 2px;">Please wait...</div>
+                        </div>
+                    </div>
                     <div class="selection-card" id="btnSelectCritical" onclick="core.setEmergencyCategory('critical')" 
                         style="background: #fff1f2; border: 1.5px solid #fecdd3;">
                         <div class="icon-sphere" style="background: linear-gradient(145deg, #fb7185, #e11d48);">🔴</div>
@@ -1314,6 +1321,9 @@
                         </div>
                     </div>
 
+                    <button class="submit-btn" style="background:#f1f5f9; color:#1e293b; box-shadow:none; margin-bottom:12px; font-weight:900;"
+                        onclick="core.clearCache()">⚡ CLEAR CACHE</button>
+
                     <button class="submit-btn" style="background:#fee2e2; color:var(--danger); box-shadow:none;"
                         onclick="core.logout()">SECURE LOGOUT</button>
 
@@ -1482,6 +1492,8 @@
             updateBufferCooldown() {
                 const banner = document.getElementById('bufferCooldownBanner');
                 const timerSpan = document.getElementById('bufferCooldownTimer');
+                const selectBanner = document.getElementById('selectionBufferCooldownBanner');
+                const selectText = document.getElementById('selectionBufferCooldownText');
                 if (!banner || !timerSpan) return;
 
                 const lastSOSTime = parseInt(localStorage.getItem('lastSOSTime') || '0');
@@ -1496,8 +1508,15 @@
                     const mins = Math.floor(remaining / 60);
                     const secs = remaining % 60;
                     timerSpan.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    if (selectBanner && selectText) {
+                        selectBanner.style.display = 'flex';
+                        selectText.innerText = `Please wait ${mins}m ${secs}s before triggering another request.`;
+                    }
                 } else {
                     banner.style.display = 'none';
+                    if (selectBanner) {
+                        selectBanner.style.display = 'none';
+                    }
                 }
             },
 
@@ -1804,6 +1823,13 @@
                 location.reload();
             },
 
+            clearCache() {
+                localStorage.removeItem(`cached_my_history_${this.user.phone}`);
+                localStorage.removeItem('offlineRequests');
+                this.toast("CACHE CLEARED", "⚡");
+                setTimeout(() => location.reload(), 1000);
+            },
+
             refreshInterval: 15,
             syncTimer: null,
 
@@ -1977,7 +2003,7 @@
                             <h3>${title}</h3>
                         </div>
                         <p>${msg}</p>
-                        <button onclick="this.parentElement.parentElement.remove()">ACKNOWLEDGE</button>
+                        <button onclick="this.closest('.mission-alert-overlay').remove()" style="background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s;">DISMISS</button>
                     </div>
                 `;
                 document.body.appendChild(overlay);
@@ -1990,6 +2016,7 @@
                         const data = await res.json();
                         data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                         this.rawData.myHistory = data.filter(r => r.phone === this.user.phone || r.device_id === this.user.serial_number);
+                        localStorage.setItem(`cached_my_history_${this.user.phone}`, JSON.stringify(this.rawData.myHistory));
                         this.renderStatusUI();
                         
                         // Update ticker based on active request
@@ -2003,8 +2030,17 @@
                             const ticker = document.getElementById('sosStatusTicker');
                             if (ticker) ticker.style.display = 'none';
                         }
+                    } else {
+                        throw new Error('Server non-ok response');
                     }
-                } catch (e) { console.error("History fetch failed", e); }
+                } catch (e) {
+                    console.error("History fetch failed, trying local cache:", e);
+                    const cached = localStorage.getItem(`cached_my_history_${this.user.phone}`);
+                    if (cached) {
+                        this.rawData.myHistory = JSON.parse(cached);
+                        this.renderStatusUI();
+                    }
+                }
             },
 
             emergencyCategory: null,

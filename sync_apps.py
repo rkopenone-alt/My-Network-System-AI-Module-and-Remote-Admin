@@ -2,6 +2,7 @@ import os
 import re
 import socket
 import json
+import sys
 
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -14,8 +15,17 @@ def get_local_ip():
         s.close()
     return ip
 
-local_ip = get_local_ip()
-print(f"[*] Detected Local LAN IP: {local_ip}")
+local_ip = None
+# Allow manual override via command line argument or environment variable
+if len(sys.argv) > 1:
+    local_ip = sys.argv[1]
+    print(f"[*] Using manually specified IP address: {local_ip}")
+elif os.environ.get('RESCUE_IP_OVERRIDE'):
+    local_ip = os.environ.get('RESCUE_IP_OVERRIDE')
+    print(f"[*] Using environment override IP address: {local_ip}")
+else:
+    local_ip = get_local_ip()
+    print(f"[*] Detected Local LAN IP: {local_ip}")
 
 # Files to update
 workspace_dir = r"c:\Users\Alienware\Desktop\Rescue Backup 26-04-2026"
