@@ -1188,8 +1188,8 @@
          */
 
         const core = {
-            API: window.__API_BASE__ || `http://${window.location.hostname || '10.45.0.1'}:3001/api`,
-            WS_URL: window.__WS_BASE__ || `ws://${window.location.hostname || '10.45.0.1'}:3001`,
+            API: window.__API_BASE__ || `http://${window.location.hostname || '192.168.1.4'}:3001/api`,
+            WS_URL: window.__WS_BASE__ || `ws://${window.location.hostname || '192.168.1.4'}:3001`,
             user: null,
             map: null,
             rescuerMarker: null,
@@ -2087,11 +2087,18 @@
                     rawHistory = await res.json();
                     
                     // Update cache on success
-                    try {
-                        const histCacheKey = 'cache_' + this.API + '/users/' + this.user.id + '/combined-history';
-                        localStorage.setItem(histCacheKey, JSON.stringify(rawHistory));
-                    } catch(e) {}
+                    if (Array.isArray(rawHistory)) {
+                        try {
+                            const histCacheKey = 'cache_' + this.API + '/users/' + this.user.id + '/combined-history';
+                            localStorage.setItem(histCacheKey, JSON.stringify(rawHistory));
+                        } catch(e) {}
+                    }
                 } catch (e) {
+                    console.error('Fetch history failed:', e);
+                }
+
+                // Fallback to cache if rawHistory is not an array or is empty
+                if (!Array.isArray(rawHistory) || rawHistory.length === 0) {
                     const histCacheKey = 'cache_' + this.API + '/users/' + this.user.id + '/combined-history';
                     const cached = localStorage.getItem(histCacheKey);
                     if (cached) {
@@ -2099,16 +2106,20 @@
                             rawHistory = JSON.parse(cached);
                         } catch(err) {}
                     }
-                    if (rawHistory.length === 0) {
-                        if (listCrit) listCrit.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);">Failed to load mission logs.</div>';
-                        return;
-                    }
                 }
 
-                rawHistory.sort((a, b) => new Date(b.updated_at || b.created_at || b.time) - new Date(a.updated_at || a.created_at || a.time));
+                if (!Array.isArray(rawHistory)) {
+                    rawHistory = [];
+                }
 
-                this.allHistory = rawHistory;
-                this.renderHistory(this.allHistory);
+                try {
+                    rawHistory.sort((a, b) => new Date(b.updated_at || b.created_at || b.time) - new Date(a.updated_at || a.created_at || a.time));
+                    this.allHistory = rawHistory;
+                    this.renderHistory(this.allHistory);
+                } catch (err) {
+                    console.error('Sorting or rendering history failed:', err);
+                    if (listCrit) listCrit.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);">Failed to load mission logs.</div>';
+                }
             },
 
             renderHistory(items) {
@@ -2180,7 +2191,7 @@
 
                     card.innerHTML = `
                         <div class="hist-details" style="flex:1;">
-                            <h4>${h.type.toUpperCase()} • ${h.sector}</h4>
+                            <h4>${(h.type || 'unknown').toUpperCase()} • ${h.sector || ''}</h4>
                             <p>ID: #${sourcePrefix}-${h.id} • ${formatLocalDate(recordTime)}</p>
                             <p style="margin-top:4px; font-style:italic;">${timeLabel}: ${formatLocalTime(recordTime)}</p>
                             ${commentHtml}

@@ -817,15 +817,20 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
             phoneOrDeviceClauses.push(`cq.target_phone = ?`);
             params.push(cleanDeviceId);
         }
-        // Also match commands linked to rescue_requests assigned to this user
-        phoneOrDeviceClauses.push(`CAST(json_extract(cq.command_payload, '$.rescue_req_id') AS TEXT) IN (SELECT CAST(id AS TEXT) FROM rescue_requests WHERE assigned_user_id = ?)`);
-        params.push(userId);
+        
+        // Match commands that might contain the rescue request IDs assigned to this user
+        const userReqs = await all(`SELECT id FROM rescue_requests WHERE assigned_user_id = ?`, [userId]);
+        userReqs.forEach(r => {
+            phoneOrDeviceClauses.push(`cq.command_payload LIKE ?`);
+            params.push(`%"rescue_req_id":${r.id}%`);
+            phoneOrDeviceClauses.push(`cq.command_payload LIKE ?`);
+            params.push(`%"rescue_req_id":"${r.id}"%`);
+        });
 
         const matchClause = phoneOrDeviceClauses.length > 0 ? `(${phoneOrDeviceClauses.join(' OR ')})` : '1=0';
 
-        let commandQuery = `SELECT 'command' as source, cq.id, cq.command_type as type, 'HQ Order' as sector, cq.status, cq.created_at, cq.updated_at, cq.command_payload, cq.priority, rr.image_url, rr.audio_url, cq.completion_image_url, rr.details as rescue_details 
+        let commandQuery = `SELECT 'command' as source, cq.id, cq.command_type as type, 'HQ Order' as sector, cq.status, cq.created_at, cq.updated_at, cq.command_payload, cq.priority, cq.completion_image_url 
                            FROM command_queue cq
-                           LEFT JOIN rescue_requests rr ON CAST(rr.id AS TEXT) = CAST(json_extract(cq.command_payload, '$.rescue_req_id') AS TEXT)
                            WHERE (${matchClause})`;
 
         if (groupIds.length > 0) {
@@ -847,6 +852,20 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
                 } catch(e) {}
             }
 
+            let reqDetails = null;
+            let reqImage = null;
+            let reqAudio = null;
+            if (payload.rescue_req_id) {
+                try {
+                    const linkedReq = await get(`SELECT details, image_url, audio_url FROM rescue_requests WHERE id = ?`, [payload.rescue_req_id]);
+                    if (linkedReq) {
+                        reqDetails = linkedReq.details;
+                        reqImage = linkedReq.image_url;
+                        reqAudio = linkedReq.audio_url;
+                    }
+                } catch(e) {}
+            }
+
             return {
                 source: c.source,
                 id: c.id,
@@ -855,12 +874,13 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
                 status: c.status,
                 lat: payload.lat || (groupMissions.length > 0 ? groupMissions[0].lat : null),
                 lng: payload.lng || (groupMissions.length > 0 ? groupMissions[0].lng : null),
-                image_url: c.image_url,
-                audio_url: c.audio_url || (personalReqs.find(pr => String(pr.id) === String(payload.rescue_req_id))?.audio_url) || null,
+                image_url: reqImage,
+                audio_url: reqAudio || (personalReqs.find(pr => String(pr.id) === String(payload.rescue_req_id))?.audio_url) || null,
                 completion_image_url: c.completion_image_url || (personalReqs.find(pr => String(pr.id) === String(payload.rescue_req_id))?.completion_image_url) || null,
                 priority: c.priority || 'normal',
-                details: c.type === 'group' ? JSON.stringify({ isGroup: true, missions: groupMissions, custom_polygon: payload.custom_polygon || null }) : (c.rescue_details || payload.details || null),
+                details: c.type === 'group' ? JSON.stringify({ isGroup: true, missions: groupMissions, custom_polygon: payload.custom_polygon || null }) : (reqDetails || payload.details || null),
                 requester_phone: payload.requester_phone || null,
+
                 requester_name: payload.requester_name || null,
                 command_payload: c.command_payload,
                 created_at: c.created_at,
@@ -1137,9 +1157,9 @@ app.post('/api/sync', async (req, res) => {
 
     const [commands, zones, setting, notifs, myRequests, refreshSetting] = await Promise.all([
         all(`
-            SELECT cq.*, rr.image_url, COALESCE(rr.details, json_extract(cq.command_payload, '$.details')) as details
+            SELECT cq.*, rr.image_url, COALESCE(rr.details, CASE WHEN json_valid(cq.command_payload) THEN json_extract(cq.command_payload, '$.details') ELSE NULL END) as details
             FROM command_queue cq
-            LEFT JOIN rescue_requests rr ON CAST(rr.id AS TEXT) = CAST(json_extract(cq.command_payload, '$.rescue_req_id') AS TEXT)
+            LEFT JOIN rescue_requests rr ON CAST(rr.id AS TEXT) = (CASE WHEN json_valid(cq.command_payload) THEN CAST(json_extract(cq.command_payload, '$.rescue_req_id') AS TEXT) ELSE NULL END)
             WHERE cq.status NOT IN ('completed', 'declined', 'finished')
         `),
         all(`SELECT * FROM operation_zones WHERE status = 'active'`),
@@ -1437,8 +1457,16 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
         let finalStatus = status;
         let reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
 
+        // Find the rescuer who is accepting or completing the task (robust match on phone/device_id)
+        const cleanedPhone = (rescuer_phone || '').replace(/\D/g, '').slice(-10);
+        let rescuer = null;
+        if (cleanedPhone) {
+            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rescuer_phone, rescuer_phone, rescuer_phone, `%${cleanedPhone}`]);
+        } else {
+            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rescuer_phone, rescuer_phone, rescuer_phone]);
+        }
+
         if (status === 'completed') {
-            const rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ?`, [rescuer_phone, rescuer_phone]);
             if (rescuer) {
                 await run(`INSERT OR IGNORE INTO rescuer_task_completions (task_id, rescuer_id) VALUES (?, ?)`, [req.params.id, rescuer.id]);
 
@@ -1459,11 +1487,20 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
         }
 
         if (compImageUrl) {
-            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, req.params.id]);
+            if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
+                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, rescuer.id, req.params.id]);
+            } else {
+                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, req.params.id]);
+            }
             await run(`UPDATE command_queue SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE command_payload LIKE ?`, [finalStatus, compImageUrl, `%"rescue_req_id":${req.params.id}%`]);
             await run(`UPDATE command_queue SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE command_payload LIKE ?`, [finalStatus, compImageUrl, `%"rescue_req_id":"${req.params.id}"%`]);
         } else {
-            await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, req.params.id]);
+            if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
+                // Ensure the rescue request is explicitly assigned to this rescuer so it doesn't disappear from their history
+                await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, rescuer.id, req.params.id]);
+            } else {
+                await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, req.params.id]);
+            }
             await run(`UPDATE command_queue SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE command_payload LIKE ?`, [finalStatus, `%"rescue_req_id":${req.params.id}%`]);
             await run(`UPDATE command_queue SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE command_payload LIKE ?`, [finalStatus, `%"rescue_req_id":"${req.params.id}"%`]);
         }
@@ -1547,7 +1584,7 @@ app.get('/api/commands', async (req, res) => {
                    u_assigned.name as assigned_officer_name,
                    g.group_name as assigned_group_name
             FROM command_queue cq
-            LEFT JOIN rescue_requests rr ON CAST(rr.id AS TEXT) = CAST(json_extract(cq.command_payload, '$.rescue_req_id') AS TEXT)
+            LEFT JOIN rescue_requests rr ON CAST(rr.id AS TEXT) = (CASE WHEN json_valid(cq.command_payload) THEN CAST(json_extract(cq.command_payload, '$.rescue_req_id') AS TEXT) ELSE NULL END)
             LEFT JOIN users u ON u.device_id = rr.device_id OR u.phone = rr.phone
             LEFT JOIN users u_assigned ON cq.target_phone = u_assigned.phone OR cq.target_phone = u_assigned.device_id
             LEFT JOIN groups g ON cq.group_id = g.id
@@ -1680,8 +1717,16 @@ app.put('/api/commands/:id/status', async (req, res) => {
         let finalStatus = status;
         let cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
 
+        // Find the rescuer who is accepting or completing the task (robust match on phone/device_id)
+        const cleanedPhone = (rescuer_phone || '').replace(/\D/g, '').slice(-10);
+        let rescuer = null;
+        if (cleanedPhone) {
+            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rescuer_phone, rescuer_phone, rescuer_phone, `%${cleanedPhone}`]);
+        } else {
+            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rescuer_phone, rescuer_phone, rescuer_phone]);
+        }
+
         if (status === 'completed') {
-            const rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ?`, [rescuer_phone, rescuer_phone]);
             if (rescuer) {
                 await run(`INSERT OR IGNORE INTO rescuer_command_completions (command_id, rescuer_id) VALUES (?, ?)`, [req.params.id, rescuer.id]);
                 
@@ -1712,10 +1757,18 @@ app.put('/api/commands/:id/status', async (req, res) => {
         try {
             const payload = typeof cmdData.command_payload === 'string' ? JSON.parse(cmdData.command_payload) : cmdData.command_payload;
             if (payload && payload.rescue_req_id) {
-                if (compImageUrl) {
-                    await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, payload.rescue_req_id]);
+                if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
+                    if (compImageUrl) {
+                        await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, rescuer.id, payload.rescue_req_id]);
+                    } else {
+                        await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, rescuer.id, payload.rescue_req_id]);
+                    }
                 } else {
-                    await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, payload.rescue_req_id]);
+                    if (compImageUrl) {
+                        await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, payload.rescue_req_id]);
+                    } else {
+                        await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, payload.rescue_req_id]);
+                    }
                 }
                 const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [payload.rescue_req_id]);
                 broadcast('RESCUE_REQUEST_UPDATE', reqData);

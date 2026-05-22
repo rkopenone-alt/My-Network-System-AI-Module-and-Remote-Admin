@@ -10,8 +10,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://10.45.0.1:3001/api';
-const WS_URL = 'ws://10.45.0.1:3001';
+const API_URL = 'http://192.168.1.4:3001/api';
+const WS_URL = 'ws://192.168.1.4:3001';
 const { width } = Dimensions.get('window');
 
 const GlobalState = {
@@ -319,7 +319,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
       {/* Header */}
       <View style={[s.header, { paddingVertical: 12, paddingHorizontal: 16 }]}>
         <TouchableOpacity onPress={onBack}><Text style={{ fontSize: 26, fontWeight: '900' }}>←</Text></TouchableOpacity>
-        <Text style={[s.headerTitle, { fontSize: 22 }]}>Home (Details)</Text>
+        <Text style={[s.headerTitle, { fontSize: 18, fontWeight: '900' }]}>ARDMS-Public Support</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -561,6 +561,7 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
     showToast('Connecting to server...', '⏳', 0);
     if (isMounted.current) setLoading(true);
 
+    let payload = null;
     try {
       let location = null;
       try {
@@ -573,7 +574,6 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
       if (!isMounted.current) return;
 
       const { imageBase64, ...cleanDetails } = details || {};
-      let payload = null;
       payload = {
         phone: user.phone,
         device_id: user.serial_number || 'PUB-MOB',
@@ -843,7 +843,7 @@ function SelectionScreen({ onSelect, onBack, isSosLocked, countdown }) {
       <StatusBar barStyle="dark-content" backgroundColor={C.white} />
       <View style={[s.header, { paddingVertical: 12, paddingHorizontal: 16 }]}>
         <TouchableOpacity onPress={onBack}><Text style={{ fontSize: 26, fontWeight: '900' }}>←</Text></TouchableOpacity>
-        <Text style={[s.headerTitle, { fontSize: 22 }]}>Emergency System</Text>
+        <Text style={[s.headerTitle, { fontSize: 18, fontWeight: '900' }]}>ARDMS-Public Support</Text>
         <View style={{ width: 30 }} />
       </View>
 
@@ -874,6 +874,7 @@ function SelectionScreen({ onSelect, onBack, isSosLocked, countdown }) {
           </View>
         )}
         <View style={{ alignItems: 'center', marginBottom: 30 }}>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: C.primary, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>ARDMS-Public Support System</Text>
           <Text style={{ fontSize: 26, fontWeight: '900', color: C.dark, textAlign: 'center' }}>Select Emergency Type</Text>
           <Text style={{ fontSize: 13, fontWeight: '700', color: C.light, marginTop: 6, textAlign: 'center' }}>Choose the severity of your situation</Text>
         </View>
@@ -938,7 +939,7 @@ function SelectionScreen({ onSelect, onBack, isSosLocked, countdown }) {
 }
 
 // ─── Screen 2B: Critical SOS Screen ──────────────────────────────────────────
-function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, onTriggerSOS, onBack }) {
+function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countdown, onTriggerSOS, onBack }) {
   const [address, setAddress] = useState('');
   const [selectedType, setSelectedType] = useState('sos');
   const [toast, setToast] = useState(null);
@@ -1054,6 +1055,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, onTrig
     showToast('Connecting to server...', '⏳', 0);
     if (isMounted.current) setLoading(true);
 
+    let payload = null;
     try {
       let location = null;
       try {
@@ -1064,7 +1066,6 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, onTrig
 
       if (!isMounted.current) return;
 
-      let payload = null;
       payload = {
         phone: user.phone,
         device_id: user.serial_number || 'PUB-MOB',

@@ -41,12 +41,13 @@ public_html_str = os.path.join(workspace_dir, "public-sos-app", "htmlStr.js")
 
 # Function to replace IPs
 def replace_ip_in_content(content, new_ip):
-    # Replace hardcoded IP 192.168.x.x
-    content = re.sub(r'192\.168\.\d{1,3}\.\d{1,3}', new_ip, content)
+    # Replace hardcoded IP 192.168.x.x and 10.x.x.x
+    content = re.sub(r'\b(?:192\.168|10)\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', new_ip, content)
     # Replace localhost if in endpoint format
     content = content.replace("localhost:3001", f"{new_ip}:3001")
     content = content.replace("127.0.0.1:3001", f"{new_ip}:3001")
     return content
+
 
 # 1. Update preview files
 for filepath in [preview_rescuer, preview_mobile, preview_admin]:

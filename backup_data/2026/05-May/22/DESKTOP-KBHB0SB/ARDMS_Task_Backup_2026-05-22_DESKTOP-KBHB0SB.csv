@@ -1,18 +1,28 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-05-22
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 22/5/2026, 7:46:14 pm
+Generated At: , 22/5/2026, 11:33:04 pm
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
 15,pregnancy,critical,completed,12.9942986,80.1957328,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-22 03:42:00,2026-05-22 03:42:52,DESKTOP-KBHB0SB
 16,pregnancy,critical,completed,12.9944627,80.1956549,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-22 04:35:07,2026-05-22 04:36:40,DESKTOP-KBHB0SB
+17,pregnancy,critical,completed,12.9942056,80.1956481,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-22 16:10:10,2026-05-22 16:12:59,DESKTOP-KBHB0SB
+18,medical,critical,completed,12.994251,80.1957298,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-22 16:54:21,2026-05-22 16:54:58,DESKTOP-KBHB0SB
+19,pregnancy,critical,completed,12.9943297,80.1957132,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-22 17:30:14,2026-05-22 17:30:48,DESKTOP-KBHB0SB
+20,Medical Support,critical,completed,12.994114,80.1956407,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-05-22 17:59:43,2026-05-22 18:00:23,DESKTOP-KBHB0SB
+21,Medical Support,critical,completed,12.9944301,80.1957226,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-05-22 18:01:48,2026-05-22 18:03:03,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES
 Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
 13,N/A,919000000001,"{""message"":""PREGNANCY RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9942986,""lng"":80.1957328,""urgency"":""critical"",""rescue_req_id"":15,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-05-22 03:42:25,,DESKTOP-KBHB0SB
 14,N/A,919000000001,"{""message"":""PREGNANCY RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9944627,""lng"":80.1956549,""urgency"":""critical"",""rescue_req_id"":16,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-05-22 04:35:26,,DESKTOP-KBHB0SB
+15,N/A,919000000001,"{""message"":""PREGNANCY RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9942056,""lng"":80.1956481,""urgency"":""critical"",""rescue_req_id"":17,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-05-22 16:10:33,,DESKTOP-KBHB0SB
+16,N/A,919000000001,"{""message"":""MEDICAL RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.994251,""lng"":80.1957298,""urgency"":""critical"",""rescue_req_id"":18,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-05-22 16:54:30,,DESKTOP-KBHB0SB
+17,N/A,919000000001,"{""message"":""PREGNANCY RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943297,""lng"":80.1957132,""urgency"":""critical"",""rescue_req_id"":19,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-05-22 17:30:33,,DESKTOP-KBHB0SB
+18,N/A,919000000001,"{""message"":""MEDICAL SUPPORT RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.994114,""lng"":80.1956407,""urgency"":""critical"",""rescue_req_id"":20,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}""}",critical,completed,2026-05-22 17:59:57,,DESKTOP-KBHB0SB
+19,N/A,919000000001,"{""message"":""MEDICAL SUPPORT RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9944301,""lng"":80.1957226,""urgency"":""critical"",""rescue_req_id"":21,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}""}",critical,completed,2026-05-22 18:02:33,,DESKTOP-KBHB0SB
 
 
 SECTION 3: PUBLIC SOS ALERTS
