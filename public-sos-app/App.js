@@ -581,7 +581,8 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
         lat: location ? location.coords.latitude : 13.085,
         lng: location ? location.coords.longitude : 80.272,
         details: JSON.stringify(cleanDetails),
-        urgency: 'critical',
+        urgency: 'normal',
+        priority: 'Normal',
         sector: 'Detected via GPS',
         image_data: imageBase64 || null
       };
@@ -637,16 +638,16 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20, alignItems: 'center' }}>
-        <Text style={s.sectionLabel}>PRIORITY MEDICAL BYPASS</Text>
+        <Text style={s.sectionLabel}>SELECT SOS CATEGORY</Text>
         <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginBottom: 24, justifyContent: 'center' }}>
-          {[['Pregnancy Support', '🤰', 'Pregnancy'], ['Medical Support', '💉', 'Critical Injury']].map(([type, icon, label]) => (
+          {[['sos', '📢', 'General SOS'], ['supplies', '📦', 'Supplies Needed']].map(([type, icon, label]) => (
             <TouchableOpacity
               key={type}
               style={[s.medBtn, emergencyType === type && s.medBtnActive]}
               onPress={() => setEmergencyType(prev => prev === type ? null : type)}
             >
               <Text style={{ fontSize: 28 }}>{icon}</Text>
-              <Text style={[s.medBtnLabel, emergencyType === type && { color: C.primary }]}>{label}</Text>
+              <Text style={[s.medBtnLabel, emergencyType === type && { color: '#b45309' }]}>{label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -1074,6 +1075,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
         lng: location ? location.coords.longitude : 80.272,
         details: address.trim() || 'Critical Emergency Triggered',
         urgency: 'critical',
+        priority: 'Critical',
         sector: 'Detected via GPS',
         image_data: imageBase64 || null
       };
@@ -1511,9 +1513,9 @@ const s = StyleSheet.create({
   timerLabel: { fontWeight: '600', fontSize: 13, color: C.light, textTransform: 'uppercase' },
   timerVal: { color: C.danger, fontSize: 22, fontWeight: '900' },
 
-  medBtn: { flex: 1, backgroundColor: C.white, borderWidth: 2, borderColor: '#fca5a5', borderRadius: 20, padding: 18, alignItems: 'center', justifyContent: 'center', gap: 8, maxWidth: 160 },
-  medBtnActive: { backgroundColor: C.primaryLight, borderColor: C.primary },
-  medBtnLabel: { fontSize: 11, fontWeight: '800', color: C.danger, textAlign: 'center', textTransform: 'uppercase' },
+  medBtn: { flex: 1, backgroundColor: C.white, borderWidth: 2, borderColor: '#fcd34d', borderRadius: 20, padding: 18, alignItems: 'center', justifyContent: 'center', gap: 8, maxWidth: 160 },
+  medBtnActive: { backgroundColor: '#fef3c7', borderColor: C.warning },
+  medBtnLabel: { fontSize: 11, fontWeight: '800', color: '#b45309', textAlign: 'center', textTransform: 'uppercase' },
 
   missionPanel: { marginTop: 20, padding: 14, borderRadius: 12, borderWidth: 1, width: '100%', alignItems: 'center' },
   missionPanelLabel: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
