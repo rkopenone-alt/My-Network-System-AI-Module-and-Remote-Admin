@@ -1737,6 +1737,11 @@
                     } catch (e) { console.error(e); }
                 }
 
+                if (isGroupMission && groupCoords.length > 0 && (!finalLat || finalLat === 0 || isNaN(finalLat))) {
+                    finalLat = groupCoords[0][0];
+                    finalLng = groupCoords[0][1];
+                }
+
                 this.activeMission = { id, type, sector: finalSector, lat: finalLat, lng: finalLng, source };
 
                 document.getElementById('missionBanner').style.display = 'flex';

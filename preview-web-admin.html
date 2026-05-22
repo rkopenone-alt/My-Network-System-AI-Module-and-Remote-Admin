@@ -6990,7 +6990,15 @@
                                 is_group_mission: true,
                                 request_ids: selectedIds,
                                 serial_numbers: newGroup.requests.map(r => r.serial_number),
-                                custom_polygon: customGroupPolygon
+                                custom_polygon: customGroupPolygon,
+                                missions: newGroup.requests.map(r => ({
+                                    id: r.id,
+                                    type: r.type,
+                                    lat: parseFloat(r.lat),
+                                    lng: parseFloat(r.lng),
+                                    sector: r.sector,
+                                    priority: r.priority
+                                }))
                             },
                             actor: 'Commander'
                         })
@@ -7233,6 +7241,7 @@
 
         async function openBulkGroupView() {
             const selectedIds = Array.from(document.querySelectorAll('.mgmt-select-checkbox:checked')).map(cb => cb.dataset.id);
+            window.bulkSelectedIds = selectedIds;
             const panel = document.getElementById('mgmtDetailPanel');
             if (!panel) return;
 
@@ -7396,7 +7405,12 @@
             const name = document.getElementById('bulkGroupName').value;
             const type = currentBulkAssignType;
             const targetId = type === 'group' ? document.getElementById('bulkGroupSelect').value : document.getElementById('bulkIndivSelect').value;
-            const selectedIds = Array.from(document.querySelectorAll('.mgmt-select-checkbox:checked')).map(cb => cb.dataset.id);
+            const selectedIds = window.bulkSelectedIds || [];
+
+            if (!selectedIds || selectedIds.length === 0) {
+                alert("ERROR: No missions selected or selection list was updated in the background. Please close this pane, select the tasks again, and click Group & Assign.");
+                return;
+            }
 
             if (!name || !targetId) {
                 alert("Operational requirement: Provide a group name and select a field target (Group or Individual).");
@@ -7488,7 +7502,15 @@
                                 is_group_mission: true,
                                 request_ids: selectedIds,
                                 serial_numbers: newGroupEntry.requests.map(r => r.serial_number || ('#' + r.id)),
-                                custom_polygon: window.customBulkPolygon || null
+                                custom_polygon: window.customBulkPolygon || null,
+                                missions: newGroupEntry.requests.map(r => ({
+                                    id: r.id,
+                                    type: r.type,
+                                    lat: parseFloat(r.lat),
+                                    lng: parseFloat(r.lng),
+                                    sector: r.sector,
+                                    priority: r.priority
+                                }))
                             },
                             actor: 'Commander'
                         })
@@ -7507,6 +7529,7 @@
                 }, 500);
 
                 // Clear selections
+                window.bulkSelectedIds = null;
                 document.querySelectorAll('.mgmt-select-checkbox').forEach(cb => cb.checked = false);
                 updateMgmtSelection();
 
