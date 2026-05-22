@@ -1,7 +1,7 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-05-22
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 22/5/2026, 11:33:04 pm
+Generated At: , 23/5/2026, 1:06:44 am
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
@@ -12,6 +12,9 @@ Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Resp
 19,pregnancy,critical,completed,12.9943297,80.1957132,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-22 17:30:14,2026-05-22 17:30:48,DESKTOP-KBHB0SB
 20,Medical Support,critical,completed,12.994114,80.1956407,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-05-22 17:59:43,2026-05-22 18:00:23,DESKTOP-KBHB0SB
 21,Medical Support,critical,completed,12.9944301,80.1957226,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-05-22 18:01:48,2026-05-22 18:03:03,DESKTOP-KBHB0SB
+22,sos,normal,completed,12.9943443,80.1957551,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-05-22 18:54:24,2026-05-22 18:55:17,DESKTOP-KBHB0SB
+23,sos,normal,pending,12.9942099,80.1957169,"{""transportMode"":""BOAT"",""needs"":[3,2,1,2],""peopleCount"":""2"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Unassigned,2026-05-22 19:20:04,2026-05-22 19:20:04,DESKTOP-KBHB0SB
+24,supplies,normal,pending,12.9942638,80.1957479,"{""transportMode"":""BOAT"",""needs"":[3,2,1,2],""peopleCount"":""2"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Unassigned,2026-05-22 19:23:18,2026-05-22 19:23:18,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES
@@ -23,6 +26,8 @@ Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At
 17,N/A,919000000001,"{""message"":""PREGNANCY RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943297,""lng"":80.1957132,""urgency"":""critical"",""rescue_req_id"":19,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-05-22 17:30:33,,DESKTOP-KBHB0SB
 18,N/A,919000000001,"{""message"":""MEDICAL SUPPORT RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.994114,""lng"":80.1956407,""urgency"":""critical"",""rescue_req_id"":20,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}""}",critical,completed,2026-05-22 17:59:57,,DESKTOP-KBHB0SB
 19,N/A,919000000001,"{""message"":""MEDICAL SUPPORT RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9944301,""lng"":80.1957226,""urgency"":""critical"",""rescue_req_id"":21,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}""}",critical,completed,2026-05-22 18:02:33,,DESKTOP-KBHB0SB
+20,N/A,919000000001,"{""message"":""SOS TASK at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943443,""lng"":80.1957551,""urgency"":""normal"",""rescue_req_id"":22,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}""}",normal,completed,2026-05-22 18:55:03,,DESKTOP-KBHB0SB
+21,N/A,919000000001,"{""name"":""test"",""is_group_mission"":true,""request_ids"":[],""serial_numbers"":[],""custom_polygon"":[[12.9943638,80.19561689999999],[12.9943638,80.1958479],[12.9941099,80.1958479],[12.9941099,80.19561689999999]]}",group,completed,2026-05-22 19:33:52,,DESKTOP-KBHB0SB
 
 
 SECTION 3: PUBLIC SOS ALERTS

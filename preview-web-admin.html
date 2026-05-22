@@ -6984,6 +6984,9 @@
                             priority: newGroup.priority.toLowerCase(),
                             command_payload: {
                                 name: name,
+                                message: `Proceed to Tactical Cluster: ${name}`,
+                                lat: newGroup.requests.length > 0 ? parseFloat(newGroup.requests[0].lat) : 0,
+                                lng: newGroup.requests.length > 0 ? parseFloat(newGroup.requests[0].lng) : 0,
                                 is_group_mission: true,
                                 request_ids: selectedIds,
                                 serial_numbers: newGroup.requests.map(r => r.serial_number),
@@ -7479,6 +7482,9 @@
                             priority: newGroupEntry.requests.some(r => r.priority === 'Critical') ? 'critical' : 'normal',
                             command_payload: {
                                 name: name,
+                                message: `Proceed to Tactical Cluster: ${name}`,
+                                lat: newGroupEntry.requests.length > 0 ? parseFloat(newGroupEntry.requests[0].lat) : 0,
+                                lng: newGroupEntry.requests.length > 0 ? parseFloat(newGroupEntry.requests[0].lng) : 0,
                                 is_group_mission: true,
                                 request_ids: selectedIds,
                                 serial_numbers: newGroupEntry.requests.map(r => r.serial_number || ('#' + r.id)),
