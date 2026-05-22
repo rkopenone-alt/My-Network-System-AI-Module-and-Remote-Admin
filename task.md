@@ -1,0 +1,21 @@
+# Task Checklist
+
+- [x] Fix Crew Assignment in Web Admin (`preview-web-admin.html`)
+  - [x] Modify `assignFromMgmt` to check if request/group is already assigned
+  - [x] Instantly open in-page `openReassignModal(cmdId)` without dashboard redirect
+  - [x] Prevent duplicate record creation inside database `/accept` endpoint
+- [x] Rename Button inside Public App (`public-sos-app/App.js`)
+  - [x] Rename category selection button `'General SOS'` to `'General Rescue'`
+  - [x] Ensure category selection persists correctly as normal priority rescue
+- [x] Remove Old APK
+  - [x] Locate and remove outdated `mobile-app/app-release.apk`
+- [x] Build Mobile App
+  - [x] Clean and compile release build using Adoptium JDK 17
+  - [x] Copy fresh production APK to `Output_APKs/public-sos-app-release.apk`
+- [x] Refine Notification Log View & Group Tasks Assignment (`preview-web-admin.html`)
+  - [x] Remove "ASSIGN TO CREW" and "RESOLVE & CLOSE" buttons when viewing individual SOS details
+  - [x] Fix "CONFIRM & INITIALIZE GROUP MISSION" button assignment target selection query selector crash
+  - [x] Prevent crash by safely mapping and filtering selected missions
+- [x] Save & Push to GitHub
+  - [x] Commit changes locally with Git
+  - [x] Push current branch to remote GitHub repository
