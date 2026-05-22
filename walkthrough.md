@@ -8,10 +8,12 @@ We have successfully refined the layout, functionality, and emergency categoriza
 
 ### 1. Web Admin Dashboard Refinements (`preview-web-admin.html`)
 *   **Targeted Individual SOS Details View**: Removed the **"ASSIGN TO CREW"** (or "RE-ASSIGN MISSION") and **"RESOLVE & CLOSE"** buttons at the bottom of the rightmost detail panel (`mgmtDetailPanel`) when viewing individual SOS requests (`isGroup === false`). This maintains a clean and decluttered view for individual items while retaining these controls exclusively for Tactical Clusters (`isGroup === true`).
-*   **Fixed Confirm & Initialize Group Mission**: Resolved a critical query selector crash when clicking "CONFIRM & INITIALIZE GROUP MISSION".
-    *   Replaced vulnerable query selector with direct `selectElement.options[selectElement.selectedIndex]` HTML standard option text parsing, ensuring it never crashes.
-    *   Added robust `.filter(r => !!r)` sanitization when searching selected mission objects to prevent null pointer and runtime crashes.
-    *   Added dynamic serial number fallbacks (`r.serial_number || ('#' + r.id)`) to handle requests without an explicit serial number seamlessly.
+*   **Fixed Confirm & Initialize Group Mission**: Resolved a critical query selector crash and global state pollution bug when clicking "CONFIRM & INITIALIZE GROUP MISSION".
+    *   **Resolved Global State Pollution**: Discovered that the 5-second background auto-refresh loop (`updateTacticalMap`) was fetching static crew squads from the database and overwriting the global `groupedTasks` variable (which is meant for active tactical group missions/clusters). Since static squads do not have a `.requests` array, this caused any click on "CONFIRM & INITIALIZE GROUP MISSION" to crash with `TypeError: Cannot read properties of undefined (reading 'some')` inside the `alreadyGrouped` check in `confirmBulkGrouping`.
+    *   **Separated States**: Removed the conflicting `groupedTasks = groups` state assignment from `updateTacticalMap()`, and corrected the map rendering loop to iterate over the actual active `groupedTasks` tactical clusters to draw boundaries correctly.
+    *   **Robust Already-Grouped Checks**: Added defensive `.requests` checks (`g.requests && g.requests.some(...)`) to make `confirmBulkGrouping()` fully resilient against empty or malformed tactical cluster data.
+    *   **Query Selector Crash Fix**: Replaced vulnerable query selector with direct `selectElement.options[selectElement.selectedIndex]` HTML standard option text parsing, ensuring it never crashes.
+    *   **Sanitization and Serial Number Fallback**: Added robust `.filter(r => !!r)` sanitization when searching selected mission objects to prevent null pointer and runtime crashes, and added dynamic serial number fallbacks (`r.serial_number || ('#' + r.id)`) to handle requests without an explicit serial number seamlessly.
 *   **Direct In-Page Crew Assignment & Reassignment**: Refactored `assignFromMgmt` to check if a group or individual request is already assigned.
     *   If it's already assigned, it locates the active command ID in the `cmds` array and directly launches `openReassignModal(cmdId)` in-page.
     *   If it's an unassigned group (tactical cluster), it similarly opens `openReassignModal(id)`.

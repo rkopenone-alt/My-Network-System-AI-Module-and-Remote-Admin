@@ -3835,7 +3835,7 @@
                 const tasks = await tasksRes.json();
                 const activeCmds = await cmdsRes.json();
                 const groups = await groupsRes.json();
-                groupedTasks = groups; // Update global state
+                // ENGINEERING FIX: Do not overwrite groupedTasks global state with static crew squads.
 
                 // Auto-Erase Tracked Route if completed/closed/removed
                 if (window.selectedTrackingCmdId) {
@@ -4033,7 +4033,7 @@
                 });
 
                 // 2.5 Render Group Perimeters for all active (non-Closed) groups
-                groups.filter(g => g.status !== 'Closed' && g.status !== 'completed').forEach(g => {
+                groupedTasks.filter(g => g.status !== 'Closed' && g.status !== 'completed').forEach(g => {
                     const coords = g.requests ? g.requests.map(req => [parseFloat(req.lat), parseFloat(req.lng)]).filter(c => !isNaN(c[0])) : [];
                     if (coords.length === 0) return;
 
@@ -7419,7 +7419,7 @@
 
             // ENGINEERING CHECK: Prevent repeated grouping
             const alreadyGrouped = selectedIds.some(id =>
-                groupedTasks.some(g => g.status !== 'Closed' && g.requests.some(r => r.id.toString() === id.toString()))
+                groupedTasks.some(g => g.status !== 'Closed' && g.requests && g.requests.some(r => r.id.toString() === id.toString()))
             );
             if (alreadyGrouped) {
                 alert("ERROR: One or more selected missions are already part of an active tactical cluster.");
