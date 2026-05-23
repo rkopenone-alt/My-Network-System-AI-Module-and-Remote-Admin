@@ -929,6 +929,10 @@
                         <div id="headerUserName" style="font-size: 13px; font-weight: 900; color: #1e293b; line-height: 1.1;">...</div>
                         <div id="headerUserDetails" style="font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-top: 2px;">...</div>
                     </div>
+                    <div onclick="core.toggleNotificationHistory()" style="width:38px; height:38px; background:#f8fafc; border-radius:12px; display:flex; align-items:center; justify-content:center; border:1px solid #e2e8f0; cursor:pointer; transition: 0.2s; position:relative;" onmousedown="this.style.transform='scale(0.9)'" onmouseup="this.style.transform='scale(1)'">
+                        <span style="font-size:18px;">🔔</span>
+                        <div id="notifBadgeCount" style="display:none; position:absolute; top:-4px; right:-4px; background:var(--danger); color:white; border-radius:50%; width:18px; height:18px; font-size:10px; font-weight:900; display:flex; align-items:center; justify-content:center; border:2px solid white;">0</div>
+                    </div>
                     <div onclick="core.nav('Settings')" style="width:38px; height:38px; background:#f8fafc; border-radius:12px; display:flex; align-items:center; justify-content:center; border:1px solid #e2e8f0; cursor:pointer; transition: 0.2s;" onmousedown="this.style.transform='scale(0.9)'" onmouseup="this.style.transform='scale(1)'">
                         <span style="font-size:18px;">👤</span>
                     </div>
@@ -1368,6 +1372,27 @@
                 <p style="margin-top:20px; color:#64748b; font-size:11px;">Current: <span id="curCoordDisplay">13.085, 80.272</span> (Chennai Default)</p>
             </div>
 
+            <!-- NOTIFICATION HISTORY POPUP -->
+            <div id="notificationHistoryPopup"
+                style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.98); z-index:9998; flex-direction:column; padding:24px; text-align:left;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #334155; padding-bottom:12px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:24px;">🔔</span>
+                        <h2 style="color:white; font-size:20px; font-weight:900; margin:0;">Alert Notifications</h2>
+                    </div>
+                    <div style="width:36px; height:36px; border-radius:10px; background:#1e293b; border:1px solid #334155; display:flex; align-items:center; justify-content:center; cursor:pointer;" onclick="core.toggleNotificationHistory()">
+                        <span style="color:#64748b; font-size:16px; font-weight:bold;">✕</span>
+                    </div>
+                </div>
+
+                <div id="notificationHistoryList" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding-bottom:20px; -webkit-overflow-scrolling: touch;">
+                    <div style="text-align:center; padding:40px 20px; color:#64748b; font-size:13px; font-weight:600;">No notifications received yet.</div>
+                </div>
+
+                <button class="submit-btn" style="width:100%; background:#475569; color:white; box-shadow:none;"
+                    onclick="core.clearNotifications()">CLEAR ALL ALERTS</button>
+            </div>
+
             <!-- LOADER -->
             <div class="full-loader" id="loader">
                 <div class="spinner"></div>
@@ -1474,6 +1499,86 @@
                 name: "Arjun Singh",
                 serial_number: "PUB-1024",
                 phone: "918000000099"
+            },
+            notifications: [],
+            unreadNotifCount: 0,
+
+            toggleNotificationHistory() {
+                const pop = document.getElementById('notificationHistoryPopup');
+                if (!pop) return;
+                if (pop.style.display === 'flex') {
+                    pop.style.display = 'none';
+                } else {
+                    pop.style.display = 'flex';
+                    this.unreadNotifCount = 0;
+                    this.updateNotifBadge();
+                    this.renderNotifications();
+                }
+            },
+
+            clearNotifications() {
+                this.notifications = [];
+                localStorage.setItem('citizen_notifications', JSON.stringify(this.notifications));
+                this.unreadNotifCount = 0;
+                this.updateNotifBadge();
+                this.renderNotifications();
+                this.toast('NOTIFICATIONS CLEARED', '🗑️');
+            },
+
+            addNotification(title, body, icon = '🔔') {
+                const notif = {
+                    title,
+                    body,
+                    icon,
+                    timestamp: new Date().toISOString()
+                };
+                this.notifications.unshift(notif);
+                if (this.notifications.length > 50) this.notifications.pop();
+                localStorage.setItem('citizen_notifications', JSON.stringify(this.notifications));
+                
+                const pop = document.getElementById('notificationHistoryPopup');
+                if (!pop || pop.style.display !== 'flex') {
+                    this.unreadNotifCount++;
+                    this.updateNotifBadge();
+                } else {
+                    this.renderNotifications();
+                }
+            },
+
+            updateNotifBadge() {
+                const badge = document.getElementById('notifBadgeCount');
+                if (!badge) return;
+                if (this.unreadNotifCount > 0) {
+                    badge.innerText = this.unreadNotifCount;
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            },
+
+            renderNotifications() {
+                const list = document.getElementById('notificationHistoryList');
+                if (!list) return;
+                if (this.notifications.length === 0) {
+                    list.innerHTML = `<div style="text-align:center; padding:40px 20px; color:#64748b; font-size:13px; font-weight:600;">No notifications received yet.</div>`;
+                    return;
+                }
+                list.innerHTML = this.notifications.map(n => {
+                    const time = new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const date = new Date(n.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                    return `
+                        <div style="background:#1e293b; border:1px solid #334155; padding:15px; border-radius:14px; display:flex; gap:12px; align-items:flex-start; box-shadow:var(--shadow-sm); margin-bottom: 8px;">
+                            <div style="font-size:24px; background:#0f172a; padding:10px; border-radius:12px; border:1px solid #334155; display:flex; align-items:center; justify-content:center; width:44px; height:44px; flex-shrink:0;">${n.icon}</div>
+                            <div style="flex:1;">
+                                <div style="display:flex; justify-content:between; align-items:center; margin-bottom:4px; gap:8px;">
+                                    <h4 style="margin:0; font-size:14px; font-weight:900; color:white; flex:1;">${n.title}</h4>
+                                    <span style="font-size:10px; color:#64748b; font-weight:800; text-transform:uppercase;">${date} ${time}</span>
+                                </div>
+                                <p style="margin:0; font-size:12px; font-weight:600; color:#94a3b8; line-height:1.4;">${n.body}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
             },
             sosTimer: null,
             socket: null,
@@ -1667,6 +1772,16 @@
             },
 
             async init() {
+                // Guarantee a completely clean login session on first launching a fresh installation or update
+                if (localStorage.getItem('app_installed_launch') !== 'true') {
+                    localStorage.removeItem('citizen_token');
+                    localStorage.removeItem('citizen_user');
+                    localStorage.setItem('app_installed_launch', 'true');
+                }
+
+                this.notifications = JSON.parse(localStorage.getItem('citizen_notifications') || '[]');
+                this.unreadNotifCount = 0;
+                this.updateNotifBadge();
                 this.setupKeyboardHandling();
                 this.bootstrap(); // Initialize header with dummy data or state
                 const savedToken = localStorage.getItem('citizen_token');
@@ -1910,12 +2025,14 @@
             },
 
             handleGatewayMessage(type, data) {
-                if (type === 'USER_DISABLED') {
-                    this.toast('ACCOUNT DISABLED BY ADMIN', '🚫');
+                if (type === 'USER_DISABLED' || type === 'FORCE_LOGOUT') {
+                    this.addNotification('Account Disabled', data?.reason || 'Account disabled by administrator', '🚫');
+                    this.toast(data?.reason || 'ACCOUNT DISABLED BY ADMIN', '🚫');
                     setTimeout(() => this.logout(), 2000);
                 }
                 if (type === 'RESCUE_REQUEST_COMPLETED') {
                     // Check if it's our request (the system sync might be more robust, but this provides instant feedback)
+                    this.addNotification('Mission Completed', 'Mission accomplished by Citizen ARDMS Team', '✅');
                     this.updateStatusUI('COMPLETED', 'Mission accomplished by Citizen ARDMS Team', '✅');
                     this.toast('Citizen ARDMS operation marked as completed!', '✅');
                     if (this.rescuerMarker) {
@@ -1959,6 +2076,7 @@
                 }
                 if (type === 'RESCUE_REQUEST_ACCEPTED') {
                     if (data.phone === this.user.phone || data.device_id === this.user.serial_number) {
+                        this.addNotification('SOS Request Accepted', `Team "${data.assignedName}" is en route to your location.`, '🚨');
                         this.updateStatusUI('TEAM_ASSIGNED', 'Rescue team has been dispatched!', '🚨');
                         this.updateGlobalNotification('Mission Accepted', `Team "${data.assignedName}" is en route`, '🚨', 'Active');
                         this.toast('MISSION ACCEPTED: TEAM EN ROUTE', '✅');
@@ -1968,6 +2086,7 @@
                 }
                 if (type === 'RESCUE_REQUEST_COMPLETED') {
                     if (data.phone === this.user.phone || data.device_id === this.user.serial_number) {
+                        this.addNotification('SOS Request Completed', 'Your rescue operation has been marked as completed. You are safe!', '🏅');
                         this.updateStatusUI('COMPLETED', 'Rescue mission successful!', '✅');
                         this.toast('MISSION COMPLETE', '🏅');
                         this.showMissionAlert(`MISSION COMPLETED`, `You are safe! The rescue operation has been marked as successful. Reach out if you need more help.`);
@@ -1975,20 +2094,40 @@
                     }
                 }
                 if (type === 'ADMIN_MESSAGE') {
+                    this.addNotification('Message from Admin', data.message, '💬');
                     this.showMissionAlert('MESSAGE FROM ADMIN', data.message);
                     this.toast('NEW MESSAGE RECEIVED', '💬');
                 }
                 if (type === 'NEW_COMMAND') {
+                    this.addNotification('Task Dispatched', `A new mission "${data.desc || 'Rescue Task'}" has been assigned.`, '🚨');
                     this.showMissionAlert('NEW MISSION ASSIGNED', `A new mission "${data.desc || 'Rescue Task'}" has been assigned to you/your group.`);
                     this.toast('MISSION ASSIGNED', '🚨');
                     this.fetchMyHistory();
                 }
-                if (type === 'SETTINGS_UPDATED' && data.key === 'retry_intervals') {
-                    const intervals = data.value.split(',').map(s => parseInt(s.trim()) * 1000);
-                    if (intervals.length > 0 && !intervals.some(isNaN)) {
-                        this.backoff = intervals;
-                        console.log('[SYNC] Live retry intervals update:', this.backoff);
-                        this.toast('Sync Config Updated', '⚙️');
+                if (type === 'BUFFER_TIME_UPDATE') {
+                    this.sosBufferMinutes = parseInt(data.minutes) || 15;
+                    this.updateBufferCooldown();
+                    console.log('[GATEWAY] Live SOS buffer time update (via BUFFER_TIME_UPDATE):', this.sosBufferMinutes);
+                    this.toast(`Emergency Buffer Updated: ${this.sosBufferMinutes}m`, '⏳');
+                }
+                if (type === 'SETTINGS_UPDATED') {
+                    if (data.key === 'retry_intervals') {
+                        const intervals = data.value.split(',').map(s => parseInt(s.trim()) * 1000);
+                        if (intervals.length > 0 && !intervals.some(isNaN)) {
+                            this.backoff = intervals;
+                            console.log('[SYNC] Live retry intervals update:', this.backoff);
+                            this.toast('Sync Config Updated', '⚙️');
+                        }
+                    } else if (data.key === 'sos_buffer_minutes') {
+                        this.sosBufferMinutes = parseInt(data.value) || 15;
+                        this.updateBufferCooldown();
+                        console.log('[GATEWAY] Live SOS buffer time update:', this.sosBufferMinutes);
+                        this.toast(`Emergency Buffer Updated: ${this.sosBufferMinutes}m`, '⏳');
+                    } else if (data.key === 'refresh_interval') {
+                        this.refreshInterval = parseInt(data.value) || 15;
+                        const el = document.getElementById('dispSyncInterval');
+                        if (el) el.innerText = this.refreshInterval + 's (Admin Set)';
+                        console.log('[GATEWAY] Live refresh interval update:', this.refreshInterval);
                     }
                 }
             },

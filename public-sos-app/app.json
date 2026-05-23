@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.rescue.sosapp",
+      "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0284c7"

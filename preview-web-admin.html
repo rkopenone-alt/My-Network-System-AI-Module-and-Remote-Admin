@@ -2844,6 +2844,21 @@
         </div>
     </div>
 
+    <!-- Task Detail Modal (Completed / History View) -->
+    <div class="modal-overlay" id="taskDetailModal" style="z-index: 10003;">
+        <div class="modal" style="width: 800px; max-height: 92vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="tdModalTitle">Task Operational Report</h3>
+                <button class="modal-close" onclick="closeModal('taskDetailModal')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; flex: 1; padding: 24px;">
+                <div id="tdModalContent" style="display:flex; flex-direction:column; gap:20px;">
+                    <!-- Content will be injected dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Tactical Grouping Modal -->
     <div class="modal-overlay" id="groupingModal" style="z-index: 10002;">
         <div class="modal" style="width: 700px; max-height: 90vh;">
@@ -4614,7 +4629,7 @@
                     closureThumb = `<img src="${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('${closureUrl}', '_blank');">`;
                 }
 
-                let row = `<tr onclick="selectTask('${c.id}')" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                let row = `<tr onclick="${isOngoing ? `selectTask('${c.id}')` : `openCompletedTaskDetailModal('${c.id}')`}" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                     <td style="font-weight: 800; color: var(--text-muted);">{SNO}</td>
                     <td style="font-weight:700;">${c.id}</td>
                     <td>${c.desc}</td>
@@ -4634,7 +4649,7 @@
                         <div style="display:flex; gap:4px;">
                             ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ Close</button>` : ''}
                             ${isReassignable ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Re-Assign</button>` : ''}
-                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); selectTask('${c.id}')">👁️ View</button>
+                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); ${isOngoing ? `selectTask('${c.id}')` : `openCompletedTaskDetailModal('${c.id}')`}">👁️ View</button>
                         </div>
                     </td>
                 </tr>`;
@@ -4735,7 +4750,7 @@
                     actionBtnId = activeCmdForReq.id;
                 }
 
-                let historyRowHtml = `<tr onclick="selectTask('${displayId}')" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                let historyRowHtml = `<tr onclick="${isOngoing ? `selectTask('${displayId}')` : `openCompletedTaskDetailModal('${displayId}')`}" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                     <td style="font-weight: 800; color: var(--text-muted);">{SNO}</td>
                     <td style="font-weight:700;">${displayId}</td>
                     <td>${(r.type || 'Request').toUpperCase()} TASK</td>
@@ -4755,7 +4770,7 @@
                         <div style="display:flex; gap:4px;">
                             ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${actionBtnId}')">✅ Close</button>` : ''}
                             ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('${actionBtnId}')">🔄 Re-Assign</button>` : ''}
-                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); selectTask('${displayId}')">👁️ View</button>
+                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); ${isOngoing ? `selectTask('${displayId}')` : `openCompletedTaskDetailModal('${displayId}')`}">👁️ View</button>
                         </div>
                     </td>
                 </tr>`;
@@ -4830,7 +4845,7 @@
                 }
 
                 return `
-                <tr onclick="selectTask('${c.id}')" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                <tr onclick="${isOngoing ? `selectTask('${c.id}')` : `openCompletedTaskDetailModal('${c.id}')`}" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                     <td style="font-weight: 800; color: var(--text-muted);">${String(i + 1).padStart(2, '0')}</td>
                     <td style="font-weight:700;">${c.id}</td>
                     <td style="font-weight:700; color:var(--special);">${c.desc}</td>
@@ -4847,7 +4862,7 @@
                     <td style="display:flex; gap:6px;">
                         ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ CLOSE</button>` : ''}
                         ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 RE-ASSIGN</button>` : ''}
-                        <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); selectTask('${c.id}')">👁️ VIEW</button>
+                        <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); ${isOngoing ? `selectTask('${c.id}')` : `openCompletedTaskDetailModal('${c.id}')`}">👁️ VIEW</button>
                     </td>
                 </tr>
             `;
@@ -5522,7 +5537,7 @@
             const pendingReqs = rescueRequests.filter(r => (r.status || '').toLowerCase() === 'pending');
             const sosCount = pendingReqs.filter(r => r.type === 'sos' || r.type === 'medical').length;
             const foodCount = pendingReqs.filter(r => r.type === 'food' || r.type === 'supplies' || r.type === 'delivery' || r.type === 'medical_delivery').length;
-            const groupedCount = groupedTasks.filter(g => g.status !== 'Closed').length;
+            const groupedCount = groupedTasks.filter(g => g.status !== 'Closed' && (g.status || '').toLowerCase() !== 'completed').length;
 
             if (document.getElementById('sosCallsBadge')) document.getElementById('sosCallsBadge').innerText = sosCount;
             if (document.getElementById('foodDistBadge')) document.getElementById('foodDistBadge').innerText = foodCount;
@@ -5647,7 +5662,7 @@
             const groupedSection = document.getElementById('section-grouped-notifs');
             if (groupedList && groupedSection) {
                 // Show both unassigned clusters and newly assigned clusters for better tracking
-                const activeGroups = groupedTasks.filter(g => g.status !== 'Closed');
+                const activeGroups = groupedTasks.filter(g => g.status && !['closed', 'completed', 'inactive'].includes(g.status.toLowerCase()));
                 if (activeGroups.length > 0) {
                     groupedSection.style.display = 'block';
                     groupedList.innerHTML = activeGroups.map((group, idx) => `
@@ -6739,6 +6754,244 @@
 
 
         // --- NEW TASK GROUPING & NOTIFICATION LOG LOGIC ---
+
+        function openCompletedTaskDetailModal(id) {
+            let cmd = cmds.find(c => c.id === id);
+            let req = null;
+            if (!cmd) {
+                const cleanId = id.toString().replace('REQ-', '').replace('PUB-', '');
+                req = rescueRequests.find(r => r.id.toString() === cleanId);
+                if (req) {
+                    let assignedTo = 'Unassigned';
+                    if (req.assigned_officer_name) {
+                        assignedTo = `👤 ${req.assigned_officer_name}`;
+                    } else if (req.assigned_group_name) {
+                        assignedTo = `👥 ${req.assigned_group_name}`;
+                    } else if (req.assigned_user_id) {
+                        assignedTo = `Rescuer ${req.assigned_user_id}`;
+                    } else if (req.assigned_group_id) {
+                        assignedTo = `Group ${req.assigned_group_id}`;
+                    }
+                    cmd = {
+                        id: 'REQ-' + req.id,
+                        desc: `${(req.type || 'Request').toUpperCase()} Task`,
+                        type: req.type || 'emergency',
+                        priority: req.priority || 'normal',
+                        zone: req.sector || 'N/A',
+                        team: assignedTo,
+                        time: formatLocalTime(req.created_at),
+                        status: (req.status || 'pending').charAt(0).toUpperCase() + (req.status || 'pending').slice(1),
+                        rescueReqId: req.id,
+                        requestIds: [],
+                        payload: req,
+                        requesterName: req.assigned_officer_name || 'Citizen',
+                        requesterPhone: req.phone || null,
+                        requesterType: req.type || null,
+                        requesterLat: req.lat || null,
+                        requesterLng: req.lng || null,
+                        requesterUrgency: req.urgency || null,
+                        details: req.details || null,
+                        requesterImageUrl: req.image_url || null,
+                        requesterAudioUrl: req.audio_url || null,
+                        completion_image_url: req.completion_image_url || null,
+                        reqTime: formatLocalTime(req.created_at)
+                    };
+                }
+            } else {
+                if (cmd.rescueReqId) {
+                    req = rescueRequests.find(r => r.id.toString() === cmd.rescueReqId.toString());
+                }
+            }
+
+            if (!cmd) {
+                showAdminToast('Task details could not be found.', 'error');
+                return;
+            }
+
+            const titleEl = document.getElementById('tdModalTitle');
+            titleEl.innerHTML = `<span style="display:flex; align-items:center; gap:8px;"><i data-lucide="shield-check" style="color:#22c55e;"></i> Task Operational Report: <span style="color:var(--accent);">${cmd.id}</span></span>`;
+
+            const contentEl = document.getElementById('tdModalContent');
+            
+            const priorityClass = getTagForStatus(cmd.status);
+            const typeClass = getTagForType(cmd.type);
+
+            let requestTime = cmd.reqTime || cmd.time || 'N/A';
+            let dispatchTime = cmd.cmdTime || cmd.time || 'N/A';
+            let completionTime = cmd.payload && cmd.payload.updated_at ? formatLocalTime(cmd.payload.updated_at) : (cmd.time || 'N/A');
+
+            let evidenceImgHtml = '';
+            if (cmd.requesterImageUrl) {
+                const fullUrl = cmd.requesterImageUrl.startsWith('http') ? cmd.requesterImageUrl : `http://${window.location.hostname || 'localhost'}:3001${cmd.requesterImageUrl}`;
+                evidenceImgHtml = `
+                    <div style="flex:1; min-width:240px; display:flex; flex-direction:column; gap:6px;">
+                        <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Evidence Photo</span>
+                        <div style="border-radius:12px; overflow:hidden; border:2px solid var(--border); height:180px;">
+                            <img src="${fullUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="window.open('${fullUrl}', '_blank')">
+                        </div>
+                    </div>`;
+            }
+
+            let closureImgHtml = '';
+            if (cmd.completion_image_url) {
+                const fullUrl = cmd.completion_image_url.startsWith('http') ? cmd.completion_image_url : `http://${window.location.hostname || 'localhost'}:3001${cmd.completion_image_url}`;
+                closureImgHtml = `
+                    <div style="flex:1; min-width:240px; display:flex; flex-direction:column; gap:6px;">
+                        <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Closure / Proof Photo</span>
+                        <div style="border-radius:12px; overflow:hidden; border:2px solid #22c55e; height:180px;">
+                            <img src="${fullUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="window.open('${fullUrl}', '_blank')">
+                        </div>
+                    </div>`;
+            }
+
+            let audioHtml = '';
+            if (cmd.requesterAudioUrl) {
+                const audioUrl = cmd.requesterAudioUrl.startsWith('http') ? cmd.requesterAudioUrl : `http://${window.location.hostname || 'localhost'}:3001${cmd.requesterAudioUrl}`;
+                audioHtml = `
+                    <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px; margin-top:10px; width:100%;">
+                        <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:8px;">Requester Audio Message</span>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <audio controls style="flex:1; height:32px;">
+                                <source src="${audioUrl}" type="audio/wav">
+                                Your browser does not support audio.
+                            </audio>
+                            <a href="${audioUrl}" class="btn btn-outline" target="_blank" style="padding:6px 12px; text-decoration:none; font-weight:800; font-size:11px;">📥 Download</a>
+                        </div>
+                    </div>`;
+            }
+
+            let itemsHtml = 'None requested';
+            if (cmd.details) {
+                try {
+                    const d = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
+                    const items = [];
+                    if (d.food) items.push(`🍞 Food: <b>${d.food}</b>`);
+                    if (d.med) items.push(`💊 Medicine: <b>${d.med}</b>`);
+                    if (d.sanitary) items.push(`🧻 Sanitary: <b>${d.sanitary}</b>`);
+                    if (items.length > 0) itemsHtml = items.join(' | ');
+                } catch (e) { }
+            }
+
+            let groupMissionsHtml = '';
+            if (cmd.type === 'group') {
+                let parsedDetails = null;
+                try {
+                    parsedDetails = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
+                } catch(e){}
+
+                if (parsedDetails && parsedDetails.isGroup && parsedDetails.missions) {
+                    groupMissionsHtml = `
+                        <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px; display:flex; flex-direction:column; gap:10px; margin-top:10px; width:100%;">
+                            <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Clustered Sub-Missions (${parsedDetails.missions.length})</span>
+                            <div style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto; padding-right:6px;">
+                    `;
+                    parsedDetails.missions.forEach(m => {
+                        let mItems = '';
+                        if (m.details) {
+                            try {
+                                const md = typeof m.details === 'string' ? JSON.parse(m.details) : m.details;
+                                const mdList = [];
+                                if (md.food) mdList.push(`🍞 ${md.food}`);
+                                if (md.med) mdList.push(`💊 ${md.med}`);
+                                if (md.sanitary) mdList.push(`🧻 ${md.sanitary}`);
+                                if (mdList.length > 0) mItems = ` - <small style="color:var(--primary); font-weight:700;">Requires: ${mdList.join(', ')}</small>`;
+                            } catch(e){}
+                        }
+                        groupMissionsHtml += `
+                            <div style="background:white; border:1px solid #e2e8f0; padding:10px 14px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:var(--shadow-sm);">
+                                <span style="font-size:12px; font-weight:800; color:#1e293b;">📌 ${m.type.toUpperCase()}${mItems}</span>
+                                <span style="font-size:11px; font-weight:700; color:var(--text-muted);">📍 ${m.sector}</span>
+                            </div>`;
+                    });
+                    groupMissionsHtml += `</div></div>`;
+                }
+            }
+
+            let commentsVal = 'No additional comments provided by citizen.';
+            if (cmd.details) {
+                try {
+                    const d = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
+                    if (d.comments) commentsVal = `"${d.comments}"`;
+                } catch(e){}
+            }
+
+            contentEl.innerHTML = `
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:16px; width:100%;">
+                    <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px;">
+                        <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Task Category</span>
+                        <span class="tag ${typeClass}" style="font-size:12px; font-weight:800; padding:4px 10px;">${(cmd.type || 'N/A').toUpperCase()}</span>
+                    </div>
+                    <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px;">
+                        <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Operation Status</span>
+                        <span class="tag ${priorityClass}" style="font-size:12px; font-weight:800; padding:4px 10px;">${cmd.status}</span>
+                    </div>
+                    <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px;">
+                        <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Assigned Group/Team</span>
+                        <span style="font-size:14px; font-weight:800; color:#1e293b; display:block; margin-top:2px;">${cmd.team}</span>
+                    </div>
+                    <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px;">
+                        <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Deployment Sector</span>
+                        <span style="font-size:14px; font-weight:800; color:#1e293b; display:block; margin-top:2px;">📍 ${cmd.zone}</span>
+                    </div>
+                </div>
+
+                <div style="background:var(--bg); border:1px solid var(--border); padding:20px; border-radius:14px; display:flex; flex-direction:column; gap:8px; width:100%;">
+                    <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Task Description</span>
+                    <p style="margin:0; font-size:15px; font-weight:700; color:#1e293b;">${cmd.desc}</p>
+                    <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); margin-top:12px; padding-top:12px; font-size:12px; font-weight:700; flex-wrap:wrap; gap:8px;">
+                        <span>🛒 Support Items: <span style="color:var(--primary);">${itemsHtml}</span></span>
+                        ${cmd.requesterPhone ? `<span>📞 Contact: <span style="color:var(--accent);">${cmd.requesterPhone}</span></span>` : ''}
+                    </div>
+                </div>
+
+                ${groupMissionsHtml}
+
+                <div style="background:var(--bg); border:1px solid var(--border); padding:20px; border-radius:14px; width:100%;">
+                    <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:16px;">Mission Operation Timeline</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; position:relative; padding:0 20px; flex-wrap:nowrap;">
+                        <div style="position:absolute; top:24px; left:40px; right:40px; height:4px; background:#e2e8f0; z-index:1;"></div>
+                        <div style="position:absolute; top:24px; left:40px; right:40px; height:4px; background:#22c55e; z-index:2; width:${cmd.status === 'Completed' ? '100%' : '50%'}; transition: width 0.5s;"></div>
+
+                        <div style="display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3; width:80px; text-align:center;">
+                            <div style="width:20px; height:20px; border-radius:50%; background:#22c55e; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
+                            <span style="font-size:11px; font-weight:800; color:#1e293b;">1. Requested</span>
+                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">${requestTime}</span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3; width:80px; text-align:center;">
+                            <div style="width:20px; height:20px; border-radius:50%; background:#22c55e; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
+                            <span style="font-size:11px; font-weight:800; color:#1e293b;">2. Dispatched</span>
+                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">${dispatchTime}</span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3; width:80px; text-align:center;">
+                            <div style="width:20px; height:20px; border-radius:50%; background:${cmd.status === 'Completed' ? '#22c55e' : '#eab308'}; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
+                            <span style="font-size:11px; font-weight:800; color:#1e293b;">3. In Transit</span>
+                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">Ongoing</span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3; width:80px; text-align:center;">
+                            <div style="width:20px; height:20px; border-radius:50%; background:${cmd.status === 'Completed' ? '#22c55e' : '#cbd5e1'}; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
+                            <span style="font-size:11px; font-weight:800; color:#1e293b;">4. Completed</span>
+                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">${cmd.status === 'Completed' ? completionTime : 'Pending'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px; width:100%;">
+                    <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:6px;">Requester Comments / Remarks</span>
+                    <p style="margin:0; font-size:13px; font-weight:600; color:#475569; font-style:italic;">${commentsVal}</p>
+                </div>
+
+                ${evidenceImgHtml || closureImgHtml ? `
+                    <div style="display:flex; flex-wrap:wrap; gap:20px; width:100%;">
+                        ${evidenceImgHtml}
+                        ${closureImgHtml}
+                    </div>` : ''}
+
+                ${audioHtml}
+            `;
+
+            openModal('taskDetailModal');
+            if (window.lucide) lucide.createIcons();
+        }
 
         function openViewRequestsModal(type) {
             try {
@@ -7941,7 +8194,7 @@
             const listArea = document.getElementById('activeGroupsList');
             if (!listArea) return;
 
-            const active = groupedTasks.filter(g => g.status !== 'Closed');
+            const active = groupedTasks.filter(g => g.status !== 'Closed' && (g.status || '').toLowerCase() !== 'completed');
 
             if (active.length === 0) {
                 listArea.innerHTML = `

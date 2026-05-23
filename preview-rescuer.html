@@ -1203,11 +1203,48 @@
             capturedImages: {},
 
             init() {
+                // Guarantee a completely clean login session on first launching a fresh installation or update
+                if (localStorage.getItem('app_installed_launch') !== 'true') {
+                    localStorage.removeItem('rescuer_token');
+                    localStorage.removeItem('rescue_user_v3');
+                    localStorage.setItem('app_installed_launch', 'true');
+                }
+
                 const saved = localStorage.getItem('rescue_user_v3');
-                if (saved) {
-                    this.user = JSON.parse(saved);
-                    this.showScreen('screenHome');
-                    this.bootstrap();
+                const token = localStorage.getItem('rescuer_token');
+                if (saved && token) {
+                    this.showLoader(true);
+                    fetch(`${this.API}/auth/verify`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }).then(res => {
+                        if (res.ok) {
+                            return res.json();
+                        } else {
+                            throw new Error('Invalid token');
+                        }
+                    }).then(data => {
+                        this.user = data.user;
+                        localStorage.setItem('rescue_user_v3', JSON.stringify(this.user));
+                        this.showScreen('screenHome');
+                        this.bootstrap();
+                        this.showLoader(false);
+                    }).catch(e => {
+                        console.error('Verification failed:', e);
+                        if (!navigator.onLine) {
+                            // If completely offline and fetch failed, proceed with cached credentials
+                            this.user = JSON.parse(saved);
+                            this.showScreen('screenHome');
+                            this.bootstrap();
+                        } else {
+                            // Online but invalid token: log out
+                            this.logout();
+                        }
+                        this.showLoader(false);
+                    });
+                } else {
+                    // Make sure everything is clean if no valid session
+                    localStorage.removeItem('rescue_user_v3');
+                    localStorage.removeItem('rescuer_token');
                 }
             },
 
@@ -1569,7 +1606,7 @@
                     let evidenceHtml = '';
                     if (t.image_url) {
                         evidenceHtml += `<div style="width:100%; height:120px; border-radius:12px; overflow:hidden; margin-bottom:12px; border:1px solid var(--border);">
-                            <img src="http://${window.location.hostname}:3001${t.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                            <img src="http://${window.__SERVER_IP__ || window.location.hostname || '192.168.1.4'}:3001${t.image_url}" style="width:100%; height:100%; object-fit:cover;">
                         </div>`;
                     }
 
@@ -1858,6 +1895,16 @@
             // ───────────────────────────────────────────────────
 
             triggerCamera(id, source) {
+                if (window.ReactNativeWebView) {
+                    // Send to native bridge
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'CAPTURE_IMAGE',
+                        taskId: id,
+                        source: source
+                    }));
+                    return;
+                }
+
                 const input = document.getElementById('hiddenCameraInput');
                 if (!input) return;
 
@@ -2392,6 +2439,13 @@
                 };
                 ws.onmessage = (e) => {
                     const msg = JSON.parse(e.data);
+                    
+                    if (msg.type === 'USER_DISABLED' || msg.type === 'FORCE_LOGOUT') {
+                        this.toast(msg.data?.reason || 'SESSION EXPIRED: PLEASE LOGIN AGAIN', '🚫');
+                        setTimeout(() => this.logout(), 2000);
+                        return;
+                    }
+
                     const updateTypes = ['NEW_RESCUE_REQUEST', 'COMMAND_STATUS_UPDATE', 'COMMAND_COMPLETED', 'RESCUE_REQUEST_UPDATE', 'RESCUE_REQUEST_ACCEPTED', 'NEW_COMMAND'];
 
                     if (updateTypes.includes(msg.type)) {
@@ -2471,7 +2525,7 @@
                         
                         ${c.image_url ? `
                             <div style="width:100%; height:140px; border-radius:8px; overflow:hidden; margin-bottom:12px; border:1px solid #334155;">
-                                <img src="http://${window.location.hostname}:3001${c.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                                <img src="http://${window.__SERVER_IP__ || window.location.hostname || '192.168.1.4'}:3001${c.image_url}" style="width:100%; height:100%; object-fit:cover;">
                             </div>
                         ` : ''}
 
@@ -2572,6 +2626,25 @@
         document.head.appendChild(style);
 
         window.core = core;
+        window.onImageCaptured = (base64, id) => {
+            core.capturedImages[id] = base64;
+
+            // Update banner camera button icon
+            const bannerBtn = document.getElementById('bannerCameraBtn');
+            if (bannerBtn && (id === '__banner__' || (core.activeMission && String(core.activeMission.id) === String(id)))) {
+                bannerBtn.textContent = '✅';
+                bannerBtn.classList.add('captured');
+            }
+
+            // Update card camera button
+            const cardBtn = document.getElementById('camBtn_' + id);
+            if (cardBtn) {
+                cardBtn.textContent = '✅ Photo';
+                cardBtn.classList.add('captured');
+            }
+
+            core.toast('📷 Photo attached via Native App!', '✅');
+        };
         window.onload = () => core.init();
     </script>
 </body>

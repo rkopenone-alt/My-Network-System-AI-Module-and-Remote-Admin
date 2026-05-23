@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ActivityIndicator, Text, PermissionsAndroid, Platform } from 'react-native';
+import { View, ActivityIndicator, Text, PermissionsAndroid, Platform, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as ImagePicker from 'expo-image-picker';
 import { htmlString } from './htmlStr';
 
 // ─── Server Configuration ─────────────────────────────────────────────────────
@@ -24,15 +25,6 @@ export default function App() {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       setHasPermission(status === 'granted');
-
-      if (Platform.OS === 'android') {
-        try {
-          await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
-          await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE);
-        } catch (e) {
-          console.warn(e);
-        }
-      }
 
       if (status === 'granted') {
         try {
@@ -119,6 +111,43 @@ export default function App() {
           try {
             const data = JSON.parse(event.nativeEvent.data);
             console.log('[WebView Message]', data);
+
+            if (data.type === 'CAPTURE_IMAGE') {
+              try {
+                // Request camera permission dynamically at runtime
+                const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                if (status !== 'granted') {
+                  Alert.alert('Permission Denied', 'Camera permission is required to capture photos.');
+                  return;
+                }
+
+                // Launch native camera
+                const result = await ImagePicker.launchCameraAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  allowsEditing: true,
+                  quality: 0.6,
+                  base64: true,
+                });
+
+                if (!result.canceled && result.assets && result.assets.length > 0) {
+                  const asset = result.assets[0];
+                  let base64Str = asset.base64;
+                  if (base64Str) {
+                    if (!base64Str.startsWith('data:')) {
+                      base64Str = 'data:image/jpeg;base64,' + base64Str;
+                    }
+                    // Inject back into the WebView global handler
+                    const code = `if (window.onImageCaptured) { window.onImageCaptured('${base64Str}', '${data.taskId}'); } true;`;
+                    if (webViewRef.current) {
+                      webViewRef.current.injectJavaScript(code);
+                    }
+                  }
+                }
+              } catch (err) {
+                console.error('[Native Camera Error]', err);
+                Alert.alert('Error', 'Failed to capture or process photo.');
+              }
+            }
 
             if (data.type === 'DOWNLOAD_PDF' && data.base64) {
               const filename = data.filename || 'Mission_History.pdf';

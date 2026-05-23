@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const { runSystemBackup } = require('./backup_util');
 const triggerBackup = () => {
@@ -612,7 +613,8 @@ app.post('/api/auth/login', async (req, res) => {
         }
         
         // Generate JWT token
-        const token = jwt.sign({ id: user.id, role: user.role, phone: user.phone, serial: user.serial_number, deviceId: user.device_id }, JWT_SECRET, { expiresIn: '7d' });
+        const passwordHash = crypto.createHash('sha256').update(user.password || '').digest('hex');
+        const token = jwt.sign({ id: user.id, role: user.role, phone: user.phone, serial: user.serial_number, deviceId: user.device_id, passwordHash }, JWT_SECRET, { expiresIn: '7d' });
         
         // Audit log
         await logCommand('LOGIN_SUCCESS', user.name, user.serial_number, { role: user.role, deviceId });
@@ -644,9 +646,15 @@ const verifyToken = (req, res, next) => {
         
         // Check if user is still active in database
         try {
-            const user = await get(`SELECT status FROM users WHERE id = ?`, [decoded.id]);
+            const user = await get(`SELECT status, password FROM users WHERE id = ?`, [decoded.id]);
             if (!user || user.status !== 'active') {
                 return res.status(403).json({ error: 'Account disabled by Administrator' });
+            }
+            if (decoded.passwordHash) {
+                const currentHash = crypto.createHash('sha256').update(user.password || '').digest('hex');
+                if (decoded.passwordHash !== currentHash) {
+                    return res.status(401).json({ error: 'Password changed. Please log in again.' });
+                }
             }
             req.user = decoded;
             next();
@@ -962,6 +970,7 @@ app.put('/api/users/:id', async (req, res) => {
     const { name, role, phone, device_id, status, group_ids, photo_url, password, serial_number } = req.body;
     const userId = req.params.id;
     try {
+        const oldUser = await get(`SELECT * FROM users WHERE id = ?`, [userId]);
         await run(`UPDATE users SET name = ?, role = ?, phone = ?, device_id = ?, status = ?, photo_url = ?, password = ?, serial_number = ? WHERE id = ?`, [name, role, phone, device_id, status, photo_url, password, serial_number, userId]);
 
         if (group_ids && Array.isArray(group_ids)) {
@@ -974,6 +983,18 @@ app.put('/api/users/:id', async (req, res) => {
         const user = await get(`SELECT * FROM users WHERE id = ?`, [userId]);
         const userGroups = await all(`SELECT g.* FROM group_members gm JOIN groups g ON gm.group_id = g.id WHERE gm.user_id = ?`, [userId]);
         user.groups = userGroups;
+
+        // If password changed, send FORCE_LOGOUT
+        if (oldUser && oldUser.password !== password) {
+            socketManager.send(user.phone, 'FORCE_LOGOUT', { reason: 'Password changed by administrator' });
+            socketManager.send(user.serial_number, 'FORCE_LOGOUT', { reason: 'Password changed by administrator' });
+            if (user.device_id) {
+                socketManager.send(user.device_id, 'FORCE_LOGOUT', { reason: 'Password changed by administrator' });
+            }
+            if (oldUser.device_id && oldUser.device_id !== user.device_id) {
+                socketManager.send(oldUser.device_id, 'FORCE_LOGOUT', { reason: 'Password changed by administrator' });
+            }
+        }
 
         // If user is disabled, force local logout instantly via WebSocket sync
         if (status && status !== 'active') {
@@ -1050,6 +1071,9 @@ app.post('/api/settings', async (req, res) => {
     try {
         await run(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, value]);
         broadcast('SETTINGS_UPDATED', { key, value });
+        if (key === 'sos_buffer_minutes') {
+            broadcast('BUFFER_TIME_UPDATE', { minutes: parseInt(value) || 15 });
+        }
         res.json({ message: 'Settings updated' });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1508,6 +1532,9 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
         reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
 
         if (finalStatus === 'completed' && reqData) {
+            // Dismiss pending new_task notification for this request ID
+            await run(`UPDATE notifications SET read = 1 WHERE message LIKE ? OR message LIKE ?`, [`%${req.params.id}%`, `%${reqData.serial_number}%`]);
+
             // Notify original requester
             if (reqData.device_id) {
                 await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
@@ -1759,6 +1786,23 @@ app.put('/api/commands/:id/status', async (req, res) => {
         }
         cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
 
+        if (finalStatus === 'completed' || finalStatus === 'declined' || finalStatus === 'finished') {
+            await run(`UPDATE notifications SET read = 1 WHERE message LIKE ? OR message LIKE ?`, [`%${req.params.id}%`, `%${cmdData.desc}%`]);
+            try {
+                const payload = typeof cmdData.command_payload === 'string' ? JSON.parse(cmdData.command_payload) : cmdData.command_payload;
+                if (payload) {
+                    if (payload.rescue_req_id) {
+                        await run(`UPDATE notifications SET read = 1 WHERE message LIKE ?`, [`%${payload.rescue_req_id}%`]);
+                    }
+                    if (payload.request_ids && Array.isArray(payload.request_ids)) {
+                        for (const reqId of payload.request_ids) {
+                            await run(`UPDATE notifications SET read = 1 WHERE message LIKE ?`, [`%${reqId}%`]);
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+
         // Propagation: If this command is linked to rescue_requests (single or grouped), update them too
         try {
             const payload = typeof cmdData.command_payload === 'string' ? JSON.parse(cmdData.command_payload) : cmdData.command_payload;
@@ -1949,6 +1993,9 @@ app.post('/api/settings', async (req, res) => {
     try {
         await run(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, String(value)]);
         broadcast('SETTINGS_UPDATED', { key, value });
+        if (key === 'sos_buffer_minutes') {
+            broadcast('BUFFER_TIME_UPDATE', { minutes: parseInt(value) || 15 });
+        }
 
         res.json({ message: 'Setting updated' });
     } catch (e) { res.status(500).json({ error: e.message }); }

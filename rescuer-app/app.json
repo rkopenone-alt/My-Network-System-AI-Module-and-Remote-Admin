@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.rescue.rescuer",
+      "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1e40af"
