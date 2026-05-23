@@ -48,6 +48,7 @@ The Rescue Operations System is divided into four highly-optimized, interconnect
 * **Map & Route Engine:** Leaflet.js mapping library.
   * *Dynamic Map Clustering:* Static markers removed completely. The map clusters and displays active field incidents dynamically using real-time operational data.
   * *Tactical Route Auto-Erase:* Actively monitors tracking states and instantly wipes the Leaflet polyline route from the screen once a rescuer completes, resolves, or declines a task.
+  * *Tactical Grouping & Task Cascading:* Admins can bundle multiple SOS requests into "Tactical Clusters" for squad dispatch. The backend automatically deduplicates individual assignments to prevent mobile notification spam. Completing a Tactical Cluster from either the mobile app or Web Admin safely cascades the `completed` status down to all child SOS requests.
 * **Media Columns Split:** Separated active grids and history tables to offer distinct columns for `IMAGE` (embedded thumbnails + lightboxes) and `AUDIO` (inline `<audio controls>` player + download link).
 
 ### 1.3. ARDMS-Public Support System (`public-sos-app`)
