@@ -7450,7 +7450,7 @@
             });
 
             // Grouped Tasks (Tactical Clusters)
-            const activeGroups = groupedTasks.filter(g => g.status !== 'Closed');
+            const activeGroups = groupedTasks.filter(g => g.status !== 'Closed' && g.status.toLowerCase() !== 'completed');
             activeGroups.forEach(grp => {
                 const item = createMgmtItem(grp, true);
                 listGrouped.appendChild(item);

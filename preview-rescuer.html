@@ -2392,7 +2392,7 @@
                 };
                 ws.onmessage = (e) => {
                     const msg = JSON.parse(e.data);
-                    const updateTypes = ['NEW_RESCUE_REQUEST', 'COMMAND_STATUS_UPDATE', 'RESCUE_REQUEST_UPDATE', 'RESCUE_REQUEST_ACCEPTED', 'NEW_COMMAND'];
+                    const updateTypes = ['NEW_RESCUE_REQUEST', 'COMMAND_STATUS_UPDATE', 'COMMAND_COMPLETED', 'RESCUE_REQUEST_UPDATE', 'RESCUE_REQUEST_ACCEPTED', 'NEW_COMMAND'];
 
                     if (updateTypes.includes(msg.type)) {
                         this.refresh();
@@ -2403,7 +2403,7 @@
                         }
 
                         // If current mission is completed by admin, clear it
-                        if (msg.type === 'COMMAND_STATUS_UPDATE' && msg.data?.status === 'completed') {
+                        if ((msg.type === 'COMMAND_STATUS_UPDATE' || msg.type === 'COMMAND_COMPLETED') && msg.data?.status === 'completed') {
                             if (this.activeMission && (this.activeMission.id === msg.data.id || ('CMD-' + this.activeMission.id) === msg.data.id)) {
                                 this.activeMission = null;
                                 document.getElementById('missionBanner').style.display = 'none';
