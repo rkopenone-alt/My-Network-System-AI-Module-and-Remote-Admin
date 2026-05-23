@@ -1964,7 +1964,7 @@
                             style="padding:15px; border-bottom:1px solid rgba(168, 85, 247, 0.1); background:rgba(168, 85, 247, 0.02); display:flex; justify-content:space-between; align-items:center;">
                             <h4
                                 style="margin:0; font-size:12px; font-weight:800; color:var(--special); text-transform:uppercase; letter-spacing:1px;">
-                                🟣 TACTICAL CLUSTERS</h4>
+                                🟣 TEMPORARY TACTICAL GROUPED TASK CLUSTER</h4>
                             <span id="mgmtCountGrouped" class="tag tag-purple" style="background:var(--special); color:white;">0</span>
                         </div>
                         <div id="mgmtListGrouped"
@@ -3010,6 +3010,13 @@
         let currentActiveOp = null;
         let groupedTasks = []; // Global state for tactical groups
         let groupPerimeters = {}; // Map layers for group boundaries
+        window.bulkSelectedIds = [];
+        try {
+            const cachedSel = sessionStorage.getItem('rescue_bulkSelectedIds');
+            if (cachedSel) {
+                window.bulkSelectedIds = JSON.parse(cachedSel);
+            }
+        } catch (e) { console.error("Error reading bulkSelectedIds cache:", e); }
         lucide.createIcons();
 
         // 0. WebSocket & Global Helpers
@@ -3593,6 +3600,12 @@
         }
         function closeModal(id) {
             document.getElementById(id).style.display = 'none';
+            if (id === 'groupingModal') {
+                try {
+                    sessionStorage.removeItem('rescue_groupingModalOpen');
+                    sessionStorage.removeItem('rescue_groupingModalType');
+                } catch(e) {}
+            }
         }
 
         // 4. Map & Interactions
@@ -4084,8 +4097,10 @@
                         const hasCmd = activeCmds.some(c => {
                             try {
                                 const p = typeof c.command_payload === 'string' ? JSON.parse(c.command_payload) : c.command_payload;
-                                return p && p.rescue_req_id === t.id;
+                                if (p && p.rescue_req_id && String(p.rescue_req_id) === String(t.id)) return true;
+                                if (p && p.request_ids && Array.isArray(p.request_ids) && p.request_ids.map(String).includes(String(t.id))) return true;
                             } catch (e) { return false; }
+                            return false;
                         });
                         if (hasCmd) return; // Let the command marker render instead
                     }
@@ -4269,8 +4284,14 @@
                             <p style="font-weight:600;">Select a mission from the triage columns to view tactical coordinates and requester profile.</p>
                         </div>
                     `;
-                    lucide.createIcons();
+                    if (window.lucide) lucide.createIcons();
                 }
+
+                // 5. Clear Grouping Caches and Close Modal
+                try {
+                    clearGroupingCaches();
+                    closeModal('groupingModal');
+                } catch(err) { console.error("Escape clear grouping caches error", err); }
             }
         });
 
@@ -4299,6 +4320,49 @@
             switchPage('dash');
 
             let cmd = cmds.find(c => c.id === id);
+            if (!cmd) {
+                // FALLBACK: Search in rescueRequests (for directly grouped/completed child tasks)
+                const cleanId = id.toString().replace('REQ-', '').replace('PUB-', '');
+                const req = rescueRequests.find(r => r.id.toString() === cleanId);
+                if (req) {
+                    let assignedTo = 'Unassigned';
+                    if (req.assigned_officer_name) {
+                        assignedTo = `👤 ${req.assigned_officer_name}`;
+                    } else if (req.assigned_group_name) {
+                        assignedTo = `👥 ${req.assigned_group_name}`;
+                    } else if (req.assigned_user_id) {
+                        assignedTo = `Rescuer ${req.assigned_user_id}`;
+                    } else if (req.assigned_group_id) {
+                        assignedTo = `Group ${req.assigned_group_id}`;
+                    }
+
+                    cmd = {
+                        id: 'REQ-' + req.id,
+                        desc: `${(req.type || 'Request').toUpperCase()} Task`,
+                        type: req.type || 'emergency',
+                        priority: req.priority || 'normal',
+                        zone: req.sector || 'N/A',
+                        team: assignedTo,
+                        time: formatLocalTime(req.created_at),
+                        status: (req.status || 'pending').charAt(0).toUpperCase() + (req.status || 'pending').slice(1),
+                        rescueReqId: req.id,
+                        requestIds: [],
+                        payload: req,
+                        requesterName: req.assigned_officer_name || 'Citizen',
+                        requesterPhone: req.phone || null,
+                        requesterType: req.type || null,
+                        requesterLat: req.lat || null,
+                        requesterLng: req.lng || null,
+                        requesterUrgency: req.urgency || null,
+                        details: req.details || null,
+                        requesterImageUrl: req.image_url || null,
+                        requesterAudioUrl: req.audio_url || null,
+                        completion_image_url: req.completion_image_url || null,
+                        reqTime: formatLocalTime(req.created_at)
+                    };
+                }
+            }
+
             if (!cmd) return;
 
             // Show details panel, hide form
@@ -4491,9 +4555,25 @@
             let critHistCount = 0;
             let normHistCount = 0;
 
+            // Collect all rescueReqIds from active group commands
+            const activeGroupReqIds = new Set();
+            cmds.forEach(gc => {
+                const s = (gc.status || '').toLowerCase();
+                const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'assigned', 'acknowledged', 'declined', 'in_progress', 'active'].includes(s);
+                if (gc.type === 'group' && isOngoing && gc.requestIds) {
+                    gc.requestIds.forEach(id => activeGroupReqIds.add(String(id)));
+                }
+            });
+
             cmds.forEach((c) => {
                 const s = (c.status || '').toLowerCase();
                 const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'assigned', 'acknowledged', 'declined', 'in_progress', 'active'].includes(s);
+
+                // Skip if this is an individual command belonging to a request that is part of an active/ongoing grouped command
+                if (isOngoing && c.type !== 'group' && c.rescueReqId && activeGroupReqIds.has(String(c.rescueReqId))) {
+                    return;
+                }
+
                 const isCrit = c.priority === 'critical' || (c.requesterUrgency === 'critical') || ['sos', 'medical', 'pregnancy', 'critical', 'rescue'].includes((c.type || '').toLowerCase());
                 const isReassignable = s !== 'completed';
 
@@ -4576,62 +4656,116 @@
                     compHtml += row.replace('{SNO}', String(compCount).padStart(2, '0'));
                 }
 
-                let historyRow = `<tr onclick="selectTask('${c.id}')" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                let historyRow = ``; // Deprecated, we render history lists from rescueRequests below
+            });
+
+            // POPULATE CRITICAL AND NORMAL HISTORY LOGS FROM rescueRequests
+            histCriticalHtml = '';
+            histNormalHtml = '';
+            critHistCount = 0;
+            normHistCount = 0;
+
+            rescueRequests.forEach((r) => {
+                const s = (r.status || 'pending').toLowerCase();
+                if (s === 'pending' || s === 'declined') {
+                    return;
+                }
+
+                const isOngoing = ['assigned', 'accepted', 'acknowledged', 'in_progress'].includes(s);
+
+                // Apply historyStatusFilter
+                if (historyStatusFilter === 'ongoing' && !isOngoing) return;
+                if (historyStatusFilter === 'completed' && isOngoing) return;
+
+                const isCrit = (r.priority || '').toLowerCase() === 'critical' || 
+                               (r.urgency || '').toLowerCase() === 'critical' || 
+                               ['sos', 'medical', 'pregnancy', 'critical', 'rescue'].includes((r.type || '').toLowerCase());
+
+                let infoText = r.details || '-';
+                if (infoText.length > 30) infoText = infoText.substring(0, 30) + '...';
+
+                let evidenceThumb = '-';
+                if (r.image_url) {
+                    const thumbUrl = r.image_url.startsWith('http') ? r.image_url : `http://${window.location.hostname || 'localhost'}:3001${r.image_url}`;
+                    evidenceThumb = `<img src="${thumbUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid ${isCrit ? '#ef4444' : 'var(--border)'};" onclick="event.stopPropagation(); window.open('${thumbUrl}', '_blank');">`;
+                }
+
+                let evidenceAudio = '-';
+                if (r.audio_url) {
+                    const audioUrl = r.audio_url.startsWith('http') ? r.audio_url : `http://${window.location.hostname || 'localhost'}:3001${r.audio_url}`;
+                    evidenceAudio = `<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 140px;">
+                        <audio controls style="width:130px; height:24px;" onclick="event.stopPropagation();">
+                            <source src="${audioUrl}" type="audio/wav">
+                            <source src="${audioUrl}" type="audio/mpeg">
+                            Your browser does not support audio.
+                        </audio>
+                        <a href="${audioUrl}" target="_blank" onclick="event.stopPropagation();" style="font-size:10px; font-weight:800; color:var(--primary); text-decoration:none;">📥 Download</a>
+                    </div>`;
+                }
+
+                let closureThumb = '-';
+                if (r.completion_image_url) {
+                    const closureUrl = r.completion_image_url.startsWith('http') ? r.completion_image_url : `http://${window.location.hostname || 'localhost'}:3001${r.completion_image_url}`;
+                    closureThumb = `<img src="${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('${closureUrl}', '_blank');">`;
+                }
+
+                let assignedTo = 'Unassigned';
+                if (r.assigned_officer_name) {
+                    assignedTo = `👤 ${r.assigned_officer_name}`;
+                } else if (r.assigned_group_name) {
+                    assignedTo = `👥 ${r.assigned_group_name}`;
+                } else if (r.assigned_user_id) {
+                    assignedTo = `Rescuer ${r.assigned_user_id}`;
+                } else if (r.assigned_group_id) {
+                    assignedTo = `Group ${r.assigned_group_id}`;
+                }
+
+                const displayId = `REQ-${r.id}`;
+                const formattedReqTime = formatLocalTime(r.created_at);
+                const formattedCmdTime = r.updated_at ? formatLocalTime(r.updated_at) : formattedReqTime;
+
+                // Let's link child/grouped tasks to their active command IDs for Close/Reassign actions
+                let actionBtnId = displayId;
+                let activeCmdForReq = cmds.find(c => {
+                    if (c.rescueReqId && c.rescueReqId.toString() === r.id.toString()) return true;
+                    if (c.requestIds && c.requestIds.some(id => id.toString() === r.id.toString())) return true;
+                    return false;
+                });
+                if (activeCmdForReq) {
+                    actionBtnId = activeCmdForReq.id;
+                }
+
+                let historyRowHtml = `<tr onclick="selectTask('${displayId}')" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                     <td style="font-weight: 800; color: var(--text-muted);">{SNO}</td>
-                    <td style="font-weight:700;">${c.id}</td>
-                    <td>${c.desc}</td>
+                    <td style="font-weight:700;">${displayId}</td>
+                    <td>${(r.type || 'Request').toUpperCase()} TASK</td>
                     <td style="font-size:11px; color:var(--text-muted);">${infoText}</td>
                     <td>${evidenceThumb}</td>
                     <td>${evidenceAudio}</td>
                     <td>
-                        <span class="tag ${getTagForType(c.type)}">${(c.type || 'N/A').toUpperCase()}</span>
+                        <span class="tag ${getTagForType(r.type)}">${(r.type || 'N/A').toUpperCase()}</span>
                     </td>
-                    <td>${c.zone}</td>
-                    <td>${c.team}</td>
-                    <td style="color:var(--text-muted); font-size: 12px;">${c.reqTime || c.time}</td>
-                    <td style="color:var(--text-muted); font-size: 12px;">${c.cmdTime || c.time}</td>
-                    <td><span class="tag ${getTagForStatus(c.status)}">${c.status}</span></td>
+                    <td>${r.sector || 'N/A'}</td>
+                    <td>${assignedTo}</td>
+                    <td style="color:var(--text-muted); font-size: 12px;">${formattedReqTime}</td>
+                    <td style="color:var(--text-muted); font-size: 12px;">${formattedCmdTime}</td>
+                    <td><span class="tag ${getTagForStatus(r.status)}">${r.status}</span></td>
                     <td>${closureThumb}</td>
                     <td>
                         <div style="display:flex; gap:4px;">
-                            ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ Close</button>` : ''}
-                            ${isReassignable ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 Re-Assign</button>` : ''}
-                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); selectTask('${c.id}')">👁️ View</button>
+                            ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${actionBtnId}')">✅ Close</button>` : ''}
+                            ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('${actionBtnId}')">🔄 Re-Assign</button>` : ''}
+                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); selectTask('${displayId}')">👁️ View</button>
                         </div>
                     </td>
                 </tr>`;
 
-                if (historyStatusFilter === 'all') {
-                    if (c.type === 'group') return; // Dedicated list
-                    if (isCrit) {
-                        critHistCount++;
-                        histCriticalHtml += historyRow.replace('{SNO}', String(critHistCount).padStart(2, '0'));
-                    } else {
-                        normHistCount++;
-                        histNormalHtml += historyRow.replace('{SNO}', String(normHistCount).padStart(2, '0'));
-                    }
-                } else if (historyStatusFilter === 'ongoing') {
-                    if (isOngoing) {
-                        if (c.type === 'group') return; // Dedicated list
-                        if (isCrit) {
-                            critHistCount++;
-                            histCriticalHtml += historyRow.replace('{SNO}', String(critHistCount).padStart(2, '0'));
-                        } else {
-                            normHistCount++;
-                            histNormalHtml += historyRow.replace('{SNO}', String(normHistCount).padStart(2, '0'));
-                        }
-                    }
-                } else if (historyStatusFilter === 'completed') {
-                    if (!isOngoing) {
-                        if (c.type === 'group') return; // Dedicated list
-                        if (isCrit) {
-                            critHistCount++;
-                            histCriticalHtml += historyRow.replace('{SNO}', String(critHistCount).padStart(2, '0'));
-                        } else {
-                            normHistCount++;
-                            histNormalHtml += historyRow.replace('{SNO}', String(normHistCount).padStart(2, '0'));
-                        }
-                    }
+                if (isCrit) {
+                    critHistCount++;
+                    histCriticalHtml += historyRowHtml.replace('{SNO}', String(critHistCount).padStart(2, '0'));
+                } else {
+                    normHistCount++;
+                    histNormalHtml += historyRowHtml.replace('{SNO}', String(normHistCount).padStart(2, '0'));
                 }
             });
 
@@ -4668,7 +4802,14 @@
             document.getElementById('historyTbodyNormal').innerHTML = histNormalHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No normal history found</td></tr>';
 
             // Populate Group History
-            const histGroupHtml = cmds.filter(c => c.type === 'group').map((c, i) => {
+            const histGroupHtml = cmds.filter(c => {
+                if (c.type !== 'group') return false;
+                const s = (c.status || '').toLowerCase();
+                const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'assigned', 'acknowledged', 'declined', 'in_progress', 'active'].includes(s);
+                if (historyStatusFilter === 'ongoing' && !isOngoing) return false;
+                if (historyStatusFilter === 'completed' && isOngoing) return false;
+                return true;
+            }).map((c, i) => {
                 let groupDetails = '-';
                 if (c.details) {
                     try {
@@ -4678,6 +4819,16 @@
                         groupDetails = c.details;
                     }
                 }
+                
+                const s = (c.status || '').toLowerCase();
+                const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'assigned', 'acknowledged', 'declined', 'in_progress', 'active'].includes(s);
+                
+                let closureThumb = '-';
+                if (c.completion_image_url) {
+                    const closureUrl = c.completion_image_url.startsWith('http') ? c.completion_image_url : `http://${window.location.hostname || 'localhost'}:3001${c.completion_image_url}`;
+                    closureThumb = `<img src="${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('${closureUrl}', '_blank');">`;
+                }
+
                 return `
                 <tr onclick="selectTask('${c.id}')" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                     <td style="font-weight: 800; color: var(--text-muted);">${String(i + 1).padStart(2, '0')}</td>
@@ -4692,10 +4843,10 @@
                     <td style="color:var(--text-muted); font-size: 11px;">-</td>
                     <td style="color:var(--text-muted); font-size: 11px;">${c.time}</td>
                     <td><span class="tag ${getTagForStatus(c.status)}">${c.status}</span></td>
-                    <td>-</td>
+                    <td>${closureThumb}</td>
                     <td style="display:flex; gap:6px;">
-                        <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ CLOSE</button>
-                        <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 RE-ASSIGN</button>
+                        ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ CLOSE</button>` : ''}
+                        ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('${c.id}')">🔄 RE-ASSIGN</button>` : ''}
                         <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); selectTask('${c.id}')">👁️ VIEW</button>
                     </td>
                 </tr>
@@ -5339,6 +5490,29 @@
                 updateNotifBadges();
                 if (typeof updateMgmtPage === 'function') updateMgmtPage();
                 if (typeof updateTacticalMap === 'function') updateTacticalMap();
+
+                // Auto-restore grouping panels/modals if they were open before reload
+                try {
+                    const cachedSelectedIdsStr = sessionStorage.getItem('rescue_bulkSelectedIds');
+                    if (cachedSelectedIdsStr) {
+                        try {
+                            window.bulkSelectedIds = JSON.parse(cachedSelectedIdsStr);
+                        } catch(e) {}
+                    }
+                    const isBulkActive = document.getElementById('bulkGroupName') !== null;
+                    if (!isBulkActive && sessionStorage.getItem('rescue_bulkGroupPanelOpen') === 'true' && window.bulkSelectedIds && window.bulkSelectedIds.length >= 2) {
+                        openBulkGroupView();
+                    }
+
+                    const isModalOpen = document.getElementById('groupingModal') && document.getElementById('groupingModal').style.display === 'flex';
+                    const cachedModalOpen = sessionStorage.getItem('rescue_groupingModalOpen') === 'true';
+                    const cachedModalType = sessionStorage.getItem('rescue_groupingModalType');
+                    if (!isModalOpen && cachedModalOpen && cachedModalType) {
+                        openGroupingModal(cachedModalType);
+                    }
+                } catch (err) {
+                    console.error("Error auto-restoring grouping views:", err);
+                }
             } catch (e) {
                 console.error("Error fetching rescue requests", e);
             }
@@ -5850,6 +6024,8 @@
                         time: formatLocalTime(c.created_at),
                         status: (c.status || 'pending').charAt(0).toUpperCase() + (c.status || 'pending').slice(1),
                         rescueReqId: payload.rescue_req_id || c.requester_db_id || null,
+                        requestIds: payload.request_ids || [],
+                        payload: payload,
                         requesterName: c.requester_name || payload.requester_name || null,
                         requesterPhone: c.requester_phone || payload.requester_phone || null,
                         requesterType: c.requester_type || payload.type || null,
@@ -6546,7 +6722,10 @@
             // Set periodic refreshes
             // Auto-refresh is now handled by startAutoRefresh(interval) triggered by fetchRefreshSetting()
 
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
+
+            // Register grouping cached storage input listeners
+            try { setupGroupingCacheListeners(); } catch (e) { console.error("Cache listeners error", e); }
 
             // Initial fetch which also triggers session restoration
             fetchOperations();
@@ -6755,20 +6934,124 @@
             }
         }
 
+        function setupGroupingCacheListeners() {
+            const nameInput = document.getElementById('newGroupingName');
+            if (nameInput) {
+                nameInput.addEventListener('input', (e) => {
+                    sessionStorage.setItem('rescue_newGroupingName', e.target.value);
+                });
+            }
+
+            const typeSelect = document.getElementById('groupingTargetType');
+            if (typeSelect) {
+                typeSelect.addEventListener('change', (e) => {
+                    sessionStorage.setItem('rescue_groupingTargetType', e.target.value);
+                });
+            }
+
+            const personSelect = document.getElementById('groupingPersonSelect');
+            if (personSelect) {
+                personSelect.addEventListener('change', (e) => {
+                    sessionStorage.setItem('rescue_groupingPersonSelect', e.target.value);
+                });
+            }
+
+            const teamSelect = document.getElementById('groupingTeamSelect');
+            if (teamSelect) {
+                teamSelect.addEventListener('change', (e) => {
+                    sessionStorage.setItem('rescue_groupingTeamSelect', e.target.value);
+                });
+            }
+        }
+
+        function clearGroupingCaches() {
+            // Bulk group caches
+            sessionStorage.removeItem('rescue_bulkGroupName');
+            sessionStorage.removeItem('rescue_currentBulkAssignType');
+            sessionStorage.removeItem('rescue_bulkGroupSelect');
+            sessionStorage.removeItem('rescue_bulkIndivSelect');
+            sessionStorage.removeItem('rescue_bulkSelectedIds');
+            sessionStorage.removeItem('rescue_bulkGroupPanelOpen');
+            window.bulkSelectedIds = [];
+
+            // Modal group caches
+            sessionStorage.removeItem('rescue_newGroupingName');
+            sessionStorage.removeItem('rescue_groupingTargetType');
+            sessionStorage.removeItem('rescue_groupingPersonSelect');
+            sessionStorage.removeItem('rescue_groupingTeamSelect');
+            sessionStorage.removeItem('rescue_groupingModalOpen');
+            sessionStorage.removeItem('rescue_groupingModalType');
+            sessionStorage.removeItem('rescue_modalSelectedIds');
+
+            // Clear fields if they exist in the DOM
+            const bulkName = document.getElementById('bulkGroupName');
+            if (bulkName) bulkName.value = '';
+            const bulkGroup = document.getElementById('bulkGroupSelect');
+            if (bulkGroup) bulkGroup.value = '';
+            const bulkIndiv = document.getElementById('bulkIndivSelect');
+            if (bulkIndiv) bulkIndiv.value = '';
+
+            const newGroupingName = document.getElementById('newGroupingName');
+            if (newGroupingName) newGroupingName.value = '';
+            const groupingPersonSelect = document.getElementById('groupingPersonSelect');
+            if (groupingPersonSelect) groupingPersonSelect.value = '';
+            const groupingTeamSelect = document.getElementById('groupingTeamSelect');
+            if (groupingTeamSelect) groupingTeamSelect.value = '';
+
+            // Reset checkboxes
+            document.querySelectorAll('.mgmt-select-checkbox').forEach(cb => cb.checked = false);
+            updateMgmtSelection();
+
+            // Clear mgmtDetailPanel if the bulk grouping UI was open inside it
+            const detailPanel = document.getElementById('mgmtDetailPanel');
+            if (detailPanel && detailPanel.querySelector('#bulkGroupName')) {
+                detailPanel.innerHTML = `
+                    <div style="flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-muted); flex-direction:column; gap:16px; padding:40px; text-align:center;">
+                        <i data-lucide="info" style="width:48px; height:48px; opacity:0.2;"></i>
+                        <p style="font-weight:600;">Select a mission from the triage columns to view tactical coordinates and requester profile.</p>
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
         function toggleGroupingAssignType() {
             const type = document.getElementById('groupingTargetType').value;
             document.getElementById('groupingIndivContainer').style.display = type === 'individual' ? 'block' : 'none';
             document.getElementById('groupingGroupContainer').style.display = type === 'group' ? 'block' : 'none';
         }
 
-        function openGroupingModal(type) {
+        async function openGroupingModal(type) {
+            try {
+                sessionStorage.setItem('rescue_groupingModalOpen', 'true');
+                sessionStorage.setItem('rescue_groupingModalType', type);
+            } catch(e) {}
+
             const title = document.getElementById('groupingModalTitle');
             if (title) title.innerText = type === 'sos' ? 'Group SOS Calls' : 'Group Supply Requests';
 
             // Pre-populate dropdowns
-            populateAssignDropdowns();
-            document.getElementById('groupingTargetType').value = 'individual';
+            await populateAssignDropdowns();
+
+            // Restore from Cache
+            const cachedName = sessionStorage.getItem('rescue_newGroupingName') || '';
+            const cachedType = sessionStorage.getItem('rescue_groupingTargetType') || 'individual';
+            const cachedPerson = sessionStorage.getItem('rescue_groupingPersonSelect') || '';
+            const cachedTeam = sessionStorage.getItem('rescue_groupingTeamSelect') || '';
+
+            const newGroupingNameEl = document.getElementById('newGroupingName');
+            if (newGroupingNameEl) newGroupingNameEl.value = cachedName;
+            
+            const targetTypeEl = document.getElementById('groupingTargetType');
+            if (targetTypeEl) targetTypeEl.value = cachedType;
+            
             toggleGroupingAssignType();
+
+            const personSelectEl = document.getElementById('groupingPersonSelect');
+            if (personSelectEl && cachedPerson) personSelectEl.value = cachedPerson;
+            
+            const teamSelectEl = document.getElementById('groupingTeamSelect');
+            if (teamSelectEl && cachedTeam) teamSelectEl.value = cachedTeam;
 
             const listArea = document.getElementById('groupingListArea');
             if (!listArea) return;
@@ -6891,17 +7174,41 @@
                 });
             }
 
-            document.getElementById('newGroupingName').value = '';
             openModal('groupingModal');
             initGroupingMap();
-            selectAllGrouping(true); // Automatically select all so the map popup is immediately populated
-            lucide.createIcons();
+            
+            // Restore checkbox state if cached, otherwise select all as default
+            const cachedSelectedIdsStr = sessionStorage.getItem('rescue_modalSelectedIds');
+            if (cachedSelectedIdsStr) {
+                try {
+                    const cachedSelectedIds = JSON.parse(cachedSelectedIdsStr);
+                    document.querySelectorAll('.group-checkbox').forEach(cb => {
+                        const id = cb.getAttribute('data-id');
+                        cb.checked = cachedSelectedIds.includes(id);
+                    });
+                    updateGroupingCount();
+                } catch(e) {
+                    selectAllGrouping(true);
+                }
+            } else {
+                selectAllGrouping(true);
+            }
+
+            if (window.lucide) lucide.createIcons();
         }
 
         function updateGroupingCount() {
-            const count = document.querySelectorAll('.group-checkbox:checked').length;
+            const checkedBoxes = document.querySelectorAll('.group-checkbox:checked');
+            const count = checkedBoxes.length;
             const el = document.getElementById('groupingSelectionCount');
             if (el) el.innerText = `${count} Requests Selected`;
+
+            // Save active selection dynamically to sessionStorage
+            const selectedIds = Array.from(checkedBoxes).map(cb => cb.getAttribute('data-id'));
+            try {
+                sessionStorage.setItem('rescue_modalSelectedIds', JSON.stringify(selectedIds));
+            } catch(e) {}
+
             updateGroupingMap();
         }
 
@@ -7010,6 +7317,11 @@
             } else {
                 showAdminToast(`Tactical Group "${name}" created (Unassigned).`);
             }
+
+            // Clear modal cache on successful dispatch
+            try {
+                clearGroupingCaches();
+            } catch (err) { }
 
             closeModal('groupingModal');
 
@@ -7157,6 +7469,9 @@
             const activeGroupCount = activeGroups.length;
             if (grpBadge) grpBadge.innerText = activeGroupCount;
 
+            // Re-sync checkboxes and Group & Assign button state
+            updateMgmtSelection();
+
             lucide.createIcons();
         }
 
@@ -7177,9 +7492,6 @@
                     const cb = div.querySelector('.mgmt-select-checkbox');
                     cb.checked = !cb.checked;
                     updateMgmtSelection();
-                    // Don't fully refresh openBulkGroupView to avoid losing input data
-                    // Just update the list if needed or keep as is.
-                    // For now, we'll just update the header count.
                 } else {
                     openMgmtDetail(data.id, isGroup);
                 }
@@ -7188,9 +7500,11 @@
             const icon = isGroup ? 'layers' : (data.type === 'SOS' || data.type === 'medical' ? 'radio' : 'package');
             const color = isGroup ? 'var(--special)' : ((data.priority && data.priority.toLowerCase() === 'critical') ? 'var(--critical)' : 'var(--accent)');
 
+            const isChecked = (window.bulkSelectedIds && window.bulkSelectedIds.includes(data.id.toString())) ? 'checked' : '';
+
             div.innerHTML = `
                 <div onclick="event.stopPropagation();" style="display:flex; align-items:center;">
-                    <input type="checkbox" class="mgmt-select-checkbox" data-id="${data.id}" data-is-group="${isGroup}" onchange="updateMgmtSelection()" style="width:16px; height:16px; cursor:pointer; accent-color:var(--accent);">
+                    <input type="checkbox" class="mgmt-select-checkbox" data-id="${data.id}" data-is-group="${isGroup}" ${isChecked} onchange="updateMgmtSelection()" style="width:16px; height:16px; cursor:pointer; accent-color:var(--accent);">
                 </div>
                 <div class="notif-content" style="flex:1;">
                     <div class="notif-title" style="font-size:14px; font-weight:900; color:var(--primary); line-height:1.2;">${isGroup ? data.name : (data.serial_number || data.id)}</div>
@@ -7205,34 +7519,63 @@
 
         function updateMgmtSelection() {
             const selected = document.querySelectorAll('.mgmt-select-checkbox:checked');
+            const selectedIds = Array.from(selected).map(cb => cb.dataset.id);
+            window.bulkSelectedIds = selectedIds;
+            try {
+                sessionStorage.setItem('rescue_bulkSelectedIds', JSON.stringify(selectedIds));
+            } catch (e) { }
+
             const btn = document.getElementById('bulkMgmtAssignBtn');
             if (btn) {
                 btn.disabled = selected.length < 2;
                 btn.innerHTML = `<i data-lucide="users" style="width:14px; margin-right:6px;"></i> Group & Assign (${selected.length})`;
                 lucide.createIcons();
             }
+
+            // Dynamically update the selected list in the side panel if open
+            const batchCont = document.getElementById('bulkSelectedBatchList');
+            if (batchCont) {
+                batchCont.innerHTML = selectedIds.map(id => {
+                    const req = rescueRequests.find(r => r.id.toString() === id.toString());
+                    return req ? `
+                        <div style="padding:14px; background:#f8fafc; border-radius:12px; display:flex; justify-content:space-between; align-items:center; border:1px solid #f1f5f9;">
+                            <div>
+                                <div style="font-weight:900; font-size:13px; color:var(--primary);">${(req.type || 'RESCUE').toUpperCase()} #${req.id}</div>
+                                <div style="font-size:11px; color:var(--text-muted); font-weight:600;">Sector: ${req.sector || 'N/A'}</div>
+                            </div>
+                            <div class="tag ${req.priority === 'Critical' ? 'tag-red' : 'tag-purple'}" style="font-size:9px;">${req.priority}</div>
+                        </div>
+                    ` : '';
+                }).join('');
+            }
+
+            // Dynamically update map inside bulk side panel if open
+            if (document.getElementById('bulkGroupMap')) {
+                initBulkMap(selectedIds);
+            }
         }
 
         let currentBulkAssignType = 'group';
         function setBulkAssignType(type) {
             currentBulkAssignType = type;
+            sessionStorage.setItem('rescue_currentBulkAssignType', type);
             const btnGrp = document.getElementById('bulkAssignBtnGroup');
             const btnInd = document.getElementById('bulkAssignBtnIndiv');
             const contGrp = document.getElementById('bulkGroupSelectCont');
             const contInd = document.getElementById('bulkIndivSelectCont');
 
             if (type === 'group') {
-                btnGrp.className = 'btn btn-primary';
-                btnInd.className = 'btn btn-outline';
-                contGrp.style.display = 'block';
-                contInd.style.display = 'none';
+                if (btnGrp) btnGrp.className = 'btn btn-primary';
+                if (btnInd) btnInd.className = 'btn btn-outline';
+                if (contGrp) contGrp.style.display = 'block';
+                if (contInd) contInd.style.display = 'none';
             } else {
-                btnGrp.className = 'btn btn-outline';
-                btnInd.className = 'btn btn-primary';
-                contGrp.style.display = 'none';
-                contInd.style.display = 'block';
+                if (btnGrp) btnGrp.className = 'btn btn-outline';
+                if (btnInd) btnInd.className = 'btn btn-primary';
+                if (contGrp) contGrp.style.display = 'none';
+                if (contInd) contInd.style.display = 'block';
             }
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
         }
 
         let bulkGroupMapInstance = null;
@@ -7240,8 +7583,17 @@
         window.customBulkPolygon = null;
 
         async function openBulkGroupView() {
-            const selectedIds = Array.from(document.querySelectorAll('.mgmt-select-checkbox:checked')).map(cb => cb.dataset.id);
+            try {
+                sessionStorage.setItem('rescue_bulkGroupPanelOpen', 'true');
+            } catch(e) {}
+            const selectedIds = window.bulkSelectedIds && window.bulkSelectedIds.length > 0
+                ? window.bulkSelectedIds
+                : Array.from(document.querySelectorAll('.mgmt-select-checkbox:checked')).map(cb => cb.dataset.id);
             window.bulkSelectedIds = selectedIds;
+            try {
+                sessionStorage.setItem('rescue_bulkSelectedIds', JSON.stringify(selectedIds));
+            } catch(e) {}
+
             const panel = document.getElementById('mgmtDetailPanel');
             if (!panel) return;
 
@@ -7293,7 +7645,7 @@
                     </div>
                     
                     <div class="section-title" style="font-size:12px;"><i data-lucide="list" style="width:14px;"></i> Selected Missions Batch</div>
-                    <div style="display:flex; flex-direction:column; gap:10px;">
+                    <div id="bulkSelectedBatchList" style="display:flex; flex-direction:column; gap:10px;">
                         ${selectedIds.map(id => {
                 const req = rescueRequests.find(r => r.id.toString() === id.toString());
                 return req ? `
@@ -7318,6 +7670,42 @@
 
             // Initialize Map with 100ms delay to ensure container is rendered
             setTimeout(() => initBulkMap(selectedIds), 100);
+
+            // Restore Cache & Bind Listeners
+            try {
+                const cachedName = sessionStorage.getItem('rescue_bulkGroupName') || '';
+                const cachedType = sessionStorage.getItem('rescue_currentBulkAssignType') || 'group';
+                const cachedGroup = sessionStorage.getItem('rescue_bulkGroupSelect') || '';
+                const cachedIndiv = sessionStorage.getItem('rescue_bulkIndivSelect') || '';
+
+                const nameInput = document.getElementById('bulkGroupName');
+                if (nameInput) {
+                    nameInput.value = cachedName;
+                    nameInput.addEventListener('input', (e) => {
+                        sessionStorage.setItem('rescue_bulkGroupName', e.target.value);
+                    });
+                }
+
+                setBulkAssignType(cachedType);
+
+                const groupSelect = document.getElementById('bulkGroupSelect');
+                if (groupSelect) {
+                    groupSelect.value = cachedGroup;
+                    groupSelect.addEventListener('change', (e) => {
+                        sessionStorage.setItem('rescue_bulkGroupSelect', e.target.value);
+                    });
+                }
+
+                const indivSelect = document.getElementById('bulkIndivSelect');
+                if (indivSelect) {
+                    indivSelect.value = cachedIndiv;
+                    indivSelect.addEventListener('change', (e) => {
+                        sessionStorage.setItem('rescue_bulkIndivSelect', e.target.value);
+                    });
+                }
+            } catch (err) {
+                console.error("Error restoring bulk group cache:", err);
+            }
         }
 
         function initBulkMap(selectedIds) {
@@ -7528,10 +7916,10 @@
                     refreshAllModules();
                 }, 500);
 
-                // Clear selections
-                window.bulkSelectedIds = null;
-                document.querySelectorAll('.mgmt-select-checkbox').forEach(cb => cb.checked = false);
-                updateMgmtSelection();
+                // Clear selections & Cache
+                try {
+                    clearGroupingCaches();
+                } catch (err) { console.error("Error running clearGroupingCaches", err); }
 
                 // Reset Detail Panel
                 document.getElementById('mgmtDetailPanel').innerHTML = `
@@ -7541,6 +7929,7 @@
                 </div>
             `;
                 lucide.createIcons();
+
                 refreshAllModules();
             } finally {
                 isConfirmingBulk = false;
@@ -7588,11 +7977,23 @@
         }
 
         function openMgmtDetail(id, isGroup) {
+            try {
+                sessionStorage.removeItem('rescue_bulkGroupPanelOpen');
+            } catch(e) {}
+
             const panel = document.getElementById('mgmtDetailPanel');
             if (!panel) return;
 
             const data = isGroup ? groupedTasks.find(g => g.id === id) : rescueRequests.find(r => r.id.toString() === id.toString());
             if (!data) return;
+
+            // Re-hydrate group requests with live data for full citizen details
+            if (isGroup && data.requests && data.requests.length > 0) {
+                data.requests = data.requests.map(r => {
+                    const fullReq = rescueRequests.find(rr => rr.id.toString() === r.id.toString());
+                    return fullReq ? fullReq : r;
+                });
+            }
 
             // Zoom map to the group border or individual request
             if (isGroup && groupPerimeters[id]) {
@@ -7851,25 +8252,6 @@
 
         function closeFromMgmt(id, isGroup) {
             if (isGroup) {
-                if (confirm("Are you sure you want to resolve and close this entire tactical group?")) {
-                    const idx = groupedTasks.findIndex(g => g.id === id);
-                    if (idx !== -1) {
-                        groupedTasks[idx].status = 'Closed';
-                        if (groupPerimeters[id]) map.removeLayer(groupPerimeters[id]);
-                        showAdminToast("Group Mission Successfully Resolved.");
-                        updateMgmtPage();
-                        updateNotifBadges();
-
-                        // Default view
-                        document.getElementById('mgmtDetailPanel').innerHTML = `
-                            <div style="flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-muted); flex-direction:column; gap:16px;">
-                                <i data-lucide="check-circle" style="width:48px; height:48px; color:var(--completed); opacity:0.2;"></i>
-                                <p style="font-weight:600;">Task Resolved. Select another notification.</p>
-                            </div>
-                        `;
-                        lucide.createIcons();
-                    }
-                }
                 closeTaskByAdmin(id);
             }
         }

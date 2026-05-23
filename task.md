@@ -1,21 +1,17 @@
-# Task Checklist
+# Task Checklist - Grouped Mission Coordinate & Routing Fix
 
-- [x] Fix Crew Assignment in Web Admin (`preview-web-admin.html`)
-  - [x] Modify `assignFromMgmt` to check if request/group is already assigned
-  - [x] Instantly open in-page `openReassignModal(cmdId)` without dashboard redirect
-  - [x] Prevent duplicate record creation inside database `/accept` endpoint
-- [x] Rename Button inside Public App (`public-sos-app/App.js`)
-  - [x] Rename category selection button `'General SOS'` to `'General Rescue'`
-  - [x] Ensure category selection persists correctly as normal priority rescue
-- [x] Remove Old APK
-  - [x] Locate and remove outdated `mobile-app/app-release.apk`
-- [x] Build Mobile App
-  - [x] Clean and compile release build using Adoptium JDK 17
-  - [x] Copy fresh production APK to `Output_APKs/public-sos-app-release.apk`
-- [x] Refine Notification Log View & Group Tasks Assignment (`preview-web-admin.html`)
-  - [x] Remove "ASSIGN TO CREW" and "RESOLVE & CLOSE" buttons when viewing individual SOS details
-  - [x] Fix "CONFIRM & INITIALIZE GROUP MISSION" button assignment target selection query selector crash
-  - [x] Prevent crash by safely mapping and filtering selected missions
-- [x] Save & Push to GitHub
-  - [x] Commit changes locally with Git
-  - [x] Push current branch to remote GitHub repository
+- [ ] Implement Web Admin Dashboard Fixes (`preview-web-admin.html`)
+  - [ ] Implement persistent selection state (`window.bulkSelectedIds`) when opening group creation pane
+  - [ ] Update `confirmBulkGrouping()` to read from persistent selection state
+  - [ ] Add safety validation guard for empty selections in `confirmBulkGrouping()`
+  - [ ] Enrich `command_payload` in `confirmBulkGrouping()` with full `missions` coordinate array
+  - [ ] Enrich `command_payload` in `confirmTaskGrouping()` with full `missions` coordinate array
+- [ ] Implement Mobile Rescuer App Fixes (`preview-rescuer.html`)
+  - [ ] Update `startMission()` validation to resolve empty center coordinates using the first mission's coordinates
+- [ ] Production Compilation & Deployment
+  - [ ] Sync web changes to bundles: run `python generate_html_str.py`
+  - [ ] Compile the React Native Android project: run Gradle build in `rescuer-app/android`
+  - [ ] Copy the compiled APK to `Output_APKs/`
+- [ ] Verification & Testing
+  - [ ] Deploy test server and verify new database dispatches
+  - [ ] Manually verify map plots correctly in Mobile Rescuer App

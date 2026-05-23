@@ -1658,6 +1658,12 @@ app.post('/api/commands', async (req, res) => {
             await run(`UPDATE rescue_requests SET status = 'assigned', assigned_group_id = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, 
                 [group_id || null, target_user_id || null, ...ids]);
             
+            // Cancel any previous individual commands for these requests to prevent duplicates
+            for (const reqId of ids) {
+                await run(`UPDATE command_queue SET status = 'cancelled' WHERE command_payload LIKE ? AND status NOT IN ('completed', 'cancelled', 'declined')`, [`%"rescue_req_id":${reqId}%`]);
+                await run(`UPDATE command_queue SET status = 'cancelled' WHERE command_payload LIKE ? AND status NOT IN ('completed', 'cancelled', 'declined')`, [`%"rescue_req_id":"${reqId}"%`]);
+            }
+            
             // Notify clients to refresh
             broadcast('RESCUE_REQUESTS_UPDATED', { ids, status: 'assigned', group_id, target_user_id });
         } else if (payloadObj && payloadObj.rescue_req_id) {
@@ -1753,25 +1759,50 @@ app.put('/api/commands/:id/status', async (req, res) => {
         }
         cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
 
-        // Propagation: If this command is linked to a rescue_request, update that too
+        // Propagation: If this command is linked to rescue_requests (single or grouped), update them too
         try {
             const payload = typeof cmdData.command_payload === 'string' ? JSON.parse(cmdData.command_payload) : cmdData.command_payload;
-            if (payload && payload.rescue_req_id) {
-                if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
-                    if (compImageUrl) {
-                        await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, rescuer.id, payload.rescue_req_id]);
+            if (payload) {
+                // Case 1: Single rescue request
+                if (payload.rescue_req_id) {
+                    if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
+                        if (compImageUrl) {
+                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, rescuer.id, payload.rescue_req_id]);
+                        } else {
+                            await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, rescuer.id, payload.rescue_req_id]);
+                        }
                     } else {
-                        await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, rescuer.id, payload.rescue_req_id]);
+                        if (compImageUrl) {
+                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, payload.rescue_req_id]);
+                        } else {
+                            await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, payload.rescue_req_id]);
+                        }
                     }
-                } else {
-                    if (compImageUrl) {
-                        await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, payload.rescue_req_id]);
+                    const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [payload.rescue_req_id]);
+                    if (reqData) broadcast('RESCUE_REQUEST_UPDATE', reqData);
+                }
+                // Case 2: Grouped rescue requests
+                if (payload.request_ids && Array.isArray(payload.request_ids) && payload.request_ids.length > 0) {
+                    const ids = payload.request_ids;
+                    const placeholders = ids.map(() => '?').join(',');
+                    if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
+                        if (compImageUrl) {
+                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [finalStatus, compImageUrl, rescuer.id, ...ids]);
+                        } else {
+                            await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [finalStatus, rescuer.id, ...ids]);
+                        }
                     } else {
-                        await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, payload.rescue_req_id]);
+                        if (compImageUrl) {
+                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [finalStatus, compImageUrl, ...ids]);
+                        } else {
+                            await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [finalStatus, ...ids]);
+                        }
+                    }
+                    for (const id of ids) {
+                        const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [id]);
+                        if (reqData) broadcast('RESCUE_REQUEST_UPDATE', reqData);
                     }
                 }
-                const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [payload.rescue_req_id]);
-                broadcast('RESCUE_REQUEST_UPDATE', reqData);
             }
         } catch (e) { console.error("Propagation error", e); }
 

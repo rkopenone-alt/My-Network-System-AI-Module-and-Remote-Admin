@@ -1420,7 +1420,7 @@
                     historyData.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
 
                     // Filter: Show all active statuses (assigned = awaiting acceptance, accepted/ongoing = in progress)
-                    const activeData = historyData.filter(t => t.status && !['completed', 'resolved', 'inactive', 'declined'].includes(t.status.toLowerCase()));
+                    const activeData = historyData.filter(t => t.status && !['completed', 'resolved', 'inactive', 'declined', 'cancelled'].includes(t.status.toLowerCase()));
 
                     // Deduplicate identical tasks (Requests vs Commands)
                     const reqIdsInCmds = new Set();
@@ -1429,6 +1429,9 @@
                             try {
                                 const p = typeof t.command_payload === 'string' ? JSON.parse(t.command_payload) : t.command_payload;
                                 if (p.rescue_req_id) reqIdsInCmds.add(String(p.rescue_req_id));
+                                if (p.request_ids && Array.isArray(p.request_ids)) {
+                                    p.request_ids.forEach(id => reqIdsInCmds.add(String(id)));
+                                }
                             } catch (e) {}
                         }
                     });
@@ -2119,7 +2122,22 @@
 
                 try {
                     rawHistory.sort((a, b) => new Date(b.updated_at || b.created_at || b.time) - new Date(a.updated_at || a.created_at || a.time));
-                    this.allHistory = rawHistory;
+                    
+                    // Deduplicate identical tasks (Requests vs Commands) from history
+                    const reqIdsInCmds = new Set();
+                    rawHistory.forEach(t => {
+                        if (t.source === 'command' && t.command_payload) {
+                            try {
+                                const p = typeof t.command_payload === 'string' ? JSON.parse(t.command_payload) : t.command_payload;
+                                if (p.rescue_req_id) reqIdsInCmds.add(String(p.rescue_req_id));
+                                if (p.request_ids && Array.isArray(p.request_ids)) {
+                                    p.request_ids.forEach(id => reqIdsInCmds.add(String(id)));
+                                }
+                            } catch (e) {}
+                        }
+                    });
+                    const dedupedHistory = rawHistory.filter(t => !(t.source === 'request' && reqIdsInCmds.has(String(t.id))));
+                    this.allHistory = dedupedHistory;
                     this.renderHistory(this.allHistory);
                 } catch (err) {
                     console.error('Sorting or rendering history failed:', err);
