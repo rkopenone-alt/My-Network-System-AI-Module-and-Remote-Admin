@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const API_URL = 'http://192.168.1.4:3001/api';
 const WS_URL = 'ws://192.168.1.4:3001';
@@ -16,6 +17,51 @@ const { width } = Dimensions.get('window');
 
 const GlobalState = {
   sosLockedUntil: 0,
+};
+
+// Helper to compress image down to under 200KB on device
+const compressAndAttachImage = async (uri, callback) => {
+  try {
+    let manipResult = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1024 } }],
+      { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+    );
+    
+    let sizeBytes = Math.round(manipResult.base64.length * 0.75);
+    
+    if (sizeBytes > 200 * 1024) {
+      manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 800 } }],
+        { compress: 0.3, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      sizeBytes = Math.round(manipResult.base64.length * 0.75);
+    }
+    
+    if (sizeBytes > 200 * 1024) {
+      manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 640 } }],
+        { compress: 0.15, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      sizeBytes = Math.round(manipResult.base64.length * 0.75);
+    }
+    
+    if (sizeBytes > 200 * 1024) {
+      Alert.alert(
+        'Compression Warning',
+        `Even after compression, the image size is ${Math.round(sizeBytes / 1024)} KB, which exceeds the 200 KB limit. Please choose a simpler or smaller image.`
+      );
+      return;
+    }
+    
+    const base64Str = `data:image/jpeg;base64,${manipResult.base64}`;
+    callback(base64Str);
+  } catch (e) {
+    console.error('Image compression error:', e);
+    Alert.alert('Compression Error', 'Failed to compress the image. Please try again.');
+  }
 };
 
 const C = {
@@ -202,7 +248,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
   const handleCameraPress = () => {
     Alert.alert(
       "Image Capture",
-      "Choose an option",
+      "Choose an option (max 200 KB)",
       [
         { text: "Take Photo", onPress: async () => {
           try {
@@ -213,15 +259,12 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
             }
             let result = await ImagePicker.launchCameraAsync({
               mediaTypes: ['images'],
-              quality: 0.4,
-              base64: true
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
-              const asset = result.assets[0];
-              let mimeType = asset.mimeType || (asset.uri.endsWith('.png') ? 'image/png' : 'image/jpeg');
-              const base64Str = `data:${mimeType};base64,${asset.base64}`;
-              setImageBase64(base64Str);
-              Alert.alert("Success", "Photo captured and attached successfully!");
+              await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
+                setImageBase64(base64Str);
+                Alert.alert("Success", "Photo captured and attached successfully!");
+              });
             }
           } catch (e) {
             console.error(e);
@@ -237,15 +280,12 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
             }
             let result = await ImagePicker.launchImageLibraryAsync({
               mediaTypes: ['images'],
-              quality: 0.4,
-              base64: true
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
-              const asset = result.assets[0];
-              let mimeType = asset.mimeType || (asset.uri.endsWith('.png') ? 'image/png' : 'image/jpeg');
-              const base64Str = `data:${mimeType};base64,${asset.base64}`;
-              setImageBase64(base64Str);
-              Alert.alert("Success", "Photo selected and attached successfully!");
+              await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
+                setImageBase64(base64Str);
+                Alert.alert("Success", "Photo selected and attached successfully!");
+              });
             }
           } catch (e) {
             console.error(e);
@@ -260,7 +300,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
   const handleMicPress = () => {
     Alert.alert(
       "Audio Capture",
-      "Choose an option (max 10 sec, 200 KB)",
+      "Choose an option (max 10 sec, 100 KB)",
       [
         { text: "Record Audio", onPress: async () => {
           try {
@@ -283,12 +323,12 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
                   try {
                     const resp = await fetch(uri);
                     const blob = await resp.blob();
-                    if (blob.size > 200 * 1024) {
-                      Alert.alert('Audio Too Large', `File is ${Math.round(blob.size / 1024)} KB. Maximum allowed is 200 KB. Please record a shorter clip.`);
+                    if (blob.size > 100 * 1024) {
+                      Alert.alert('Audio Too Large', `File is ${Math.round(blob.size / 1024)} KB. Maximum allowed is 100 KB. Please record a shorter clip.`);
                       return;
                     }
                   } catch (_) { /* skip size check if blob fails */ }
-                  Alert.alert('Success', 'Audio recorded (≤10 sec, ≤200 KB)');
+                  Alert.alert('Success', 'Audio recorded (≤10 sec, ≤100 KB)');
                 } catch (e) { Alert.alert('Error', e.message); }
               }}
             ]);
@@ -299,8 +339,8 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
             let result = await DocumentPicker.getDocumentAsync({ type: 'audio/*' });
             if (!result.canceled && result.assets && result.assets.length > 0) {
               const asset = result.assets[0];
-              if (asset.size && asset.size > 200 * 1024) {
-                Alert.alert('Audio Too Large', `File is ${Math.round(asset.size / 1024)} KB. Maximum allowed is 200 KB.`);
+              if (asset.size && asset.size > 100 * 1024) {
+                Alert.alert('Audio Too Large', `File is ${Math.round(asset.size / 1024)} KB. Maximum allowed is 100 KB.`);
                 return;
               }
               Alert.alert('Success', 'Audio file attached successfully.');
@@ -959,19 +999,6 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
     };
   }, []);
 
-  // Helper: enforce 500 KB max, single image
-  const attachImageCritical = (asset, source) => {
-    const mimeType = asset.mimeType || (asset.uri.endsWith('.png') ? 'image/png' : 'image/jpeg');
-    const base64Str = `data:${mimeType};base64,${asset.base64}`;
-    const sizeBytes = Math.round(asset.base64.length * 0.75);
-    if (sizeBytes > 500 * 1024) {
-      Alert.alert('Image Too Large', `Image is ${Math.round(sizeBytes / 1024)} KB. Maximum allowed is 500 KB.`);
-      return;
-    }
-    setImageBase64(base64Str);
-    Alert.alert('Success', source === 'camera' ? 'Photo captured and attached!' : 'Photo selected and attached!');
-  };
-
   const handleCameraPress = () => {
     if (imageBase64) {
       Alert.alert('Image Already Attached', 'Only one photo is allowed. Remove the current image first?', [
@@ -982,7 +1009,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
     }
     Alert.alert(
       "Image Capture",
-      "Choose an option (max 1 photo, 500 KB)",
+      "Choose an option (max 1 photo, 200 KB)",
       [
         { text: "Take Photo", onPress: async () => {
           try {
@@ -993,11 +1020,12 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
             }
             let result = await ImagePicker.launchCameraAsync({
               mediaTypes: ['images'],
-              quality: 0.5,
-              base64: true
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
-              attachImageCritical(result.assets[0], 'camera');
+              await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
+                setImageBase64(base64Str);
+                Alert.alert('Success', 'Photo captured and attached!');
+              });
             }
           } catch (e) {
             console.error(e);
@@ -1013,11 +1041,12 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
             }
             let result = await ImagePicker.launchImageLibraryAsync({
               mediaTypes: ['images'],
-              quality: 0.5,
-              base64: true
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
-              attachImageCritical(result.assets[0], 'gallery');
+              await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
+                setImageBase64(base64Str);
+                Alert.alert('Success', 'Photo selected and attached!');
+              });
             }
           } catch (e) {
             console.error(e);

@@ -1,17 +1,21 @@
-# Task Checklist - Grouped Mission Coordinate & Routing Fix
+# Tasks - Media Upload Fixes & Compression
 
-- [ ] Implement Web Admin Dashboard Fixes (`preview-web-admin.html`)
-  - [ ] Implement persistent selection state (`window.bulkSelectedIds`) when opening group creation pane
-  - [ ] Update `confirmBulkGrouping()` to read from persistent selection state
-  - [ ] Add safety validation guard for empty selections in `confirmBulkGrouping()`
-  - [ ] Enrich `command_payload` in `confirmBulkGrouping()` with full `missions` coordinate array
-  - [ ] Enrich `command_payload` in `confirmTaskGrouping()` with full `missions` coordinate array
-- [ ] Implement Mobile Rescuer App Fixes (`preview-rescuer.html`)
-  - [ ] Update `startMission()` validation to resolve empty center coordinates using the first mission's coordinates
-- [ ] Production Compilation & Deployment
-  - [ ] Sync web changes to bundles: run `python generate_html_str.py`
-  - [ ] Compile the React Native Android project: run Gradle build in `rescuer-app/android`
-  - [ ] Copy the compiled APK to `Output_APKs/`
-- [ ] Verification & Testing
-  - [ ] Deploy test server and verify new database dispatches
-  - [ ] Manually verify map plots correctly in Mobile Rescuer App
+- [x] Integrate local image compression inside native applications using `expo-image-manipulator`
+  - [x] Implement `compressAndAttachImage` helper in `public-sos-app/App.js` (max 200KB)
+  - [x] Apply compression to RequirementsScreen camera/gallery in `public-sos-app`
+  - [x] Apply compression to CriticalSOSScreen camera/gallery in `public-sos-app`
+  - [x] Enforce max 100KB limit on voice recordings in `public-sos-app`
+  - [x] Implement image compression in `rescuer-app/App.js` (max 200KB, single image)
+- [x] Implement client-side HTML canvas-based compression in `preview-mobile-app.html`
+  - [x] Add `_compressImage` method to `preview-mobile-app.html`
+  - [x] Update `handleSOSImage` and `handlePhoto` to compress images to max 200KB
+- [x] Fix real-time Admin Reply message routing in backend
+  - [x] Replace broken broadcast logic in `system-backend/server.js` with direct `socketManager.send`
+  - [x] Save reply messages as standard row in database `notifications` table for `/api/sync` support
+- [x] Align Web Admin media viewing
+  - [x] Add `formatMediaUrl` helper to `preview-web-admin.html`
+  - [x] Apply `formatMediaUrl` to all image elements
+  - [x] Fix potential null-pointer crash on evidence container click
+- [x] Compile and generate native APK
+  - [x] Run Gradle compiler `assembleRelease` inside `public-sos-app/android`
+  - [x] Place generated APK in workspace root (under `Output_APKs/`)

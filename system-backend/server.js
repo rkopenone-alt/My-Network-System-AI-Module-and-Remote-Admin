@@ -113,12 +113,18 @@ app.post('/api/messages/send', async (req, res) => {
     const { deviceId, message } = req.body;
     if (!deviceId || !message) return res.status(400).json({ error: 'Missing data' });
     
-    broadcast({
-        type: 'ADMIN_MESSAGE',
-        targetDeviceId: deviceId,
-        data: { message, timestamp: new Date().toISOString() }
-    });
-    res.json({ success: true });
+    // 1. Send via WebSocket (for live web clients)
+    const sent = socketManager.send(deviceId, 'ADMIN_MESSAGE', { message, timestamp: new Date().toISOString() });
+    
+    // 2. Insert into notifications table (for native apps polling via /api/sync)
+    try {
+        await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
+            [deviceId, 'admin_message', message, 0]);
+    } catch (e) {
+        console.error("Failed to insert message notification:", e);
+    }
+    
+    res.json({ success: true, queued: !sent });
 });
 
 

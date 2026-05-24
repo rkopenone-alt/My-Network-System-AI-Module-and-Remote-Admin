@@ -1431,7 +1431,7 @@
                                     EVIDENCE:</b>
                                 <div id="tdEvidenceImageContainer"
                                     style="width:100%; height:160px; background:#dbeafe; border-radius:6px; overflow:hidden; margin-bottom:8px; display:flex; align-items:center; justify-content:center; border:1px solid #bfdbfe; cursor:pointer;"
-                                    onclick="window.open(this.querySelector('img').src)">
+                                    onclick="const img = this.querySelector('img'); if (img) window.open(img.src);">
                                     <span style="color:#1d4ed8; font-size:10px;">No Image Provided</span>
                                 </div>
                                 <div id="tdEvidenceAudioContainer"
@@ -2994,6 +2994,13 @@
         const SERVER_IP = window.location.hostname || 'localhost'; // Your PC's current IP address
         const API_BASE = `http://${window.location.hostname || 'localhost'}:3001/api`;
 
+        function formatMediaUrl(url) {
+            if (!url) return '';
+            if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+            const base = `http://${window.location.hostname || 'localhost'}:3001`;
+            return `${base}${url}`;
+        }
+
         // Timezone conversion helpers
         function formatLocalTime(dbTimeStr) {
             if (!dbTimeStr) return '--:--';
@@ -4435,7 +4442,7 @@
                 const downloadBtn = document.getElementById('btnDownloadEvidence');
 
                 if (cmd.requesterImageUrl) {
-                    const fullUrl = `http://${window.location.hostname || 'localhost'}:3001${cmd.requesterImageUrl}`;
+                    const fullUrl = formatMediaUrl(cmd.requesterImageUrl);
                     imgContainer.innerHTML = `<img src="${fullUrl}" style="width:100%; height:100%; object-fit:cover;">`;
                     downloadBtn.style.display = 'block';
                     window.downloadEvidence = () => {
@@ -4454,7 +4461,7 @@
                 const downloadAudioLink = document.getElementById('btnDownloadAudio');
                 if (audioContainer && audioPlayer && downloadAudioLink) {
                     if (cmd.requesterAudioUrl) {
-                        const audioFullUrl = `http://${window.location.hostname || 'localhost'}:3001${cmd.requesterAudioUrl}`;
+                        const audioFullUrl = formatMediaUrl(cmd.requesterAudioUrl);
                         audioPlayer.src = audioFullUrl;
                         downloadAudioLink.href = audioFullUrl;
                         downloadAudioLink.download = `Audio_REQ_${cmd.rescueReqId || 'N_A'}.wav`;
@@ -4606,13 +4613,13 @@
 
                 let evidenceThumb = '-';
                 if (c.requesterImageUrl) {
-                    const thumbUrl = c.requesterImageUrl.startsWith('http') ? c.requesterImageUrl : `http://${window.location.hostname || 'localhost'}:3001${c.requesterImageUrl}`;
+                    const thumbUrl = formatMediaUrl(c.requesterImageUrl);
                     evidenceThumb = `<img src="${thumbUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid ${isCrit ? '#ef4444' : 'var(--border)'};" onclick="event.stopPropagation(); window.open('${thumbUrl}', '_blank');">`;
                 }
 
                 let evidenceAudio = '-';
                 if (c.requesterAudioUrl) {
-                    const audioUrl = c.requesterAudioUrl.startsWith('http') ? c.requesterAudioUrl : `http://${window.location.hostname || 'localhost'}:3001${c.requesterAudioUrl}`;
+                    const audioUrl = formatMediaUrl(c.requesterAudioUrl);
                     evidenceAudio = `<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 140px;">
                         <audio controls style="width:130px; height:24px;" onclick="event.stopPropagation();">
                             <source src="${audioUrl}" type="audio/wav">
@@ -4625,7 +4632,7 @@
 
                 let closureThumb = '-';
                 if (c.completion_image_url) {
-                    const closureUrl = c.completion_image_url.startsWith('http') ? c.completion_image_url : `http://${window.location.hostname || 'localhost'}:3001${c.completion_image_url}`;
+                    const closureUrl = formatMediaUrl(c.completion_image_url);
                     closureThumb = `<img src="${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('${closureUrl}', '_blank');">`;
                 }
 
@@ -4701,13 +4708,13 @@
 
                 let evidenceThumb = '-';
                 if (r.image_url) {
-                    const thumbUrl = r.image_url.startsWith('http') ? r.image_url : `http://${window.location.hostname || 'localhost'}:3001${r.image_url}`;
+                    const thumbUrl = formatMediaUrl(r.image_url);
                     evidenceThumb = `<img src="${thumbUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid ${isCrit ? '#ef4444' : 'var(--border)'};" onclick="event.stopPropagation(); window.open('${thumbUrl}', '_blank');">`;
                 }
 
                 let evidenceAudio = '-';
                 if (r.audio_url) {
-                    const audioUrl = r.audio_url.startsWith('http') ? r.audio_url : `http://${window.location.hostname || 'localhost'}:3001${r.audio_url}`;
+                    const audioUrl = formatMediaUrl(r.audio_url);
                     evidenceAudio = `<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 140px;">
                         <audio controls style="width:130px; height:24px;" onclick="event.stopPropagation();">
                             <source src="${audioUrl}" type="audio/wav">
@@ -4720,7 +4727,7 @@
 
                 let closureThumb = '-';
                 if (r.completion_image_url) {
-                    const closureUrl = r.completion_image_url.startsWith('http') ? r.completion_image_url : `http://${window.location.hostname || 'localhost'}:3001${r.completion_image_url}`;
+                    const closureUrl = formatMediaUrl(r.completion_image_url);
                     closureThumb = `<img src="${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('${closureUrl}', '_blank');">`;
                 }
 
@@ -4840,7 +4847,7 @@
                 
                 let closureThumb = '-';
                 if (c.completion_image_url) {
-                    const closureUrl = c.completion_image_url.startsWith('http') ? c.completion_image_url : `http://${window.location.hostname || 'localhost'}:3001${c.completion_image_url}`;
+                    const closureUrl = formatMediaUrl(c.completion_image_url);
                     closureThumb = `<img src="${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('${closureUrl}', '_blank');">`;
                 }
 
@@ -5638,7 +5645,7 @@
                                 <b>Priority:</b> <span style="color:${isCritical ? '#e11d48' : 'var(--text-muted)'}; font-weight:900;">${(req.priority || (isCritical ? 'CRITICAL' : 'NORMAL')).toUpperCase()}</span><br>
                                 <b>Urgency:</b> <span style="color:${req.urgency === 'critical' ? 'var(--critical)' : 'inherit'}; font-weight:700;">${req.urgency.toUpperCase()}</span>
                                 ${detailsHtml}
-                                ${req.image_url ? `<div style="margin-top:8px;"><img src="http://${window.location.hostname || 'localhost'}:3001${req.image_url}" style="width:60px; height:60px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>` : ''}
+                                ${req.image_url ? `<div style="margin-top:8px;"><img src="${formatMediaUrl(req.image_url)}" style="width:60px; height:60px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>` : ''}
                             </div>
                             <div class="actionable-actions">
                                 <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="openAssignModal('${req.id}', '${safeType}', '${safeSector}', '${req.urgency}', '${num}')">${assignBtnLabel}</button>

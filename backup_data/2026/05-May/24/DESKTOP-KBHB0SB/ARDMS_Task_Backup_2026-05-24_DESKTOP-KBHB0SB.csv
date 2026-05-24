@@ -1,0 +1,22 @@
+ARDMS SYSTEM BACKUP REPORT - DATE: 2026-05-24
+Device Hostname: , DESKTOP-KBHB0SB
+Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
+Generated At: , 24/5/2026, 10:37:54 am
+
+SECTION 1: RESCUE REQUESTS & TASKS
+Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
+33,pregnancy,critical,declined,12.9944047,80.195585,Critical Emergency Triggered,Unassigned,2026-05-24 04:22:25,2026-05-24 04:22:29,DESKTOP-KBHB0SB
+34,medical,critical,completed,12.9944499,80.1956534,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-24 04:28:29,2026-05-24 04:30:58,DESKTOP-KBHB0SB
+35,supplies,normal,completed,12.9944182,80.1956332,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-05-24 04:29:22,2026-05-24 04:33:00,DESKTOP-KBHB0SB
+36,sos,normal,completed,12.9944499,80.1956534,"{""transportMode"":""ROAD"",""needs"":[6,2,1,2],""peopleCount"":""5"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-05-24 04:31:56,2026-05-24 04:33:00,DESKTOP-KBHB0SB
+
+
+SECTION 2: RESCUER COMMAND DISPATCHES
+Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
+27,N/A,919000000001,"{""message"":""MEDICAL RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9944499,""lng"":80.1956534,""urgency"":""critical"",""rescue_req_id"":34,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-05-24 04:30:17,,DESKTOP-KBHB0SB
+28,N/A,919000000001,"{""name"":""test 100"",""message"":""Proceed to Tactical Cluster: test 100"",""lat"":12.9944499,""lng"":80.1956534,""is_group_mission"":true,""request_ids"":[""36"",""35""],""serial_numbers"":[""#36"",""#35""],""custom_polygon"":[[12.994549899999999,80.1955332],[12.994549899999999,80.1957534],[12.9943182,80.1957534],[12.9943182,80.1955332]],""missions"":[{""id"":36,""type"":""sos"",""lat"":12.9944499,""lng"":80.1956534,""sector"":""Detected via GPS"",""priority"":""Normal""},{""id"":35,""type"":""supplies"",""lat"":12.9944182,""lng"":80.1956332,""sector"":""Detected via GPS"",""priority"":""Normal""}]}",group,completed,2026-05-24 04:32:42,,DESKTOP-KBHB0SB
+
+
+SECTION 3: PUBLIC SOS ALERTS
+SOS ID,Device ID,Phone,Latitude,Longitude,Details,Status,Priority,Alert Time,Device Node
+NO SOS ALERTS FOR THIS DATE

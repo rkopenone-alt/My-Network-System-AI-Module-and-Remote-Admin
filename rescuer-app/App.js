@@ -5,6 +5,7 @@ import * as Location from 'expo-location';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { htmlString } from './htmlStr';
 
 // ─── Server Configuration ─────────────────────────────────────────────────────
@@ -123,15 +124,48 @@ export default function App() {
 
                 // Launch native camera
                 const result = await ImagePicker.launchCameraAsync({
-                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  mediaTypes: ['images'],
                   allowsEditing: true,
-                  quality: 0.6,
-                  base64: true,
                 });
 
                 if (!result.canceled && result.assets && result.assets.length > 0) {
                   const asset = result.assets[0];
-                  let base64Str = asset.base64;
+                  
+                  // 1. Initial compression: resize width to 1024px, JPEG quality to 60%
+                  let manipResult = await ImageManipulator.manipulateAsync(
+                    asset.uri,
+                    [{ resize: { width: 1024 } }],
+                    { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+                  );
+                  
+                  let sizeBytes = Math.round(manipResult.base64.length * 0.75);
+                  
+                  // 2. If still > 200KB, second pass
+                  if (sizeBytes > 200 * 1024) {
+                    manipResult = await ImageManipulator.manipulateAsync(
+                      asset.uri,
+                      [{ resize: { width: 800 } }],
+                      { compress: 0.3, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+                    );
+                    sizeBytes = Math.round(manipResult.base64.length * 0.75);
+                  }
+                  
+                  // 3. If still > 200KB, third pass
+                  if (sizeBytes > 200 * 1024) {
+                    manipResult = await ImageManipulator.manipulateAsync(
+                      asset.uri,
+                      [{ resize: { width: 640 } }],
+                      { compress: 0.15, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+                    );
+                    sizeBytes = Math.round(manipResult.base64.length * 0.75);
+                  }
+                  
+                  if (sizeBytes > 200 * 1024) {
+                    Alert.alert('Compression Warning', `Photo is ${Math.round(sizeBytes / 1024)} KB, which exceeds the 200 KB limit. Please try again.`);
+                    return;
+                  }
+                  
+                  let base64Str = manipResult.base64;
                   if (base64Str) {
                     if (!base64Str.startsWith('data:')) {
                       base64Str = 'data:image/jpeg;base64,' + base64Str;
