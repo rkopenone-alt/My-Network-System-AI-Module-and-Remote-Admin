@@ -19,3 +19,5 @@
 - [x] Compile and generate native APK
   - [x] Run Gradle compiler `assembleRelease` inside `public-sos-app/android`
   - [x] Place generated APK in workspace root (under `Output_APKs/`)
+  - [x] Run Gradle compiler `assembleRelease` inside `rescuer-app/android`
+  - [x] Place generated rescuer APK in workspace root (under `Output_APKs/`)

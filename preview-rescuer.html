@@ -795,11 +795,11 @@
                 <div class="input-group">
                     <label class="input-label">Officer Login ID</label>
                     <input type="text" id="inpId" class="input-field" placeholder="Enter Phone or ID"
-                        value="919000000001">
+                        >
                 </div>
-                <div class="input-group">
-                    <label class="input-label">Security PIN</label>
-                    <input type="password" id="inpPin" class="input-field" placeholder="Enter PIN" value="123456">
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Access PIN</label>
+                    <input type="password" id="inpPin" class="input-field" placeholder="Enter PIN">
                 </div>
 
                 <button class="login-btn" onclick="core.login()">LOGIN</button>
@@ -1105,7 +1105,13 @@
             try {
                 const d = new Date(t);
                 if (isNaN(d)) return dbTimeStr;
-                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                let h = d.getHours();
+                let m = d.getMinutes();
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12;
+                h = h ? h : 12;
+                m = m < 10 ? '0' + m : m;
+                return h + ':' + m + ' ' + ampm;
             } catch(e) { return dbTimeStr; }
         }
 

@@ -1,7 +1,7 @@
-﻿import os
+import os
 import re
 
-dir_path = r'rescuer-app/node_modules/@react-native/gradle-plugin'
+dir_path = r'public-sos-app/node_modules/@react-native/gradle-plugin'
 
 replacements = {
     r'alias\(libs\.plugins\.kotlin\.jvm\)': 'id("org.jetbrains.kotlin.jvm") version "1.9.24"',

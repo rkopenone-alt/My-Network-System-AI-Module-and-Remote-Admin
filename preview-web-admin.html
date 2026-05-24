@@ -1482,8 +1482,30 @@
 
                 <!-- Command List Area -->
                 <div class="command-list-area">
-                    <div class="cmd-tabs">
-                        <div class="cmd-tab active" onclick="switchCmdTab('live', this)">Live Commands</div>
+                    <div class="cmd-tabs" style="position: relative; display: flex; align-items: center;">
+                        <div style="display: flex;">
+                            <div class="cmd-tab active" onclick="switchCmdTab('live', this)">Live Commands</div>
+                        </div>
+                        <div style="position: absolute; left: 50%; transform: translateX(-50%); display:flex; gap:10px;">
+                            <button id="btnFilterLiveCritical" class="btn btn-primary"
+                                style="padding: 8px 16px; font-size: 12px; background: var(--critical); border-color: var(--critical); opacity: 1;"
+                                onclick="filterLiveCommands('critical')">
+                                <i data-lucide="alert-circle" style="width:14px; margin-right:6px;"></i> Critical Mission
+                                <span id="badgeLiveCritical" style="background:white; color:var(--critical); font-size:10px; font-weight:800; border-radius:10px; padding:2px 6px; margin-left:6px; display:none;">0</span>
+                            </button>
+                            <button id="btnFilterLiveNormal" class="btn btn-primary"
+                                style="padding: 8px 16px; font-size: 12px; background: var(--accent); border-color: var(--accent); opacity: 0.5;"
+                                onclick="filterLiveCommands('normal')">
+                                <i data-lucide="box" style="width:14px; margin-right:6px;"></i> Normal Mission
+                                <span id="badgeLiveNormal" style="background:white; color:var(--accent); font-size:10px; font-weight:800; border-radius:10px; padding:2px 6px; margin-left:6px; display:none;">0</span>
+                            </button>
+                            <button id="btnFilterLiveGrouped" class="btn btn-primary"
+                                style="padding: 8px 16px; font-size: 12px; background: var(--special); border-color: var(--special); opacity: 0.5;"
+                                onclick="filterLiveCommands('grouped')">
+                                <i data-lucide="layers" style="width:14px; margin-right:6px;"></i> Grouped Mission
+                                <span id="badgeLiveGrouped" style="background:white; color:var(--special); font-size:10px; font-weight:800; border-radius:10px; padding:2px 6px; margin-left:6px; display:none;">0</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="cmd-content" id="cmd-live">
@@ -1500,25 +1522,6 @@
                                 style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
                                 <!-- Critical Tasks Cards will be injected here -->
                             </div>
-                        </div>
-
-                        <div style="display:flex; gap:10px; margin-bottom: 16px;">
-                            <button id="btnFilterLiveCritical" class="btn btn-primary"
-                                style="padding: 8px 16px; font-size: 12px; background: var(--critical); border-color: var(--critical); opacity: 1;"
-                                onclick="filterLiveCommands('critical')">
-                                <i data-lucide="alert-circle" style="width:14px; margin-right:6px;"></i> Critical
-                                Mission
-                            </button>
-                            <button id="btnFilterLiveNormal" class="btn btn-primary"
-                                style="padding: 8px 16px; font-size: 12px; background: var(--accent); border-color: var(--accent); opacity: 0.5;"
-                                onclick="filterLiveCommands('normal')">
-                                <i data-lucide="box" style="width:14px; margin-right:6px;"></i> Normal Mission
-                            </button>
-                            <button id="btnFilterLiveGrouped" class="btn btn-primary"
-                                style="padding: 8px 16px; font-size: 12px; background: var(--special); border-color: var(--special); opacity: 0.5;"
-                                onclick="filterLiveCommands('grouped')">
-                                <i data-lucide="layers" style="width:14px; margin-right:6px;"></i> Grouped Mission
-                            </button>
                         </div>
 
                         <div id="liveTableContainerCritical" style="display:block;">
@@ -3010,7 +3013,13 @@
             try {
                 const d = new Date(t);
                 if (isNaN(d)) return dbTimeStr;
-                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                let h = d.getHours();
+                let m = d.getMinutes();
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12;
+                h = h ? h : 12;
+                m = m < 10 ? '0' + m : m;
+                return h + ':' + m + ' ' + ampm;
             } catch(e) { return dbTimeStr; }
         }
 
@@ -4130,7 +4139,11 @@
                     const typeStr = t.type ? t.type.toLowerCase() : 'emergency';
                     const icon = getTaskIconByType(typeStr);
                     const label = t.serial_number || t.phone || t.device_id;
-                    const m = addMarker(t.lat, t.lng, typeStr, icon, `Request: ${typeStr}<br>Area: ${t.sector}`, label, false, isInZone, t.id, false, t.status, t.created_at, label);
+                    let detailsHtml = `Request: ${typeStr}<br>Area: ${t.sector}`;
+                    if (t.image_url) {
+                        detailsHtml += `<br><div style="margin-top:8px; border-radius:6px; overflow:hidden; border:1px solid var(--border);"><img src="${formatMediaUrl(t.image_url)}" style="width:100%; max-height:140px; object-fit:cover; cursor:pointer;" onclick="event.stopPropagation(); window.open(this.src, '_blank')"></div>`;
+                    }
+                    const m = addMarker(t.lat, t.lng, typeStr, icon, detailsHtml, label, false, isInZone, t.id, false, t.status, t.created_at, label);
                     window.markerClusterGroup.addLayer(m);
                     mapLayers.push(m);
                 });
@@ -4819,6 +4832,23 @@
             document.getElementById('liveCmdBodyGrouped').innerHTML = liveGroupedHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No grouped commands</td></tr>';
             const compTbody = document.getElementById('compCmdBody');
             if (compTbody) compTbody.innerHTML = compHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No completed commands</td></tr>';
+
+            // Update live command buttons with badges
+            if (document.getElementById('badgeLiveCritical')) {
+                const el = document.getElementById('badgeLiveCritical');
+                el.innerText = liveCritCount;
+                el.style.display = liveCritCount > 0 ? 'inline-block' : 'none';
+            }
+            if (document.getElementById('badgeLiveNormal')) {
+                const el = document.getElementById('badgeLiveNormal');
+                el.innerText = liveNormCount;
+                el.style.display = liveNormCount > 0 ? 'inline-block' : 'none';
+            }
+            if (document.getElementById('badgeLiveGrouped')) {
+                const el = document.getElementById('badgeLiveGrouped');
+                el.innerText = liveGroupedCount;
+                el.style.display = liveGroupedCount > 0 ? 'inline-block' : 'none';
+            }
 
             document.getElementById('historyTbodyCritical').innerHTML = histCriticalHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No critical history found</td></tr>';
             document.getElementById('historyTbodyNormal').innerHTML = histNormalHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No normal history found</td></tr>';
@@ -5546,9 +5576,21 @@
             const foodCount = pendingReqs.filter(r => r.type === 'food' || r.type === 'supplies' || r.type === 'delivery' || r.type === 'medical_delivery').length;
             const groupedCount = groupedTasks.filter(g => g.status !== 'Closed' && (g.status || '').toLowerCase() !== 'completed').length;
 
-            if (document.getElementById('sosCallsBadge')) document.getElementById('sosCallsBadge').innerText = sosCount;
-            if (document.getElementById('foodDistBadge')) document.getElementById('foodDistBadge').innerText = foodCount;
-            if (document.getElementById('groupedTasksBadge')) document.getElementById('groupedTasksBadge').innerText = groupedCount;
+            if (document.getElementById('sosCallsBadge')) {
+                const el = document.getElementById('sosCallsBadge');
+                el.innerText = sosCount;
+                el.style.display = sosCount > 0 ? 'inline-block' : 'none';
+            }
+            if (document.getElementById('foodDistBadge')) {
+                const el = document.getElementById('foodDistBadge');
+                el.innerText = foodCount;
+                el.style.display = foodCount > 0 ? 'inline-block' : 'none';
+            }
+            if (document.getElementById('groupedTasksBadge')) {
+                const el = document.getElementById('groupedTasksBadge');
+                el.innerText = groupedCount;
+                el.style.display = groupedCount > 0 ? 'inline-block' : 'none';
+            }
 
             // Notification Mgmt Counters
             const elCrit = document.getElementById('mgmtCountCritical');
@@ -5916,9 +5958,7 @@
                 const res = await fetch(`${API_BASE}/dashboard-stats`);
                 const stats = await res.json();
 
-                if (document.getElementById('sosCallsBadge')) {
-                    document.getElementById('sosCallsBadge').innerText = stats.sos.total;
-                    document.getElementById('foodDistBadge').innerText = stats.food.total;
+                if (document.getElementById('opSosCount')) {
                     document.getElementById('opSosCount').innerText = stats.sos.total;
                     const sosPct = stats.sos.total > 0 ? (stats.sos.completed / stats.sos.total) * 100 : 0;
                     document.getElementById('opSosBar').style.width = sosPct + '%';
@@ -6057,7 +6097,7 @@
                         details: detailSummary,
                         requesterImageUrl: c.requester_image_url || null,
                         requesterAudioUrl: c.requester_audio_url || null,
-                        completion_image_url: c.completion_image_url || null,
+                        completion_image_url: c.completion_image_url || c.req_completion_image_url || null,
                         reqTime: c.request_time ? formatLocalTime(c.request_time) : null
                     };
                 });
@@ -6868,14 +6908,36 @@
             }
 
             let itemsHtml = 'None requested';
+            let extraDetailsHtml = '';
             if (cmd.details) {
                 try {
                     const d = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
                     const items = [];
+                    // Old format
                     if (d.food) items.push(`🍞 Food: <b>${d.food}</b>`);
                     if (d.med) items.push(`💊 Medicine: <b>${d.med}</b>`);
                     if (d.sanitary) items.push(`🧻 Sanitary: <b>${d.sanitary}</b>`);
+                    
+                    // New format array parsing
+                    if (d.needs && Array.isArray(d.needs)) {
+                        const labels = ['Food Rations', 'Medical Tablets', 'Asthma Kit', 'Sanitary Kit'];
+                        d.needs.forEach((qty, idx) => {
+                            if (qty > 0 && labels[idx]) {
+                                items.push(`📦 ${labels[idx]}: <b>${qty}</b>`);
+                            }
+                        });
+                    }
+
                     if (items.length > 0) itemsHtml = items.join(' | ');
+
+                    const extraInfo = [];
+                    if (d.transportMode) extraInfo.push(`Transport: <b>${d.transportMode}</b>`);
+                    if (d.peopleCount) extraInfo.push(`Civilians: <b>${d.peopleCount}</b>`);
+                    if (d.address) extraInfo.push(`Landmark/Input: <b>${d.address}</b>`);
+                    
+                    if (extraInfo.length > 0) {
+                        extraDetailsHtml = `<div style="margin-top:8px; font-size:12px; font-weight:700; color:var(--text-muted);">ℹ️ ${extraInfo.join(' | ')}</div>`;
+                    }
                 } catch (e) { }
             }
 
@@ -6949,6 +7011,7 @@
                         <span>🛒 Support Items: <span style="color:var(--primary);">${itemsHtml}</span></span>
                         ${cmd.requesterPhone ? `<span>📞 Contact: <span style="color:var(--accent);">${cmd.requesterPhone}</span></span>` : ''}
                     </div>
+                    ${extraDetailsHtml}
                 </div>
 
                 ${groupMissionsHtml}
@@ -7529,7 +7592,7 @@
                     type: 'group',
                     zone: 'Multi-Sector Triage',
                     team: targetName,
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    time: (() => { let d = new Date(); let h = d.getHours(); let m = d.getMinutes(); let a = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; m = m < 10 ? '0' + m : m; return h + ':' + m + ' ' + a; })(),
                     status: 'Assigned',
                     priority: newGroup.priority.toLowerCase(),
                     details: JSON.stringify({
@@ -8106,7 +8169,7 @@
                     type: 'group',
                     zone: 'Multi-Sector Triage',
                     team: targetName,
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    time: (() => { let d = new Date(); let h = d.getHours(); let m = d.getMinutes(); let a = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; m = m < 10 ? '0' + m : m; return h + ':' + m + ' ' + a; })(),
                     status: 'Assigned',
                     priority: isCritical ? 'critical' : 'normal',
                     details: JSON.stringify({

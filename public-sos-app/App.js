@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, SafeAreaView, StatusBar, ActivityIndicator,
-  Animated, Dimensions, Vibration, Alert, Linking, Platform
+  Animated, Dimensions, Vibration, Alert, Linking, Platform, AppState
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -10,6 +10,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system';
 
 const API_URL = 'http://192.168.1.4:3001/api';
 const WS_URL = 'ws://192.168.1.4:3001';
@@ -19,7 +20,27 @@ const GlobalState = {
   sosLockedUntil: 0,
 };
 
-// Helper to compress image down to under 200KB on device
+// Helper: save media file locally to document directory folder
+const saveMediaToLocalFolder = async (base64Str, prefix) => {
+  try {
+    const dir = FileSystem.documentDirectory + 'ARDMS_Media/';
+    const dirInfo = await FileSystem.getInfoAsync(dir);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+    }
+    const filename = `${prefix}_${Date.now()}.jpg`;
+    const fileUri = dir + filename;
+    const base64Code = base64Str.split('base64,')[1] || base64Str;
+    await FileSystem.writeAsStringAsync(fileUri, base64Code, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    console.log(`[Media Save] Saved locally: ${fileUri}`);
+  } catch (err) {
+    console.error('[Media Save Error]', err);
+  }
+};
+
+// Helper to compress image down to under 200KB on device and save a copy locally
 const compressAndAttachImage = async (uri, callback) => {
   try {
     let manipResult = await ImageManipulator.manipulateAsync(
@@ -57,6 +78,7 @@ const compressAndAttachImage = async (uri, callback) => {
     }
     
     const base64Str = `data:image/jpeg;base64,${manipResult.base64}`;
+    await saveMediaToLocalFolder(base64Str, 'sos_photo');
     callback(base64Str);
   } catch (e) {
     console.error('Image compression error:', e);
@@ -226,8 +248,44 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
   const [transportMode, setTransportMode] = useState('AIR');
   const [needs, setNeeds] = useState([6, 2, 1, 2]);
   const [peopleCount, setPeopleCount] = useState('5');
+  const [address, setAddress] = useState('');
   const [attachments, setAttachments] = useState({ voice: false, camera: false, note: false });
   const [imageBase64, setImageBase64] = useState(null);
+  const [audioBase64, setAudioBase64] = useState(null);
+  const cameraPulse = useRef(new Animated.Value(1)).current;
+  const micPulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    let anim;
+    if (imageBase64) {
+      anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(cameraPulse, { toValue: 1.2, duration: 600, useNativeDriver: true }),
+          Animated.timing(cameraPulse, { toValue: 1, duration: 600, useNativeDriver: true })
+        ])
+      );
+      anim.start();
+    } else {
+      cameraPulse.setValue(1);
+    }
+    return () => { if (anim) anim.stop(); };
+  }, [imageBase64]);
+
+  useEffect(() => {
+    let anim;
+    if (audioBase64) {
+      anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(micPulse, { toValue: 1.2, duration: 600, useNativeDriver: true }),
+          Animated.timing(micPulse, { toValue: 1, duration: 600, useNativeDriver: true })
+        ])
+      );
+      anim.start();
+    } else {
+      micPulse.setValue(1);
+    }
+    return () => { if (anim) anim.stop(); };
+  }, [audioBase64]);
 
   const updateNeed = (idx, delta) => {
     setNeeds(prev => {
@@ -263,6 +321,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
             if (!result.canceled && result.assets && result.assets.length > 0) {
               await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
                 setImageBase64(base64Str);
+                setAttachments(prev => ({ ...prev, camera: true }));
                 Alert.alert("Success", "Photo captured and attached successfully!");
               });
             }
@@ -284,6 +343,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
             if (!result.canceled && result.assets && result.assets.length > 0) {
               await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
                 setImageBase64(base64Str);
+                setAttachments(prev => ({ ...prev, camera: true }));
                 Alert.alert("Success", "Photo selected and attached successfully!");
               });
             }
@@ -328,7 +388,26 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
                       return;
                     }
                   } catch (_) { /* skip size check if blob fails */ }
-                  Alert.alert('Success', 'Audio recorded (≤10 sec, ≤100 KB)');
+                  
+                  // Save a copy of the audio to local storage ARDMS_Media folder
+                  try {
+                    const dir = FileSystem.documentDirectory + 'ARDMS_Media/';
+                    const dirInfo = await FileSystem.getInfoAsync(dir);
+                    if (!dirInfo.exists) {
+                      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+                    }
+                    const filename = `audio_${Date.now()}.m4a`;
+                    const fileUri = dir + filename;
+                    await FileSystem.copyAsync({ from: uri, to: fileUri });
+                    console.log(`[Audio Save] Saved locally: ${fileUri}`);
+                  } catch (e) {
+                    console.error('[Audio Save Error]', e);
+                  }
+                  
+                  const base64Str = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+                  setAudioBase64(`data:audio/m4a;base64,${base64Str}`);
+                  setAttachments(prev => ({ ...prev, voice: true }));
+                  Alert.alert('Success', 'Audio recorded (≤10 sec, ≤100 KB) & saved locally!');
                 } catch (e) { Alert.alert('Error', e.message); }
               }}
             ]);
@@ -343,7 +422,27 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
                 Alert.alert('Audio Too Large', `File is ${Math.round(asset.size / 1024)} KB. Maximum allowed is 100 KB.`);
                 return;
               }
-              Alert.alert('Success', 'Audio file attached successfully.');
+              
+              // Save a copy of selected audio locally
+              try {
+                const dir = FileSystem.documentDirectory + 'ARDMS_Media/';
+                const dirInfo = await FileSystem.getInfoAsync(dir);
+                if (!dirInfo.exists) {
+                  await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+                }
+                const filename = `audio_upload_${Date.now()}_${asset.name}`;
+                const fileUri = dir + filename;
+                await FileSystem.copyAsync({ from: asset.uri, to: fileUri });
+                console.log(`[Audio Save] Saved locally: ${fileUri}`);
+              } catch (e) {
+                console.error('[Audio Save Error]', e);
+              }
+              
+              const base64Str = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+              let ext = asset.name ? asset.name.split('.').pop().toLowerCase() : 'm4a';
+              setAudioBase64(`data:audio/${ext};base64,${base64Str}`);
+              setAttachments(prev => ({ ...prev, voice: true }));
+              Alert.alert('Success', 'Audio file attached successfully & saved locally.');
             }
           } catch (e) { Alert.alert("Error", e.message); }
         }},
@@ -386,6 +485,8 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
               style={{ flex: 1, padding: 12, fontSize: 14, color: C.dark, textAlignVertical: 'top' }}
               placeholder="Address, landmarks..."
               multiline
+              value={address}
+              onChangeText={setAddress}
             />
           </View>
           <View style={{ flex: 2.5, gap: 6 }}>
@@ -399,19 +500,19 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
               disabled={!imageEnabled}
               onPress={() => imageEnabled && handleCameraPress()}
             >
-              <Text style={{ fontSize: 20 }}>{imageBase64 ? '✅' : (imageEnabled ? '📷' : '🚫')}</Text>
+              <Animated.Text style={{ fontSize: 20, transform: [{ scale: imageBase64 ? cameraPulse : 1 }] }}>{imageBase64 ? '✅' : (imageEnabled ? '📷' : '🚫')}</Animated.Text>
               <Text style={{ fontSize: 8, fontWeight: '900', color: imageBase64 ? C.secondary : (imageEnabled ? C.primary : C.danger), textAlign: 'center' }}>
                 {imageBase64 ? 'ATTACHED' : (imageEnabled ? 'ACTIVE' : 'DISABLED')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[s.attachBtn, { width: '100%', flex: 1, height: undefined, borderRadius: 12, padding: 8 }, !micEnabled && { opacity: 0.5, backgroundColor: '#f1f5f9' }]}
+              style={[s.attachBtn, { width: '100%', flex: 1, height: undefined, borderRadius: 12, padding: 8 }, !micEnabled && { opacity: 0.5, backgroundColor: '#f1f5f9' }, audioBase64 && s.attachBtnActive]}
               disabled={!micEnabled}
               onPress={() => micEnabled && handleMicPress()}
             >
-              <Text style={{ fontSize: 20 }}>{micEnabled ? '🎙️' : '🚫'}</Text>
-              <Text style={{ fontSize: 8, fontWeight: '900', color: micEnabled ? C.primary : C.danger, textAlign: 'center' }}>
-                {micEnabled ? 'ACTIVE' : 'DISABLED'}
+              <Animated.Text style={{ fontSize: 20, transform: [{ scale: audioBase64 ? micPulse : 1 }] }}>{audioBase64 ? '✅' : (micEnabled ? '🎙️' : '🚫')}</Animated.Text>
+              <Text style={{ fontSize: 8, fontWeight: '900', color: audioBase64 ? C.secondary : (micEnabled ? C.primary : C.danger), textAlign: 'center' }}>
+                {audioBase64 ? 'ATTACHED' : (micEnabled ? 'ACTIVE' : 'DISABLED')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -451,7 +552,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
 
         <TouchableOpacity
           style={[s.nextBtn, { marginTop: 'auto', padding: 18, borderRadius: 16 }]}
-          onPress={() => onNext({ transportMode, needs, peopleCount, attachments, imageBase64 })}
+          onPress={() => onNext({ transportMode, needs, peopleCount, address, attachments, imageBase64, audioBase64 })}
         >
           <Text style={[s.nextBtnText, { fontSize: 16, fontWeight: '900' }]}>CONFIRM & PROCEED</Text>
         </TouchableOpacity>
@@ -613,7 +714,7 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
       // Check if component is still mounted before continuing
       if (!isMounted.current) return;
 
-      const { imageBase64, ...cleanDetails } = details || {};
+      const { imageBase64, audioBase64, ...cleanDetails } = details || {};
       payload = {
         phone: user.phone,
         device_id: user.serial_number || 'PUB-MOB',
@@ -624,7 +725,8 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
         urgency: 'normal',
         priority: 'Normal',
         sector: 'Detected via GPS',
-        image_data: imageBase64 || null
+        image_data: imageBase64 || null,
+        audio_data: audioBase64 || null
       };
 
       const res = await fetch(`${API_URL}/rescue-requests`, {
@@ -646,6 +748,8 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
           }
         } catch (err) {}
         onTriggerSOS(buf * 60);
+        setImageBase64(null);
+        setAudioBase64(null);
       } else {
         if (res.status === 429) {
           const errData = await res.json();
@@ -987,6 +1091,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
   const [loading, setLoading] = useState(false);
   const toastAnim = useRef(new Animated.Value(0)).current;
   const sosScale = useRef(new Animated.Value(1)).current;
+  const cameraPulse = useRef(new Animated.Value(1)).current;
   const [imageBase64, setImageBase64] = useState(null);
   const isMounted = useRef(true);
   const toastTimerRef = useRef(null);
@@ -998,6 +1103,24 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    let anim;
+    if (imageBase64) {
+      anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(cameraPulse, { toValue: 1.2, duration: 600, useNativeDriver: true }),
+          Animated.timing(cameraPulse, { toValue: 1, duration: 600, useNativeDriver: true })
+        ])
+      );
+      anim.start();
+    } else {
+      cameraPulse.setValue(1);
+    }
+    return () => {
+      if (anim) anim.stop();
+    };
+  }, [imageBase64]);
 
   const handleCameraPress = () => {
     if (imageBase64) {
@@ -1196,26 +1319,31 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
               onChangeText={setAddress}
             />
             <View style={{ flexDirection: 'column', gap: 8 }}>
-              {imageEnabled && (
                 <TouchableOpacity 
                   style={[
                     s.mediaBtn, 
-                    { borderColor: imageBase64 ? C.secondary : '#3b82f6', backgroundColor: imageBase64 ? '#ecfdf5' : '#eff6ff' }
+                    { borderColor: imageBase64 ? C.secondary : '#3b82f6', backgroundColor: imageBase64 ? '#ecfdf5' : '#eff6ff', opacity: imageEnabled ? 1 : 0.4 }
                   ]} 
                   activeOpacity={0.8}
+                  disabled={!imageEnabled}
                   onPress={handleCameraPress}
                 >
-                  <Text style={{ fontSize: 18 }}>{imageBase64 ? '✅' : '📷'}</Text>
-                  <Text style={{ fontSize: 7, fontWeight: '900', color: imageBase64 ? C.secondary : '#2563eb', marginTop: 1 }}>
-                    {imageBase64 ? 'ATTACHED' : 'PHOTO'}
+                  <Animated.Text style={{ fontSize: 18, transform: [{ scale: imageBase64 ? cameraPulse : 1 }] }}>{imageBase64 ? '✅' : (imageEnabled ? '📷' : '🚫')}</Animated.Text>
+                  <Text style={{ fontSize: 7, fontWeight: '900', color: imageBase64 ? C.secondary : '#2563eb', marginTop: 1, textAlign: 'center' }}>
+                    {imageBase64 ? 'ATTACHED' : (imageEnabled ? 'PHOTO' : 'DISABLED')}
                   </Text>
                 </TouchableOpacity>
-              )}
-              {micEnabled && (
-                <TouchableOpacity style={[s.mediaBtn, { borderColor: C.border, backgroundColor: '#f8fafc' }]} activeOpacity={0.8}>
-                  <Text style={{ fontSize: 18 }}>🎙️</Text>
+
+                <TouchableOpacity 
+                  style={[s.mediaBtn, { borderColor: C.border, backgroundColor: '#f8fafc', opacity: micEnabled ? 1 : 0.4 }]} 
+                  disabled={!micEnabled}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ fontSize: 18 }}>{micEnabled ? '🎙️' : '🚫'}</Text>
+                  <Text style={{ fontSize: 7, fontWeight: '900', color: C.light, marginTop: 1, textAlign: 'center' }}>
+                    {micEnabled ? 'AUDIO' : 'DISABLED'}
+                  </Text>
                 </TouchableOpacity>
-              )}
             </View>
           </View>
         </View>
@@ -1293,18 +1421,38 @@ export default function App() {
   const [sosCountdown, setSosCountdown] = useState(0);
 
   useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === 'active') {
+        if (GlobalState.sosLockedUntil > 0) {
+          const remaining = Math.max(0, Math.floor((GlobalState.sosLockedUntil - Date.now()) / 1000));
+          if (remaining > 0) {
+            setIsSosLocked(true);
+            setSosCountdown(remaining);
+          } else {
+            setIsSosLocked(false);
+            setSosCountdown(0);
+            GlobalState.sosLockedUntil = 0;
+            AsyncStorage.removeItem('sosLockedUntil');
+          }
+        }
+      }
+    };
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
     let timer;
     if (isSosLocked && sosCountdown > 0) {
       timer = setInterval(() => {
-        setSosCountdown(prev => {
-          if (prev <= 1) {
-            setIsSosLocked(false);
-            GlobalState.sosLockedUntil = 0;
-            AsyncStorage.removeItem('sosLockedUntil');
-            return 0;
-          }
-          return prev - 1;
-        });
+        const remaining = Math.max(0, Math.floor((GlobalState.sosLockedUntil - Date.now()) / 1000));
+        setSosCountdown(remaining);
+        if (remaining <= 0) {
+          setIsSosLocked(false);
+          GlobalState.sosLockedUntil = 0;
+          AsyncStorage.removeItem('sosLockedUntil');
+          clearInterval(timer);
+        }
       }, 1000);
     }
     return () => clearInterval(timer);

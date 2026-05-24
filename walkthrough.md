@@ -38,7 +38,21 @@ We have successfully refined the layout, functionality, and emergency categoriza
     *   Assigning and re-assigning crew from the Notification Log detail panel launches the re-assignment modal cleanly without redirecting to the dashboard.
     *   Viewing an individual SOS request (e.g. supplies request #24) successfully hides the "ASSIGN TO CREW" and "RESOLVE & CLOSE" buttons.
     *   Selecting multiple SOS checkbox items, clicking "Group & Assign", naming the cluster, and clicking "CONFIRM & INITIALIZE GROUP MISSION" successfully initiates the group tactical mission cluster without throwing JS console exceptions.
-*   **APK Integrity**: Compiled APK resides in `Output_APKs/public-sos-app-release.apk` with the latest "General Rescue" label in place.
+    *   Fixed the null-pointer crash that occurred when clicking on an evidence image without `formatMediaUrl` applied.
+
+### 4. History Page Media Integration
+- Updated the `page-history` section in the Web Admin dashboard to display media.
+- Injected `evidenceThumb` and `evidenceAudio` columns into the `historyRowHtml` template.
+- Ensured table headers for both Live and History grids are synchronized with the new `IMAGE` and `AUDIO` columns.
+
+### 5. Production APK Compilation
+- Compiled production-level, optimized APKs using the Gradle `assembleRelease` pipeline for both mobile applications.
+- Successfully generated `public-sos-app-release.apk` (75 MB) for the citizen app.
+- Successfully generated `rescuer-app-release.apk` (83 MB) for the responder app.
+- The compiled APKs are available in the `Output_APKs/` directory at the root of the workspace.
+
+## Testing & Validation
+*   **APK Integrity**: Compiled APK resides in `Output_APKs/public-sos-app-release.apk` and `Output_APKs/rescuer-app-release.apk` with the latest "General Rescue" label in place.
 
 ### Git Version Control
 *   Committed and pushed all changes to the remote Git repository.

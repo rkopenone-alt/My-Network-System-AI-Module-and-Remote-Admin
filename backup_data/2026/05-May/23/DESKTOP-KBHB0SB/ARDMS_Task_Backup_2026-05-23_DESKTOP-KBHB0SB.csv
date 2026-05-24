@@ -1,11 +1,11 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-05-23
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 24/5/2026, 10:37:54 am
+Generated At: , 24/5/2026, 10:04:41 pm
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
-28,sos,critical,declined,12.9941825,80.1956048,Critical Emergency Triggered,Unassigned,2026-05-23 16:35:59,2026-05-23 16:36:06,DESKTOP-KBHB0SB
+28,sos,critical,completed,12.9941825,80.1956048,Critical Emergency Triggered,Unassigned,2026-05-23 16:35:59,2026-05-24 15:31:00,DESKTOP-KBHB0SB
 29,pregnancy,critical,completed,12.9943138,80.1957778,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-23 16:38:02,2026-05-23 16:39:24,DESKTOP-KBHB0SB
 30,supplies,normal,declined,12.9943138,80.1957778,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Unassigned,2026-05-23 16:40:44,2026-05-23 16:41:22,DESKTOP-KBHB0SB
 31,supplies,normal,completed,12.9943138,80.1957778,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-05-23 16:41:49,2026-05-23 16:44:37,DESKTOP-KBHB0SB

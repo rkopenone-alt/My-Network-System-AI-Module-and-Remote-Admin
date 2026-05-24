@@ -1,7 +1,7 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-05-21
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 24/5/2026, 10:37:54 am
+Generated At: , 24/5/2026, 10:04:41 pm
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
@@ -14,7 +14,7 @@ Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Resp
 7,pregnancy,critical,completed,12.9944672,80.1956951,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-21 16:52:07,2026-05-21 18:04:46,DESKTOP-KBHB0SB
 8,medical,critical,completed,12.9943588,80.1939576,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-21 18:05:34,2026-05-21 18:36:03,DESKTOP-KBHB0SB
 9,pregnancy,critical,completed,12.9945267,80.1956518,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-21 18:45:10,2026-05-21 19:10:09,DESKTOP-KBHB0SB
-10,medical,critical,declined,12.9943117,80.1956785,Critical Emergency Triggered,Unassigned,2026-05-21 19:47:33,2026-05-21 20:28:42,DESKTOP-KBHB0SB
+10,medical,critical,completed,12.9943117,80.1956785,Critical Emergency Triggered,Unassigned,2026-05-21 19:47:33,2026-05-24 15:31:09,DESKTOP-KBHB0SB
 11,pregnancy,critical,completed,12.9942499,80.1957343,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-21 20:28:50,2026-05-21 20:29:24,DESKTOP-KBHB0SB
 12,Pregnancy Support,critical,completed,12.9942571,80.1957023,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-05-21 20:45:00,2026-05-21 20:46:07,DESKTOP-KBHB0SB
 13,Pregnancy Support,critical,completed,12.9942972,80.1957314,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-05-21 20:55:56,2026-05-21 20:58:13,DESKTOP-KBHB0SB

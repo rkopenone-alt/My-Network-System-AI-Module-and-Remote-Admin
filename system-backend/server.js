@@ -1614,6 +1614,8 @@ app.get('/api/commands', async (req, res) => {
                    rr.urgency as requester_urgency,
                    rr.created_at as request_time,
                    rr.image_url as requester_image_url,
+                   rr.audio_url as requester_audio_url,
+                   rr.completion_image_url as req_completion_image_url,
                    u_assigned.name as assigned_officer_name,
                    g.group_name as assigned_group_name
             FROM command_queue cq

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ActivityIndicator, Text, PermissionsAndroid, Platform, Alert } from 'react-native';
+import { View, ActivityIndicator, Text, PermissionsAndroid, Platform, Alert, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { htmlString } from './htmlStr';
 
 // ─── Server Configuration ─────────────────────────────────────────────────────
@@ -19,6 +20,79 @@ export default function App() {
   const [hasPermission, setHasPermission] = useState(null);
   const [serverIp, setServerIp] = useState(SERVER_IP);
   const webViewRef = useRef(null);
+
+  // Custom Camera States
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [activeTaskId, setActiveTaskId] = useState(null);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const cameraRef = useRef(null);
+
+  const processImageUri = async (uri, taskId) => {
+    try {
+      let manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      
+      let sizeBytes = Math.round(manipResult.base64.length * 0.75);
+      
+      if (sizeBytes > 200 * 1024) {
+        manipResult = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ resize: { width: 800 } }],
+          { compress: 0.3, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+        sizeBytes = Math.round(manipResult.base64.length * 0.75);
+      }
+      
+      if (sizeBytes > 200 * 1024) {
+        manipResult = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ resize: { width: 640 } }],
+          { compress: 0.15, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+        sizeBytes = Math.round(manipResult.base64.length * 0.75);
+      }
+      
+      if (sizeBytes > 200 * 1024) {
+        Alert.alert('Compression Warning', `Photo exceeds the limit. Please try again.`);
+        return;
+      }
+      
+      let base64Str = manipResult.base64;
+      if (base64Str) {
+        if (!base64Str.startsWith('data:')) {
+          base64Str = 'data:image/jpeg;base64,' + base64Str;
+        }
+        
+        try {
+          const dir = FileSystem.documentDirectory + 'ARDMS_Media/';
+          const dirInfo = await FileSystem.getInfoAsync(dir);
+          if (!dirInfo.exists) {
+            await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+          }
+          const filename = `rescuer_photo_${Date.now()}.jpg`;
+          const fileUri = dir + filename;
+          const base64Code = base64Str.split('base64,')[1] || base64Str;
+          await FileSystem.writeAsStringAsync(fileUri, base64Code, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+        } catch (e) {
+          console.error('[Media Save Error]', e);
+        }
+        
+        const code = `if (window.onImageCaptured) { window.onImageCaptured('${base64Str}', '${taskId}'); } true;`;
+        if (webViewRef.current) {
+          webViewRef.current.injectJavaScript(code);
+        }
+      }
+    } catch (err) {
+      console.error('[Image Process Error]', err);
+      Alert.alert('Error', 'Failed to process photo.');
+    }
+  };
 
 
   useEffect(() => {
@@ -115,67 +189,47 @@ export default function App() {
 
             if (data.type === 'CAPTURE_IMAGE') {
               try {
-                // Request camera permission dynamically at runtime
-                const { status } = await ImagePicker.requestCameraPermissionsAsync();
-                if (status !== 'granted') {
-                  Alert.alert('Permission Denied', 'Camera permission is required to capture photos.');
-                  return;
-                }
-
-                // Launch native camera
-                const result = await ImagePicker.launchCameraAsync({
-                  mediaTypes: ['images'],
-                  allowsEditing: true,
-                });
-
-                if (!result.canceled && result.assets && result.assets.length > 0) {
+                Alert.alert(
+                  'Attach Photo',
+                  'Choose photo source',
+                  [
+                    {
+                      text: 'Camera',
+                      onPress: async () => {
+                        if (!cameraPermission?.granted) {
+                          const p = await requestCameraPermission();
+                          if (!p.granted) {
+                            Alert.alert('Permission Denied', 'Camera permission is required.');
+                            return;
+                          }
+                        }
+                        setActiveTaskId(data.taskId);
+                        setIsCameraActive(true);
+                      }
+                    },
+                    {
+                      text: 'Gallery',
+                      onPress: async () => {
+                        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                        if (status !== 'granted') {
+                          Alert.alert('Permission Denied', 'Gallery permission is required.');
+                          return;
+                        }
+                        const result = await ImagePicker.launchImageLibraryAsync({
+                          mediaTypes: ['images'],
+                          allowsEditing: false,
+                        });
+                        processImageResult(result, data.taskId);
+                      }
+                    },
+                    { text: 'Cancel', style: 'cancel' }
+                  ]
+                );
+                
+                async function processImageResult(result, taskId) {
+                  if (result.canceled || !result.assets || result.assets.length === 0) return;
                   const asset = result.assets[0];
-                  
-                  // 1. Initial compression: resize width to 1024px, JPEG quality to 60%
-                  let manipResult = await ImageManipulator.manipulateAsync(
-                    asset.uri,
-                    [{ resize: { width: 1024 } }],
-                    { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-                  );
-                  
-                  let sizeBytes = Math.round(manipResult.base64.length * 0.75);
-                  
-                  // 2. If still > 200KB, second pass
-                  if (sizeBytes > 200 * 1024) {
-                    manipResult = await ImageManipulator.manipulateAsync(
-                      asset.uri,
-                      [{ resize: { width: 800 } }],
-                      { compress: 0.3, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-                    );
-                    sizeBytes = Math.round(manipResult.base64.length * 0.75);
-                  }
-                  
-                  // 3. If still > 200KB, third pass
-                  if (sizeBytes > 200 * 1024) {
-                    manipResult = await ImageManipulator.manipulateAsync(
-                      asset.uri,
-                      [{ resize: { width: 640 } }],
-                      { compress: 0.15, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-                    );
-                    sizeBytes = Math.round(manipResult.base64.length * 0.75);
-                  }
-                  
-                  if (sizeBytes > 200 * 1024) {
-                    Alert.alert('Compression Warning', `Photo is ${Math.round(sizeBytes / 1024)} KB, which exceeds the 200 KB limit. Please try again.`);
-                    return;
-                  }
-                  
-                  let base64Str = manipResult.base64;
-                  if (base64Str) {
-                    if (!base64Str.startsWith('data:')) {
-                      base64Str = 'data:image/jpeg;base64,' + base64Str;
-                    }
-                    // Inject back into the WebView global handler
-                    const code = `if (window.onImageCaptured) { window.onImageCaptured('${base64Str}', '${data.taskId}'); } true;`;
-                    if (webViewRef.current) {
-                      webViewRef.current.injectJavaScript(code);
-                    }
-                  }
+                  await processImageUri(asset.uri, taskId);
                 }
               } catch (err) {
                 console.error('[Native Camera Error]', err);
@@ -201,6 +255,62 @@ export default function App() {
           } catch (e) {}
         }}
       />
+      {/* Custom Camera Overlay */}
+      {isCameraActive && !capturedPhoto && (
+        <View style={StyleSheet.absoluteFill}>
+          <CameraView 
+            style={StyleSheet.absoluteFill} 
+            facing="back"
+            ref={cameraRef}
+          >
+            <View style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'flex-end', paddingBottom: 40, alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-around', alignItems: 'center' }}>
+                <TouchableOpacity onPress={() => setIsCameraActive(false)} style={{ padding: 15 }}>
+                  <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={async () => {
+                    if (cameraRef.current) {
+                      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
+                      setCapturedPhoto(photo);
+                    }
+                  }} 
+                  style={{ width: 70, height: 70, borderRadius: 35, backgroundColor: 'white', borderWidth: 4, borderColor: '#ccc' }} 
+                />
+                <View style={{ width: 60 }} />
+              </View>
+            </View>
+          </CameraView>
+        </View>
+      )}
+
+      {/* Captured Photo Preview */}
+      {isCameraActive && capturedPhoto && (
+        <View style={StyleSheet.absoluteFill}>
+          <Image source={{ uri: capturedPhoto.uri }} style={StyleSheet.absoluteFill} />
+          <View style={{ position: 'absolute', bottom: 40, width: '100%', flexDirection: 'row', justifyContent: 'space-around' }}>
+            <TouchableOpacity 
+              onPress={() => setCapturedPhoto(null)} 
+              style={{ padding: 15, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10 }}
+            >
+              <Text style={{ color: 'white', fontSize: 20, fontWeight: 'bold' }}>Retry</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={async () => {
+                const uri = capturedPhoto.uri;
+                const tid = activeTaskId;
+                setIsCameraActive(false);
+                setCapturedPhoto(null);
+                setActiveTaskId(null);
+                await processImageUri(uri, tid);
+              }} 
+              style={{ padding: 15, backgroundColor: '#2563eb', borderRadius: 10 }}
+            >
+              <Text style={{ color: 'white', fontSize: 20, fontWeight: 'bold' }}>Okay</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
