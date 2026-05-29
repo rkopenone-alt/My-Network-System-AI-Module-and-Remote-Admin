@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ActivityIndicator, Text, PermissionsAndroid, Platform, Alert, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, Text, PermissionsAndroid, Platform, Alert, Image, TouchableOpacity, StyleSheet, TextInput, Modal } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import * as FileSystem from 'expo-file-system';
@@ -7,11 +7,11 @@ import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { htmlString } from './htmlStr';
 
 // ─── Server Configuration ─────────────────────────────────────────────────────
 // Update SERVER_IP to your machine's Wi-Fi IP address.
-// Run: ipconfig  → look for IPv4 Address under Wi-Fi
 const SERVER_IP = '192.168.1.4';
 const SERVER_PORT = '3001';
 // ─────────────────────────────────────────────────────────────────────────────
@@ -19,7 +19,73 @@ const SERVER_PORT = '3001';
 export default function App() {
   const [hasPermission, setHasPermission] = useState(null);
   const [serverIp, setServerIp] = useState(SERVER_IP);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [showConfig, setShowConfig] = useState(false);
+  const [tempIp, setTempIp] = useState(SERVER_IP);
   const webViewRef = useRef(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem('serverIp').then(val => {
+      if (val) {
+        setServerIp(val);
+        setTempIp(val);
+      }
+    });
+    AsyncStorage.getItem('rescuer_token').then(val => {
+      if (val) setToken(val);
+    });
+    AsyncStorage.getItem('rescue_user_v3').then(val => {
+      if (val) setUser(JSON.parse(val));
+    });
+  }, []);
+
+  const saveIp = async () => {
+    const cleanIp = tempIp.trim();
+    if (!cleanIp) {
+      Alert.alert("Error", "Please enter a valid IP address");
+      return;
+    }
+    await AsyncStorage.setItem('serverIp', cleanIp);
+    setServerIp(cleanIp);
+    setShowConfig(false);
+    Alert.alert("Server IP Updated", `Reconnecting to http://${cleanIp}:${SERVER_PORT}`);
+  };
+
+  const handleLogin = async (phone, pin, ip) => {
+    try {
+      const cleanIp = ip.trim();
+      await AsyncStorage.setItem('serverIp', cleanIp);
+      setServerIp(cleanIp);
+      setTempIp(cleanIp);
+      
+      let localDeviceId = await AsyncStorage.getItem('rescuer_device_id');
+      if (!localDeviceId) {
+        localDeviceId = 'RESDEV-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        await AsyncStorage.setItem('rescuer_device_id', localDeviceId);
+      }
+
+      const res = await fetch(`http://${cleanIp}:${SERVER_PORT}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idOrPhone: phone.trim(), pin, deviceId: localDeviceId })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        await AsyncStorage.setItem('rescuer_token', data.token);
+        await AsyncStorage.setItem('rescue_user_v3', JSON.stringify(data.user));
+        setUser(data.user);
+        setToken(data.token);
+      } else {
+        const errData = await res.json();
+        Alert.alert("Login Failed", errData.error || "Access Denied");
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Network Error", "Could not connect to the server. Please check the IP address and Wi-Fi connection.");
+    }
+  };
 
   // Custom Camera States
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -145,6 +211,9 @@ export default function App() {
     window.__SERVER_PORT__ = '${SERVER_PORT}';
     window.__API_BASE__ = 'http://${serverIp}:${SERVER_PORT}/api';
     window.__WS_BASE__ = 'ws://${serverIp}:${SERVER_PORT}';
+    localStorage.setItem('rescuer_token', '${token || ''}');
+    localStorage.setItem('rescue_user_v3', '${user ? JSON.stringify(user).replace(/'/g, "\\'") : ''}');
+    localStorage.setItem('app_installed_launch', 'true');
     true;
   `;
 
@@ -167,6 +236,15 @@ export default function App() {
     );
   }
 
+  if (!token || !user) {
+    return (
+      <LoginScreen 
+        onLogin={handleLogin} 
+        initialIp={serverIp} 
+      />
+    );
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <WebView
@@ -186,6 +264,22 @@ export default function App() {
           try {
             const data = JSON.parse(event.nativeEvent.data);
             console.log('[WebView Message]', data);
+
+            if (data.type === 'LOGOUT') {
+              await AsyncStorage.removeItem('rescuer_token');
+              await AsyncStorage.removeItem('rescue_user_v3');
+              setUser(null);
+              setToken(null);
+              return;
+            }
+
+            if (data.type === 'UPDATE_IP') {
+              await AsyncStorage.setItem('serverIp', data.ip);
+              setServerIp(data.ip);
+              setTempIp(data.ip);
+              Alert.alert("Server IP Updated", "Reconnecting to the new IP address...");
+              return;
+            }
 
             if (data.type === 'CAPTURE_IMAGE') {
               try {
@@ -311,6 +405,238 @@ export default function App() {
           </View>
         </View>
       )}
+
+      {/* Floating settings gear button */}
+      <TouchableOpacity 
+        style={styles.floatingSettingsBtn} 
+        onPress={() => setShowConfig(true)}
+      >
+        <Text style={{ fontSize: 24 }}>⚙️</Text>
+      </TouchableOpacity>
+
+      {/* Settings Modal */}
+      <Modal visible={showConfig} transparent={true} animationType="slide">
+        <View style={styles.modalBg}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Server Configuration</Text>
+            <Text style={styles.modalLabel}>Enter Laptop IP Address:</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={tempIp}
+              onChangeText={setTempIp}
+              placeholder="e.g. 192.168.1.15"
+              keyboardType="numeric"
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#f1f5f9' }]} onPress={() => setShowConfig(false)}>
+                <Text style={{ color: '#0f172a', fontWeight: 'bold' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#0ea5e9' }]} onPress={saveIp}>
+                <Text style={{ color: 'white', fontWeight: 'bold' }}>Save IP</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  floatingSettingsBtn: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 999,
+  },
+  modalBg: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  modalLabel: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 8,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+    color: '#0f172a',
+    backgroundColor: '#f8fafc',
+  },
+  modalBtn: {
+    flex: 0.48,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  }
+});
+
+function LoginScreen({ onLogin, initialIp }) {
+  const [phone, setPhone] = useState('');
+  const [pin, setPin] = useState('');
+  const [ip, setIp] = useState(initialIp);
+
+  useEffect(() => {
+    setIp(initialIp);
+  }, [initialIp]);
+
+  useEffect(() => {
+    AsyncStorage.getItem('serverIp').then(val => {
+      if (val) {
+        setIp(val);
+      }
+    });
+  }, []);
+
+  return (
+    <View style={loginStyles.container}>
+      <View style={loginStyles.card}>
+        <View style={loginStyles.logoCircle}>
+          <Text style={{ fontSize: 44 }}>👨‍✈️</Text>
+        </View>
+        <Text style={loginStyles.title}>ARDMS Rescuer App</Text>
+        <Text style={loginStyles.subtitle}>Official Officer Login</Text>
+
+        <Text style={loginStyles.label}>OFFICER ID or PHONE</Text>
+        <TextInput
+          style={loginStyles.input}
+          placeholder="MEM-01 or phone number"
+          placeholderTextColor="#64748b"
+          value={phone}
+          onChangeText={setPhone}
+        />
+
+        <Text style={loginStyles.label}>SECURITY PIN</Text>
+        <TextInput
+          style={loginStyles.input}
+          placeholder="Enter 6-digit PIN"
+          placeholderTextColor="#64748b"
+          secureTextEntry
+          value={pin}
+          onChangeText={setPin}
+          keyboardType="numeric"
+        />
+
+        <Text style={loginStyles.label}>SERVER IP ADDRESS</Text>
+        <TextInput
+          style={loginStyles.input}
+          placeholder="e.g. 192.168.1.15"
+          placeholderTextColor="#64748b"
+          value={ip}
+          onChangeText={setIp}
+        />
+
+        <TouchableOpacity 
+          style={loginStyles.button} 
+          onPress={() => onLogin(phone, pin, ip)}
+        >
+          <Text style={loginStyles.buttonText}>Secure Login System</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const loginStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  card: {
+    width: '100%',
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+  },
+  logoCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#0ea5e9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#f8fafc',
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#0ea5e9',
+    fontWeight: 'bold',
+    marginBottom: 24,
+  },
+  label: {
+    alignSelf: 'flex-start',
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#94a3b8',
+    marginBottom: 6,
+    letterSpacing: 1,
+  },
+  input: {
+    width: '100%',
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 8,
+    padding: 12,
+    color: '#f8fafc',
+    fontSize: 15,
+    marginBottom: 16,
+  },
+  button: {
+    width: '100%',
+    backgroundColor: '#0284c7',
+    borderRadius: 8,
+    padding: 15,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  }
+});

@@ -12,9 +12,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system';
 
-const API_URL = 'http://192.168.1.4:3001/api';
-const WS_URL = 'ws://192.168.1.4:3001';
 const { width } = Dimensions.get('window');
+
+let API_URL = 'http://192.168.1.4:3001/api';
+let WS_URL = 'ws://192.168.1.4:3001';
+
+const setServerIpAddress = (ip) => {
+  API_URL = `http://${ip}:3001/api`;
+  WS_URL = `ws://${ip}:3001`;
+};
 
 const GlobalState = {
   sosLockedUntil: 0,
@@ -172,16 +178,30 @@ function LocationStatusBar() {
 function LoginScreen({ onLogin }) {
   const [phone, setPhone] = useState('');
   const [pass, setPass] = useState('');
+  const [ipAddress, setIpAddress] = useState('192.168.1.4');
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeIn, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+    AsyncStorage.getItem('serverIp').then(ip => {
+      if (ip) {
+        setIpAddress(ip);
+        setServerIpAddress(ip);
+      }
+    });
   }, []);
 
   const handleLogin = async () => {
     if (!phone.trim()) {
       Alert.alert('Required', 'Please enter your mobile number or ID');
       return;
+    }
+    
+    try {
+      const cleanIp = ipAddress.trim();
+      await AsyncStorage.setItem('serverIp', cleanIp);
+      setServerIpAddress(cleanIp);
+    } catch (e) {
+      console.warn("Failed to save server IP:", e);
     }
     
     try {
@@ -233,6 +253,14 @@ function LoginScreen({ onLogin }) {
           secureTextEntry
           value={pass}
           onChangeText={setPass}
+        />
+        <Text style={s.label}>SERVER IP ADDRESS</Text>
+        <TextInput
+          style={s.input}
+          placeholder="e.g. 192.168.1.15"
+          placeholderTextColor={C.light}
+          value={ipAddress}
+          onChangeText={setIpAddress}
         />
         <TouchableOpacity style={s.loginBtn} onPress={handleLogin} activeOpacity={0.85}>
           <Text style={s.loginBtnText}>Secure Login System</Text>
@@ -564,8 +592,13 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
 function ProfileScreen({ user, onLogout }) {
   const [isOnline, setIsOnline] = useState(true);
   const [syncInterval, setSyncInterval] = useState('FETCHING...');
+  const [ipAddress, setIpAddress] = useState('192.168.1.4');
 
   useEffect(() => {
+    AsyncStorage.getItem('serverIp').then(ip => {
+      if (ip) setIpAddress(ip);
+    });
+
     const fetchSettings = async () => {
       try {
         const res = await fetch(`${API_URL}/settings`);
@@ -602,6 +635,34 @@ function ProfileScreen({ user, onLogout }) {
             <View style={{ width: '100%', height: 1, backgroundColor: C.border, marginVertical: 20 }} />
             <Text style={[s.label, { marginBottom: 4 }]}>PHONE NUMBER</Text>
             <Text style={{ fontSize: 18, fontWeight: '800', color: C.dark, marginBottom: 15 }}>{user?.phone}</Text>
+          </View>
+
+          <Text style={s.sectionLabel}>SERVER NETWORK SETTINGS</Text>
+          <View style={[s.actionCard, { borderLeftColor: C.primary, marginBottom: 20, padding: 16 }]}>
+            <Text style={[s.label, { marginBottom: 6 }]}>LAPTOP SERVER IP ADDRESS</Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TextInput
+                style={[s.input, { flex: 1, marginBottom: 0, height: 44, paddingVertical: 0, paddingHorizontal: 12, backgroundColor: 'white' }]}
+                value={ipAddress}
+                onChangeText={setIpAddress}
+                placeholder="e.g. 192.168.1.15"
+              />
+              <TouchableOpacity 
+                style={[s.loginBtn, { width: 80, height: 44, marginTop: 0, padding: 0, justifyContent: 'center', shadowColor: C.primary }]}
+                onPress={async () => {
+                  const cleanIp = ipAddress.trim();
+                  if (!cleanIp) {
+                    Alert.alert("Error", "Please enter a valid IP address");
+                    return;
+                  }
+                  await AsyncStorage.setItem('serverIp', cleanIp);
+                  setServerIpAddress(cleanIp);
+                  Alert.alert("Server IP Updated", `The app is now configured to connect to http://${cleanIp}:3001`);
+                }}
+              >
+                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 13 }}>SAVE</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <Text style={s.sectionLabel}>SYSTEM CONFIGURATION</Text>
@@ -1474,6 +1535,12 @@ export default function App() {
   };
 
   useEffect(() => {
+    AsyncStorage.getItem('serverIp').then(ip => {
+      if (ip) {
+        setServerIpAddress(ip);
+      }
+    });
+
     AsyncStorage.getItem('sosUser').then(saved => {
       if (saved) { setUser(JSON.parse(saved)); setScreen('selection'); }
       setChecking(false);

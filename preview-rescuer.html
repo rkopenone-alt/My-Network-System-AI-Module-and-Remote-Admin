@@ -1004,6 +1004,18 @@
                         </div>
                     </div>
 
+                    <div class="settings-group">
+                        <div class="settings-item" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 15px 20px;">
+                            <div class="item-label" style="font-weight: 800; color: var(--primary); font-size: 11px; letter-spacing: 0.5px;"><i>📡</i> SERVER NETWORK SETTINGS</div>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                                <input type="text" id="inpServerIp" placeholder="e.g. 192.168.1.15" 
+                                    style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-body); color: var(--text-main); font-family: 'Inter'; font-size: 14px;">
+                                <button onclick="core.updateServerIp()" 
+                                    style="background: var(--accent); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer;">SAVE</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="logout-btn" onclick="core.clearCache()" style="background:var(--warning); color:var(--text-main); margin-bottom:10px;">CLEAR APP CACHE & REFRESH</div>
                     <div class="logout-btn" onclick="core.logout()">SECURE SESSION LOGOUT</div>
 
@@ -1298,7 +1310,25 @@
 
             logout() {
                 localStorage.removeItem('rescue_user_v3');
+                localStorage.removeItem('rescuer_token');
+                try {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOGOUT' }));
+                } catch(e) {}
                 location.reload();
+            },
+
+            updateServerIp() {
+                const ip = document.getElementById('inpServerIp').value.trim();
+                if (!ip) {
+                    this.toast("INVALID IP ADDRESS", "⚠️");
+                    return;
+                }
+                localStorage.setItem('serverIp', ip);
+                try {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip }));
+                } catch(e) {
+                    this.toast("IP SAVED - REBOOT PREVIEW TO APPLY", "📡");
+                }
             },
 
             clearCache() {
@@ -1390,6 +1420,11 @@
                 const groupNames = (this.user.groups && this.user.groups.length > 0) ? this.user.groups.map(g => g.group_name).join(', ') : 'No Groups Assigned';
                 document.getElementById('profGroups').innerText = groupNames;
                 document.getElementById('dispZone').innerText = `Active in: ${groupNames}`;
+
+                const serverIpField = document.getElementById('inpServerIp');
+                if (serverIpField) {
+                    serverIpField.value = window.__SERVER_IP__ || window.location.hostname || '192.168.1.4';
+                }
             },
 
             initMap() {

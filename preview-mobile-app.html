@@ -1675,8 +1675,11 @@
             locationWatcher: null,
 
             startLocationTracking() {
-                if (!navigator.geolocation) {
-                    this.toast("Geolocation not supported", "🚫");
+                const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                if (!navigator.geolocation || !isSecure) {
+                    console.warn("Insecure context or no geolocation, using simulation/manual location.");
+                    this.renderLocationBar('file_off');
+                    document.getElementById('locationPopup').style.display = 'none';
                     return;
                 }
 
@@ -1690,7 +1693,11 @@
                     },
                     (error) => {
                         console.error("Location error:", error);
-                        document.getElementById('locationPopup').style.display = 'flex';
+                        if (error.code === 1) { // Permission Denied
+                            this.renderLocationBar('denied');
+                        } else {
+                            document.getElementById('locationPopup').style.display = 'flex';
+                        }
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
