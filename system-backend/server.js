@@ -597,9 +597,9 @@ app.post('/api/auth/login', async (req, res) => {
         const last10 = cleaned.length >= 10 ? cleaned.slice(-10) : null;
         let user;
         if (last10) {
-            user = await get(`SELECT * FROM users WHERE (phone = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ? OR serial_number = ?) AND password = ?`, [idOrPhone, `%${last10}`, idOrPhone, pin]);
+            user = await get(`SELECT * FROM users WHERE (serial_number = ? OR phone = ? OR (length(REPLACE(phone, '+', '')) >= 10 AND REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?)) AND password = ? ORDER BY CASE WHEN serial_number = ? THEN 2 WHEN phone = ? THEN 1 ELSE 0 END DESC LIMIT 1`, [idOrPhone, idOrPhone, `%${last10}`, pin, idOrPhone, idOrPhone]);
         } else {
-            user = await get(`SELECT * FROM users WHERE (phone = ? OR serial_number = ?) AND password = ?`, [idOrPhone, idOrPhone, pin]);
+            user = await get(`SELECT * FROM users WHERE (serial_number = ? OR phone = ?) AND password = ? LIMIT 1`, [idOrPhone, idOrPhone, pin]);
         }
         
         if (!user) {
@@ -783,9 +783,9 @@ app.post('/api/login', async (req, res) => {
         const last10 = cleaned.length >= 10 ? cleaned.slice(-10) : null;
         let user;
         if (last10) {
-            user = await get(`SELECT * FROM users WHERE (phone = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ? OR serial_number = ?) AND password = ? AND status = 'active'`, [phone, `%${last10}`, phone, password]);
+            user = await get(`SELECT * FROM users WHERE (serial_number = ? OR phone = ? OR (length(REPLACE(phone, '+', '')) >= 10 AND REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?)) AND password = ? AND status = 'active' ORDER BY CASE WHEN serial_number = ? THEN 2 WHEN phone = ? THEN 1 ELSE 0 END DESC LIMIT 1`, [phone, phone, `%${last10}`, password, phone, phone]);
         } else {
-            user = await get(`SELECT * FROM users WHERE (phone = ? OR serial_number = ?) AND password = ? AND status = 'active'`, [phone, phone, password]);
+            user = await get(`SELECT * FROM users WHERE (serial_number = ? OR phone = ?) AND password = ? AND status = 'active' LIMIT 1`, [phone, phone, password]);
         }
         if (user) {
             // Fetch groups for user

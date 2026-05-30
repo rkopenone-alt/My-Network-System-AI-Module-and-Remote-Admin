@@ -12,7 +12,7 @@ import { htmlString } from './htmlStr';
 
 // ─── Server Configuration ─────────────────────────────────────────────────────
 // Update SERVER_IP to your machine's Wi-Fi IP address.
-const SERVER_IP = '192.168.1.4';
+const SERVER_IP = '';
 const SERVER_PORT = '3001';
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -32,11 +32,30 @@ export default function App() {
         setTempIp(val);
       }
     });
-    AsyncStorage.getItem('rescuer_token').then(val => {
-      if (val) setToken(val);
-    });
-    AsyncStorage.getItem('rescue_user_v3').then(val => {
-      if (val) setUser(JSON.parse(val));
+    AsyncStorage.getItem('rescuer_token').then(async token => {
+      if (token) {
+        try {
+          const ip = await AsyncStorage.getItem('serverIp') || SERVER_IP;
+          const res = await fetch(`http://${ip}:${SERVER_PORT}/api/auth/verify`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            await AsyncStorage.setItem('rescue_user_v3', JSON.stringify(data.user));
+            setUser(data.user);
+            setToken(token);
+          } else {
+            setUser(null);
+            setToken(null);
+          }
+        } catch(e) {
+          const saved = await AsyncStorage.getItem('rescue_user_v3');
+          if (saved) {
+            setUser(JSON.parse(saved));
+            setToken(token);
+          }
+        }
+      }
     });
   }, []);
 
@@ -73,6 +92,10 @@ export default function App() {
 
       if (res.ok) {
         const data = await res.json();
+        try {
+          const keys = await AsyncStorage.getAllKeys();
+          await AsyncStorage.multiRemove(keys.filter(k => k !== 'serverIp' && k !== 'rescuer_device_id'));
+        } catch(e) {}
         await AsyncStorage.setItem('rescuer_token', data.token);
         await AsyncStorage.setItem('rescue_user_v3', JSON.stringify(data.user));
         setUser(data.user);
@@ -266,8 +289,10 @@ export default function App() {
             console.log('[WebView Message]', data);
 
             if (data.type === 'LOGOUT') {
-              await AsyncStorage.removeItem('rescuer_token');
-              await AsyncStorage.removeItem('rescue_user_v3');
+              try {
+                const keys = await AsyncStorage.getAllKeys();
+                await AsyncStorage.multiRemove(keys.filter(k => k !== 'serverIp' && k !== 'rescuer_device_id'));
+              } catch(e) {}
               setUser(null);
               setToken(null);
               return;
@@ -561,7 +586,15 @@ function LoginScreen({ onLogin, initialIp }) {
 
         <TouchableOpacity 
           style={loginStyles.button} 
-          onPress={() => onLogin(phone, pin, ip)}
+          onPress={() => {
+            const cleanIp = ip.trim();
+            const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+            if (!cleanIp || !ipRegex.test(cleanIp)) {
+              Alert.alert('Required', 'Please enter a valid Server IP address (e.g. 192.168.1.15)');
+              return;
+            }
+            onLogin(phone, pin, cleanIp);
+          }}
         >
           <Text style={loginStyles.buttonText}>Secure Login System</Text>
         </TouchableOpacity>

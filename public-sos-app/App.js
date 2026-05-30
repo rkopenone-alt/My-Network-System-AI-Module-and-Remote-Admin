@@ -14,8 +14,8 @@ import * as FileSystem from 'expo-file-system';
 
 const { width } = Dimensions.get('window');
 
-let API_URL = 'http://192.168.1.4:3001/api';
-let WS_URL = 'ws://192.168.1.4:3001';
+let API_URL = '';
+let WS_URL = '';
 
 const setServerIpAddress = (ip) => {
   API_URL = `http://${ip}:3001/api`;
@@ -178,7 +178,7 @@ function LocationStatusBar() {
 function LoginScreen({ onLogin }) {
   const [phone, setPhone] = useState('');
   const [pass, setPass] = useState('');
-  const [ipAddress, setIpAddress] = useState('192.168.1.4');
+  const [ipAddress, setIpAddress] = useState('');
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -196,8 +196,14 @@ function LoginScreen({ onLogin }) {
       return;
     }
     
+    const cleanIp = ipAddress.trim();
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (!cleanIp || !ipRegex.test(cleanIp)) {
+      Alert.alert('Required', 'Please enter a valid Server IP address (e.g. 192.168.1.15)');
+      return;
+    }
+    
     try {
-      const cleanIp = ipAddress.trim();
       await AsyncStorage.setItem('serverIp', cleanIp);
       setServerIpAddress(cleanIp);
     } catch (e) {
@@ -213,6 +219,11 @@ function LoginScreen({ onLogin }) {
 
       if (res.ok) {
         const data = await res.json();
+        try {
+          const keys = await AsyncStorage.getAllKeys();
+          const keysToRemove = keys.filter(k => k === 'sosUser' || k === 'sosToken' || k === 'offlineRequests' || k.startsWith('cachedHistory_'));
+          await AsyncStorage.multiRemove(keysToRemove);
+        } catch(e) {}
         await AsyncStorage.setItem('sosUser', JSON.stringify(data.user));
         if (data.token) await AsyncStorage.setItem('sosToken', data.token);
         onLogin(data.user);
@@ -592,7 +603,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
 function ProfileScreen({ user, onLogout }) {
   const [isOnline, setIsOnline] = useState(true);
   const [syncInterval, setSyncInterval] = useState('FETCHING...');
-  const [ipAddress, setIpAddress] = useState('192.168.1.4');
+  const [ipAddress, setIpAddress] = useState('');
 
   useEffect(() => {
     AsyncStorage.getItem('serverIp').then(ip => {
@@ -651,8 +662,9 @@ function ProfileScreen({ user, onLogout }) {
                 style={[s.loginBtn, { width: 80, height: 44, marginTop: 0, padding: 0, justifyContent: 'center', shadowColor: C.primary }]}
                 onPress={async () => {
                   const cleanIp = ipAddress.trim();
-                  if (!cleanIp) {
-                    Alert.alert("Error", "Please enter a valid IP address");
+                  const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+                  if (!cleanIp || !ipRegex.test(cleanIp)) {
+                    Alert.alert("Error", "Please enter a valid IP address (e.g. 192.168.1.15)");
                     return;
                   }
                   await AsyncStorage.setItem('serverIp', cleanIp);
@@ -1541,8 +1553,27 @@ export default function App() {
       }
     });
 
-    AsyncStorage.getItem('sosUser').then(saved => {
-      if (saved) { setUser(JSON.parse(saved)); setScreen('selection'); }
+    AsyncStorage.getItem('sosToken').then(async token => {
+      if (!token) {
+        setChecking(false);
+        return;
+      }
+      try {
+        const res = await fetch(`${API_URL}/auth/verify`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          await AsyncStorage.setItem('sosUser', JSON.stringify(data.user));
+          setUser(data.user);
+          setScreen('selection');
+        } else {
+          await handleLogout();
+        }
+      } catch (e) {
+        const saved = await AsyncStorage.getItem('sosUser');
+        if (saved) { setUser(JSON.parse(saved)); setScreen('selection'); }
+      }
       setChecking(false);
     });
     
@@ -1623,8 +1654,11 @@ export default function App() {
   }, []);
 
   const handleLogout = async () => {
-    await AsyncStorage.removeItem('sosUser');
-    await AsyncStorage.removeItem('sosToken');
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const keysToRemove = keys.filter(k => k === 'sosUser' || k === 'sosToken' || k === 'offlineRequests' || k.startsWith('cachedHistory_'));
+      await AsyncStorage.multiRemove(keysToRemove);
+    } catch(e) {}
     setUser(null);
     setScreen('login');
   };
