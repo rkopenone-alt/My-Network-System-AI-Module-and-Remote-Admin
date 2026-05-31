@@ -1132,6 +1132,29 @@
                         Secure Unified Interface for<br>Tactical Emergency Response
                     </p>
                 </div>
+                
+                <!-- Server Connection config -->
+                <div style="margin-top: 48px; border-top: 1px dashed var(--border); padding-top: 32px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <label style="font-size: 11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin:0;">Server Connection IP</label>
+                        <div id="adminConnectionBadge" style="display:flex; align-items:center; gap:4px; font-size:10px; font-weight:800; color:#ef4444;">
+                            <span style="width:6px; height:6px; background:#ef4444; border-radius:50%; display:inline-block;"></span> DISCONNECTED
+                        </div>
+                    </div>
+                    <div style="display:flex; gap: 8px;">
+                        <input type="text" id="adminServerIpInput" placeholder="e.g. 192.168.1.7" 
+                            style="flex:1; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: white; font-family: monospace; font-size: 13px; color: var(--text-main); font-weight: 600;" />
+                        <button class="btn btn-primary" onclick="saveAdminServerIp()" style="padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 700; height: auto;">
+                            Save
+                        </button>
+                    </div>
+                    <div id="adminIpHelpText" style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 8px; line-height: 1.4;">
+                        Enter server IP. Leaving empty falls back to localhost.
+                    </div>
+                    <div style="margin-top: 8px; display: flex; gap: 12px;">
+                        <a href="#" onclick="resetAdminServerIp(); return false;" style="font-size: 11px; color: var(--accent); font-weight: 700; text-decoration: none;">← Reset to Default (Localhost)</a>
+                    </div>
+                </div>
             </div>
 
             <!-- Bottom Actions -->
@@ -2238,6 +2261,38 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Box 6: Server Connection IP Configuration -->
+                <div class="card"
+                    style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                            <h3 style="margin:0;">Server Connection IP</h3>
+                            <div id="configConnectionBadge" style="display:flex; align-items:center; gap:4px; font-size:10px; font-weight:800; color:#ef4444;">
+                                <span style="width:6px; height:6px; background:#ef4444; border-radius:50%; display:inline-block;"></span> DISCONNECTED
+                            </div>
+                        </div>
+                        <p style="color:var(--text-muted);font-size:12px; margin-bottom: 16px;">Configure the target backend server IP address. Changing this will update the API base and WebSocket connections.</p>
+                    </div>
+                    <div>
+                        <div class="input-group" style="margin-bottom: 12px;">
+                            <label class="input-label"
+                                style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Target Server IP</label>
+                            <input type="text" id="configServerIpInput" class="form-control" placeholder="e.g. 192.168.1.7"
+                                style="height: 36px; font-size: 12px; border-radius: 6px; font-family: monospace;">
+                        </div>
+                        <div id="configIpHelpText" style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
+                            Enter server IP. Leaving empty falls back to localhost.
+                        </div>
+                        <div style="margin-bottom: 12px; display: flex; gap: 12px;">
+                            <a href="#" onclick="resetConfigServerIp(); return false;" style="font-size: 11px; color: var(--accent); font-weight: 700; text-decoration: none;">← Reset to Default (Localhost)</a>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveConfigServerIp()"
+                            style="width: 100%; justify-content: center; height: 36px; font-size: 12px; border-radius: 6px; font-weight: 700;">
+                            <i data-lucide="save" style="width:16px; margin-right: 4px;"></i> Save Server IP & Reconnect
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -2994,13 +3049,13 @@
     </div>
 
     <script>
-        const SERVER_IP = window.location.hostname || 'localhost'; // Your PC's current IP address
-        const API_BASE = `http://${window.location.hostname || 'localhost'}:3001/api`;
+        const SERVER_IP = localStorage.getItem('serverIp') || window.location.hostname || 'localhost'; // Dynamically resolved IP address
+        const API_BASE = `http://${SERVER_IP}:3001/api`;
 
         function formatMediaUrl(url) {
             if (!url) return '';
             if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
-            const base = `http://${window.location.hostname || 'localhost'}:3001`;
+            const base = `http://${SERVER_IP}:3001`;
             return `${base}${url}`;
         }
 
@@ -3052,37 +3107,62 @@
 
         // 0. WebSocket & Global Helpers
         let socket;
+        function updateBadge(connected) {
+            const badge1 = document.getElementById('adminConnectionBadge');
+            const badge2 = document.getElementById('configConnectionBadge');
+            const color = connected ? '#10b981' : '#ef4444';
+            const text = connected ? 'CONNECTED' : 'DISCONNECTED';
+            const html = `<span style="width:6px; height:6px; background:${color}; border-radius:50%; display:inline-block;"></span> ${text}`;
+            if (badge1) {
+                badge1.innerHTML = html;
+                badge1.style.color = color;
+            }
+            if (badge2) {
+                badge2.innerHTML = html;
+                badge2.style.color = color;
+            }
+        }
         function initWebSocket() {
-            const wsUrl = `ws://${window.location.hostname || 'localhost'}:3001`;
+            const wsUrl = `ws://${SERVER_IP}:3001`;
             console.log(`[Admin] Connecting to WebSocket: ${wsUrl}`);
-            socket = new WebSocket(wsUrl);
+            try {
+                socket = new WebSocket(wsUrl);
 
-            socket.onopen = () => {
-                console.log("[Admin] WebSocket Connected");
-                socket.send(JSON.stringify({ type: 'REGISTER', deviceId: 'WEB_ADMIN_MASTER', room: 'admin' }));
-            };
-            socket.onclose = () => {
-                console.log("[Admin] WebSocket Closed. Reconnecting...");
+                socket.onopen = () => {
+                    console.log("[Admin] WebSocket Connected");
+                    updateBadge(true);
+                    socket.send(JSON.stringify({ type: 'REGISTER', deviceId: 'WEB_ADMIN_MASTER', room: 'admin' }));
+                };
+                socket.onerror = () => {
+                    updateBadge(false);
+                };
+                socket.onclose = () => {
+                    console.log("[Admin] WebSocket Closed. Reconnecting...");
+                    updateBadge(false);
+                    setTimeout(initWebSocket, 5000);
+                };
+                socket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        const updateTypes = [
+                            'NEW_RESCUE_REQUEST', 'RESCUE_REQUEST_ACCEPTED', 'RESCUE_REQUEST_DECLINED',
+                            'RESCUE_REQUEST_UPDATE', 'COMMAND_STATUS_UPDATE', 'RESCUE_REQUEST_COMPLETED',
+                            'SOS_ALERT', 'RESCUER_UPDATE', 'NEW_COMMAND'
+                        ];
+
+                        if (updateTypes.includes(data.type)) {
+                            if (data.type === 'NEW_RESCUE_REQUEST') showAdminToast(`🆘 New SOS Alert from ${data.data?.sector || 'field'}`);
+                            if (data.type === 'RESCUE_REQUEST_COMPLETED') showAdminToast(`✅ Mission complete: ${data.data?.sector || 'request'} marked done`);
+                            if (data.type === 'SOS_ALERT') showAdminToast(`🚨 SOS Alert: ${data.data?.details?.message || 'Incoming alert'}`);
+
+                            refreshAllModules();
+                        }
+                    } catch (e) { console.error("[Admin] WS Error:", e); }
+                };
+            } catch (e) {
+                updateBadge(false);
                 setTimeout(initWebSocket, 5000);
-            };
-            socket.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    const updateTypes = [
-                        'NEW_RESCUE_REQUEST', 'RESCUE_REQUEST_ACCEPTED', 'RESCUE_REQUEST_DECLINED',
-                        'RESCUE_REQUEST_UPDATE', 'COMMAND_STATUS_UPDATE', 'RESCUE_REQUEST_COMPLETED',
-                        'SOS_ALERT', 'RESCUER_UPDATE', 'NEW_COMMAND'
-                    ];
-
-                    if (updateTypes.includes(data.type)) {
-                        if (data.type === 'NEW_RESCUE_REQUEST') showAdminToast(`🆘 New SOS Alert from ${data.data?.sector || 'field'}`);
-                        if (data.type === 'RESCUE_REQUEST_COMPLETED') showAdminToast(`✅ Mission complete: ${data.data?.sector || 'request'} marked done`);
-                        if (data.type === 'SOS_ALERT') showAdminToast(`🚨 SOS Alert: ${data.data?.details?.message || 'Incoming alert'}`);
-
-                        refreshAllModules();
-                    }
-                } catch (e) { console.error("[Admin] WS Error:", e); }
-            };
+            }
         }
 
         // --- GLOBAL REFRESH & SYNC HUB ---
@@ -3098,11 +3178,19 @@
             if (typeof fetchGroups === 'function') fetchGroups();
         }
 
-        function showAdminToast(msg) {
+        function showAdminToast(msg, type = 'info') {
             const toast = document.getElementById('adminToast');
             const toastMsg = document.getElementById('adminToastMsg');
             if (toastMsg) toastMsg.innerText = msg;
             else toast.innerText = msg;
+
+            if (type === 'success') {
+                toast.style.backgroundColor = '#10b981';
+            } else if (type === 'error') {
+                toast.style.backgroundColor = '#ef4444';
+            } else {
+                toast.style.backgroundColor = '#1e293b';
+            }
 
             toast.classList.add('show');
             clearTimeout(toast._timeout);
@@ -3128,7 +3216,21 @@
                         enterDashboard(savedOpId);
                     }
                 }
-            } catch (e) { console.error("Error fetching operations", e); }
+            } catch (e) {
+                console.error("Error fetching operations", e);
+                const body = document.getElementById('opsListBody');
+                if (body) {
+                    body.innerHTML = `<tr><td colspan="5" style="padding:40px; text-align:center; color:var(--danger); font-size:14px; font-weight:800; line-height:1.6;">
+                        ⚠️ CONNECTION FAILED to backend server at ${API_BASE}.<br>
+                        <span style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-top:8px;">
+                            Please verify the backend is running. If you are running the system on this laptop, reset connection settings to Localhost.
+                        </span>
+                        <a href="#" onclick="resetAdminServerIp(); return false;" style="display:inline-block; margin-top:12px; background:var(--accent); color:white; padding:8px 16px; border-radius:8px; text-decoration:none; font-family:sans-serif; font-size:13px; font-weight:700;">
+                            ← Reset Connection to Localhost
+                        </a>
+                    </td></tr>`;
+                }
+            }
         }
 
         function renderOpsList() {
@@ -3207,7 +3309,7 @@
                 }
                 fetchOperations();
                 closeModal('createOpModal');
-            } catch (e) { alert("Failed to save operation: " + e.message); }
+            } catch (e) { alert(`Failed to save operation: ${e.message}\nIs the backend running at ${API_BASE}?`); }
         }
 
         async function deleteOperation(opId) {
@@ -6224,6 +6326,65 @@
             }
         }
 
+        function saveAdminServerIp() {
+            const input = document.getElementById('adminServerIpInput');
+            const val = input.value.trim();
+            if (val === '') {
+                localStorage.removeItem('serverIp');
+                showAdminToast("✓ Server IP reset to default (localhost)! Reconnecting...", "success");
+            } else {
+                localStorage.setItem('serverIp', val);
+                showAdminToast("✓ Server IP saved! Reconnecting...", "success");
+            }
+            
+            const btn = document.querySelector('button[onclick="saveAdminServerIp()"]');
+            if (btn) {
+                btn.style.backgroundColor = "#10b981";
+                btn.style.borderColor = "#10b981";
+                btn.style.color = "white";
+                btn.innerText = "✓ Saved";
+            }
+            setTimeout(() => {
+                window.location.reload();
+            }, 1200);
+        }
+        function resetAdminServerIp() {
+            localStorage.removeItem('serverIp');
+            showAdminToast("✓ Reset to default localhost. Reconnecting...", "success");
+            setTimeout(() => {
+                window.location.reload();
+            }, 1200);
+        }
+        function saveConfigServerIp() {
+            const input = document.getElementById('configServerIpInput');
+            const val = input.value.trim();
+            if (val === '') {
+                localStorage.removeItem('serverIp');
+                showAdminToast("✓ Server IP reset to default (localhost)! Reconnecting...", "success");
+            } else {
+                localStorage.setItem('serverIp', val);
+                showAdminToast("✓ Server IP saved! Reconnecting...", "success");
+            }
+            
+            const btn = document.querySelector('button[onclick="saveConfigServerIp()"]');
+            if (btn) {
+                btn.style.backgroundColor = "#10b981";
+                btn.style.borderColor = "#10b981";
+                btn.style.color = "white";
+                btn.innerHTML = "✓ Server IP Saved";
+            }
+            setTimeout(() => {
+                window.location.reload();
+            }, 1200);
+        }
+        function resetConfigServerIp() {
+            localStorage.removeItem('serverIp');
+            showAdminToast("✓ Reset to default localhost. Reconnecting...", "success");
+            setTimeout(() => {
+                window.location.reload();
+            }, 1200);
+        }
+
         function setBufferPreset(val) {
             document.getElementById('bufferIntervalInput').value = val;
             const selectEl = document.getElementById('bufferUnitSelect');
@@ -6773,13 +6934,56 @@
             clockEl.innerText = `${hoursStr}:${minutes}:${seconds} ${ampm}`;
         }
 
+        async function detectServerIp() {
+            let detectedIp = null;
+            try {
+                // Try relative window.location.hostname first as it is always reachable on the laptop
+                const res = await fetch(`http://${window.location.hostname || 'localhost'}:3001/api/server-ip`);
+                if (res.ok) {
+                    const data = await res.json();
+                    detectedIp = data.ip;
+                }
+            } catch (e) {
+                try {
+                    // Fallback to currently configured API base
+                    const res = await fetch(`${API_BASE}/server-ip`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        detectedIp = data.ip;
+                    }
+                } catch(err) {}
+            }
+
+            if (detectedIp && detectedIp !== '127.0.0.1') {
+                const txt = `📢 Detected Laptop IP: <strong>${detectedIp}</strong> (Feed this IP address into both mobile apps to connect them)`;
+                const help1 = document.getElementById('adminIpHelpText');
+                if (help1) {
+                    help1.innerHTML = txt;
+                    help1.style.color = '#0ea5e9';
+                }
+                const help2 = document.getElementById('configIpHelpText');
+                if (help2) {
+                    help2.innerHTML = txt;
+                    help2.style.color = '#0ea5e9';
+                }
+            }
+        }
+
         // Initialize
         window.onload = () => {
+            if (document.getElementById('adminServerIpInput')) {
+                document.getElementById('adminServerIpInput').value = SERVER_IP;
+            }
+            if (document.getElementById('configServerIpInput')) {
+                document.getElementById('configServerIpInput').value = SERVER_IP;
+            }
+
             try { initWebSocket(); } catch (e) { console.error("WS Init Error", e); }
             try { initMap(); } catch (e) { console.error("Map Init Error", e); }
 
             updateDigitalClock();
             setInterval(updateDigitalClock, 1000);
+            detectServerIp();
 
             // Set periodic refreshes
             // Auto-refresh is now handled by startAutoRefresh(interval) triggered by fetchRefreshSetting()

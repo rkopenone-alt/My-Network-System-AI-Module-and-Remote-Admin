@@ -8,6 +8,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const os = require('os');
 
 const { runSystemBackup } = require('./backup_util');
 const triggerBackup = () => {
@@ -620,7 +621,7 @@ app.post('/api/auth/login', async (req, res) => {
         
         // Generate JWT token
         const passwordHash = crypto.createHash('sha256').update(user.password || '').digest('hex');
-        const token = jwt.sign({ id: user.id, role: user.role, phone: user.phone, serial: user.serial_number, deviceId: user.device_id, passwordHash }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ id: user.id, name: user.name, role: user.role, phone: user.phone, serial: user.serial_number, deviceId: user.device_id, passwordHash }, JWT_SECRET, { expiresIn: '7d' });
         
         // Audit log
         await logCommand('LOGIN_SUCCESS', user.name, user.serial_number, { role: user.role, deviceId });
@@ -670,8 +671,55 @@ const verifyToken = (req, res, next) => {
     });
 };
 
-app.get('/api/auth/verify', verifyToken, (req, res) => {
-    res.json({ valid: true, user: req.user });
+app.get('/api/auth/verify', verifyToken, async (req, res) => {
+    try {
+        const user = await get(`SELECT * FROM users WHERE id = ?`, [req.user.id]);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const userGroups = await all(`SELECT g.* FROM group_members gm JOIN groups g ON gm.group_id = g.id WHERE gm.user_id = ?`, [user.id]);
+        res.json({ 
+            valid: true, 
+            user: { 
+                id: user.id, 
+                name: user.name, 
+                role: user.role, 
+                serial_number: user.serial_number, 
+                phone: user.phone, 
+                device_id: user.device_id, 
+                interrupted_task_id: user.interrupted_task_id,
+                groups: userGroups
+            } 
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok' });
+});
+
+app.get('/api/server-ip', (req, res) => {
+    try {
+        const interfaces = os.networkInterfaces();
+        let ip = '127.0.0.1';
+        for (const devName in interfaces) {
+            const iface = interfaces[devName];
+            for (let i = 0; i < iface.length; i++) {
+                const alias = iface[i];
+                if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
+                    ip = alias.address;
+                    break;
+                }
+            }
+            if (ip !== '127.0.0.1') break;
+        }
+        res.json({ ip });
+    } catch(e) {
+        res.json({ ip: '127.0.0.1' });
+    }
 });
 
 // ─── Zones ────────────────────────────────────────────────────────────────────

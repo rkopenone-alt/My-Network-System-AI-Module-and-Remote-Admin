@@ -1810,6 +1810,10 @@
                         });
                         if (res.ok) {
                             const data = await res.json();
+                            if (!data.user || data.user.role !== 'public') {
+                                this.logout();
+                                return;
+                            }
                             this.user = data.user;
                             localStorage.setItem('citizen_user', JSON.stringify(this.user));
                             this.showScreen('screenEmergencyType');
@@ -1925,6 +1929,12 @@
 
                     if (res.ok) {
                         const data = await res.json();
+                        if (!data.user || data.user.role !== 'public') {
+                            err.innerText = "ACCESS DENIED - CITIZENS ONLY";
+                            err.style.display = 'block';
+                            this.showLoader(false);
+                            return;
+                        }
                         this.user = data.user;
                         localStorage.setItem('citizen_token', data.token);
                         localStorage.setItem('citizen_user', JSON.stringify(this.user));
@@ -1951,14 +1961,31 @@
             logout() {
                 localStorage.removeItem('citizen_token');
                 localStorage.removeItem('citizen_user');
-                location.reload();
+                if (this.socket) {
+                    try {
+                        this.socket.onclose = null;
+                        this.socket.close();
+                    } catch(e) {}
+                    this.socket = null;
+                }
+                this.user = null;
+                this.showScreen('screenLogin');
+                this.toast("LOGGED OUT", "🔑");
             },
 
             clearCache() {
-                localStorage.removeItem(`cached_my_history_${this.user.phone}`);
+                localStorage.removeItem(`cached_my_history_${this.user ? this.user.phone : ''}`);
                 localStorage.removeItem('offlineRequests');
-                this.toast("CACHE CLEARED", "⚡");
-                setTimeout(() => location.reload(), 1000);
+                if (this.socket) {
+                    try {
+                        this.socket.onclose = null;
+                        this.socket.close();
+                    } catch(e) {}
+                    this.socket = null;
+                }
+                this.toast("CACHE CLEARED", "🧹");
+                this.user = null;
+                this.showScreen('screenLogin');
             },
 
             refreshInterval: 15,

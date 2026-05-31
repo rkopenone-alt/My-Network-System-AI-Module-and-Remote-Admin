@@ -14,8 +14,35 @@ import * as FileSystem from 'expo-file-system';
 
 const { width } = Dimensions.get('window');
 
-let API_URL = '';
-let WS_URL = '';
+const DEFAULT_SERVER_IP = '';
+let API_URL = `http://${DEFAULT_SERVER_IP}:3001/api`;
+let WS_URL = `ws://${DEFAULT_SERVER_IP}:3001`;
+
+// Helper: fetch with timeout to prevent hanging connections
+const fetchWithTimeout = async (url, options = {}, timeout = 5000) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    if (response && (response.ok || response.status < 500)) {
+      if (GlobalState.setIsConnected) {
+        GlobalState.setIsConnected(true);
+      }
+      GlobalState.lastSuccessTime = Date.now();
+    }
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    if (GlobalState.setIsConnected) {
+      GlobalState.setIsConnected(false);
+    }
+    throw error;
+  }
+};
 
 const setServerIpAddress = (ip) => {
   API_URL = `http://${ip}:3001/api`;
@@ -24,6 +51,8 @@ const setServerIpAddress = (ip) => {
 
 const GlobalState = {
   sosLockedUntil: 0,
+  setIsConnected: null,
+  lastSuccessTime: 0,
 };
 
 // Helper: save media file locally to document directory folder
@@ -175,19 +204,17 @@ function LocationStatusBar() {
 }
 
 // ─── Screen 1: Login ──────────────────────────────────────────────────────────
-function LoginScreen({ onLogin }) {
+function LoginScreen({ onLogin, serverIp, onIpChange }) {
   const [phone, setPhone] = useState('');
   const [pass, setPass] = useState('');
-  const [ipAddress, setIpAddress] = useState('');
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    AsyncStorage.getItem('serverIp').then(ip => {
-      if (ip) {
-        setIpAddress(ip);
-        setServerIpAddress(ip);
-      }
-    });
+    Animated.timing(fadeIn, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   const handleLogin = async () => {
@@ -196,7 +223,7 @@ function LoginScreen({ onLogin }) {
       return;
     }
     
-    const cleanIp = ipAddress.trim();
+    const cleanIp = serverIp.trim();
     const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
     if (!cleanIp || !ipRegex.test(cleanIp)) {
       Alert.alert('Required', 'Please enter a valid Server IP address (e.g. 192.168.1.15)');
@@ -205,20 +232,24 @@ function LoginScreen({ onLogin }) {
     
     try {
       await AsyncStorage.setItem('serverIp', cleanIp);
-      setServerIpAddress(cleanIp);
+      onIpChange(cleanIp);
     } catch (e) {
       console.warn("Failed to save server IP:", e);
     }
     
     try {
-      const res = await fetch(`${API_URL}/auth/login`, {
+      const res = await fetchWithTimeout(`http://${cleanIp}:3001/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idOrPhone: phone.trim(), pin: pass, deviceId: 'PUB-MOB' })
-      });
+      }, 5000);
 
       if (res.ok) {
         const data = await res.json();
+        if (data.user.role !== 'public') {
+          Alert.alert('Access Denied', 'This app is for citizen SOS reporting only.');
+          return;
+        }
         try {
           const keys = await AsyncStorage.getAllKeys();
           const keysToRemove = keys.filter(k => k === 'sosUser' || k === 'sosToken' || k === 'offlineRequests' || k.startsWith('cachedHistory_'));
@@ -226,7 +257,7 @@ function LoginScreen({ onLogin }) {
         } catch(e) {}
         await AsyncStorage.setItem('sosUser', JSON.stringify(data.user));
         if (data.token) await AsyncStorage.setItem('sosToken', data.token);
-        onLogin(data.user);
+        onLogin(data.user, cleanIp);
       } else {
         const errData = await res.json();
         Alert.alert('Login Failed', errData.error || 'Invalid credentials');
@@ -270,8 +301,8 @@ function LoginScreen({ onLogin }) {
           style={s.input}
           placeholder="e.g. 192.168.1.15"
           placeholderTextColor={C.light}
-          value={ipAddress}
-          onChangeText={setIpAddress}
+          value={serverIp}
+          onChangeText={onIpChange}
         />
         <TouchableOpacity style={s.loginBtn} onPress={handleLogin} activeOpacity={0.85}>
           <Text style={s.loginBtnText}>Secure Login System</Text>
@@ -600,7 +631,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
   );
 }
 
-function ProfileScreen({ user, onLogout }) {
+function ProfileScreen({ user, onLogout, onIpChange }) {
   const [isOnline, setIsOnline] = useState(true);
   const [syncInterval, setSyncInterval] = useState('FETCHING...');
   const [ipAddress, setIpAddress] = useState('');
@@ -612,7 +643,7 @@ function ProfileScreen({ user, onLogout }) {
 
     const fetchSettings = async () => {
       try {
-        const res = await fetch(`${API_URL}/settings`);
+        const res = await fetchWithTimeout(`${API_URL}/settings`, {}, 5000);
         if (res.ok) {
           const settings = await res.json();
           if (settings.retry_intervals) {
@@ -669,6 +700,7 @@ function ProfileScreen({ user, onLogout }) {
                   }
                   await AsyncStorage.setItem('serverIp', cleanIp);
                   setServerIpAddress(cleanIp);
+                  if (onIpChange) onIpChange(cleanIp);
                   Alert.alert("Server IP Updated", `The app is now configured to connect to http://${cleanIp}:3001`);
                 }}
               >
@@ -802,11 +834,11 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
         audio_data: audioBase64 || null
       };
 
-      const res = await fetch(`${API_URL}/rescue-requests`, {
+      const res = await fetchWithTimeout(`${API_URL}/rescue-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      });
+      }, 5000);
 
       if (!isMounted.current) return;
 
@@ -909,7 +941,7 @@ function HistoryScreen({ user, onBack }) {
     const fetchHistory = async () => {
       const phone = user?.phone || user?.serial_number;
       try {
-        const res = await fetch(`${API_URL}/rescue-requests/by-phone/${phone}`);
+        const res = await fetchWithTimeout(`${API_URL}/rescue-requests/by-phone/${phone}`, {}, 5000);
         if (res.ok) {
           const items = await res.json();
           const active = items.filter(i => i.status !== 'completed');
@@ -1305,11 +1337,11 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
         image_data: imageBase64 || null
       };
 
-      const res = await fetch(`${API_URL}/rescue-requests`, {
+      const res = await fetchWithTimeout(`${API_URL}/rescue-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      });
+      }, 5000);
 
       if (!isMounted.current) return;
 
@@ -1482,6 +1514,44 @@ function BottomNav({ current, onNav }) {
   );
 }
 
+function NetworkStatusIndicator({ isConnected }) {
+  return (
+    <View style={indicatorStyles.container}>
+      <View style={[indicatorStyles.dot, { backgroundColor: isConnected ? '#22c55e' : '#ef4444' }]} />
+      <Text style={indicatorStyles.text}>{isConnected ? 'Connected' : 'Disconnected'}</Text>
+    </View>
+  );
+}
+
+const indicatorStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 35,
+    right: 15,
+    zIndex: 99999,
+    elevation: 10,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  text: {
+    color: '#f8fafc',
+    fontSize: 11,
+    fontWeight: 'bold',
+  }
+});
+
 // ─── App Root ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(null);
@@ -1492,6 +1562,46 @@ export default function App() {
   const [micEnabled, setMicEnabled] = useState(true);
   const [isSosLocked, setIsSosLocked] = useState(false);
   const [sosCountdown, setSosCountdown] = useState(0);
+  const [serverIp, setServerIp] = useState(DEFAULT_SERVER_IP);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    GlobalState.setIsConnected = setIsConnected;
+    return () => {
+      GlobalState.setIsConnected = null;
+    };
+  }, []);
+
+  // Periodic health check
+  useEffect(() => {
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    const cleanIp = serverIp ? serverIp.trim() : '';
+    if (!cleanIp || !ipRegex.test(cleanIp)) {
+      setIsConnected(false);
+      return;
+    }
+    const checkConnection = async () => {
+      // If we had a successful request in the last 10 seconds, skip the background health check request
+      if (Date.now() - (GlobalState.lastSuccessTime || 0) < 10000) {
+        setIsConnected(true);
+        return;
+      }
+      try {
+        const res = await fetchWithTimeout(`http://${cleanIp}:3001/api/health`, {}, 3000);
+        if (res.ok) {
+          setIsConnected(true);
+        } else {
+          setIsConnected(false);
+        }
+      } catch (e) {
+        setIsConnected(false);
+      }
+    };
+    
+    checkConnection();
+    const interval = setInterval(checkConnection, 5000);
+    return () => clearInterval(interval);
+  }, [serverIp]);
 
   useEffect(() => {
     const handleAppStateChange = (nextAppState) => {
@@ -1547,35 +1657,75 @@ export default function App() {
   };
 
   useEffect(() => {
-    AsyncStorage.getItem('serverIp').then(ip => {
-      if (ip) {
-        setServerIpAddress(ip);
-      }
-    });
-
-    AsyncStorage.getItem('sosToken').then(async token => {
-      if (!token) {
-        setChecking(false);
-        return;
-      }
+    const initializeApp = async () => {
       try {
-        const res = await fetch(`${API_URL}/auth/verify`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          await AsyncStorage.setItem('sosUser', JSON.stringify(data.user));
-          setUser(data.user);
-          setScreen('selection');
+        const APP_VERSION = '1.1.0';
+        const storedVersion = await AsyncStorage.getItem('appVersion');
+        if (storedVersion !== APP_VERSION) {
+          try {
+            const keys = await AsyncStorage.getAllKeys();
+            const keysToRemove = keys.filter(k => k === 'sosUser' || k === 'sosToken' || k === 'offlineRequests' || k.startsWith('cachedHistory_'));
+            await AsyncStorage.multiRemove(keysToRemove);
+          } catch (e) {}
+          await AsyncStorage.setItem('appVersion', APP_VERSION);
+        }
+
+        const ip = await AsyncStorage.getItem('serverIp');
+        if (ip && ip !== '') {
+          setServerIpAddress(ip);
+          setServerIp(ip);
         } else {
-          await handleLogout();
+          setServerIpAddress(DEFAULT_SERVER_IP);
+          setServerIp(DEFAULT_SERVER_IP);
+          await AsyncStorage.setItem('serverIp', DEFAULT_SERVER_IP);
+        }
+
+        const currentIp = ip || DEFAULT_SERVER_IP;
+        if (!currentIp || currentIp.trim() === '') {
+          setChecking(false);
+          setScreen('login');
+          return;
+        }
+
+        const token = await AsyncStorage.getItem('sosToken');
+        if (!token) {
+          setChecking(false);
+          setScreen('login');
+          return;
+        }
+
+        try {
+          const res = await fetchWithTimeout(`http://${ip}:3001/api/auth/verify`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }, 5000);
+          if (res.ok) {
+            const data = await res.json();
+            if (!data.user || data.user.role !== 'public') {
+              await handleLogout();
+              return;
+            }
+            await AsyncStorage.setItem('sosUser', JSON.stringify(data.user));
+            setUser(data.user);
+            setScreen('selection');
+          } else {
+            await handleLogout();
+          }
+        } catch (e) {
+          console.warn("Verify session failed, checking cache:", e);
+          const saved = await AsyncStorage.getItem('sosUser');
+          if (saved) {
+            setUser(JSON.parse(saved));
+            setScreen('selection');
+          }
         }
       } catch (e) {
-        const saved = await AsyncStorage.getItem('sosUser');
-        if (saved) { setUser(JSON.parse(saved)); setScreen('selection'); }
+        console.error("Initialization failed:", e);
+      } finally {
+        setChecking(false);
       }
-      setChecking(false);
-    });
+    };
+
+    initializeApp();
     
     AsyncStorage.getItem('imageEnabled').then(val => {
       if (val !== null) setImageEnabled(val === 'true');
@@ -1606,11 +1756,11 @@ export default function App() {
             let stillOffline = [];
             for (let req of offlineList) {
               try {
-                const res = await fetch(`${API_URL}/rescue-requests`, {
+                const res = await fetchWithTimeout(`${API_URL}/rescue-requests`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(req.payload)
-                });
+                }, 5000);
                 if (!res.ok && res.status !== 429) {
                   stillOffline.push(req);
                 }
@@ -1626,7 +1776,7 @@ export default function App() {
       } catch (e) {}
 
       try {
-        const res = await fetch(`${API_URL}/settings`);
+        const res = await fetchWithTimeout(`${API_URL}/settings`, {}, 5000);
         if (res.ok) {
           const settings = await res.json();
           if (settings.public_image_enabled !== undefined) {
@@ -1672,7 +1822,25 @@ export default function App() {
   }
 
   if (screen === 'login') {
-    return <LoginScreen onLogin={(u) => { setUser(u); setScreen('selection'); }} />;
+    return (
+      <View style={{ flex: 1 }}>
+        <NetworkStatusIndicator isConnected={isConnected} />
+        <LoginScreen 
+          serverIp={serverIp}
+          onIpChange={(ip) => {
+            setServerIp(ip);
+            setServerIpAddress(ip);
+            AsyncStorage.setItem('serverIp', ip);
+          }}
+          onLogin={(u, ip) => { 
+            setUser(u); 
+            setServerIp(ip); 
+            setServerIpAddress(ip);
+            setScreen('selection'); 
+          }} 
+        />
+      </View>
+    );
   }
 
   const renderScreen = () => {
@@ -1693,13 +1861,14 @@ export default function App() {
       case 'history': 
         return <HistoryScreen user={user} onBack={() => setScreen('selection')} />;
       case 'settings': 
-        return <ProfileScreen user={user} onLogout={handleLogout} />;
+        return <ProfileScreen user={user} onLogout={handleLogout} onIpChange={setServerIp} />;
       default: return null;
     }
   };
 
   return (
     <View style={{ flex: 1 }}>
+      <NetworkStatusIndicator isConnected={isConnected} />
       {renderScreen()}
       {screen !== 'login' && (
         <BottomNav current={screen} onNav={setScreen} />

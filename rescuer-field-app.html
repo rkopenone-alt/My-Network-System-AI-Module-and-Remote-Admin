@@ -576,6 +576,10 @@
                     <label class="input-label">Security PIN</label>
                     <input type="password" id="inpPin" class="input-field" placeholder="Enter PIN" value="123456">
                 </div>
+                <div class="input-group">
+                    <label class="input-label">Server IP Address</label>
+                    <input type="text" id="inpIp" class="input-field" placeholder="e.g. 192.168.1.15" value="">
+                </div>
                 
                 <button class="login-btn" onclick="core.login()">LOGIN</button>
                 <p id="loginError" style="color:var(--danger); font-size:12px; font-weight:800; margin-top:20px; display:none;">ACCESS DENIED - INVALID CREDENTIALS</p>
@@ -690,6 +694,10 @@
                     </div>
 
                     <div class="settings-group">
+                        <div class="settings-item" style="cursor: default;">
+                            <div class="item-label"><i>🌐</i> Server IP</div>
+                            <input type="text" id="settingsIp" style="border: none; outline: none; text-align: right; font-weight: 700; color: var(--primary); font-family: inherit; width: 140px; background: transparent;" value="" onchange="core.updateServerIp(this.value)">
+                        </div>
                         <div class="settings-item">
                             <div class="item-label"><i>🔔</i> Dispatch Alerts</div>
                             <div class="item-val">ACTIVE</div>
@@ -750,6 +758,14 @@
             allHistory: [],
             
             async init() {
+                // Dynamically override API based on injected window variables if available
+                if (window.__API_BASE__) this.API = window.__API_BASE__;
+                if (window.__WS_BASE__) this.WS_URL = window.__WS_BASE__;
+
+                const serverIp = window.__SERVER_IP__ || (this.API ? this.API.split('//')[1].split(':')[0] : '');
+                if (document.getElementById('inpIp')) document.getElementById('inpIp').value = serverIp;
+                if (document.getElementById('settingsIp')) document.getElementById('settingsIp').value = serverIp;
+
                 this.setupKeyboardHandling();
                 const savedToken = localStorage.getItem('rescue_token_v3');
                 const savedUser = localStorage.getItem('rescue_user_v3');
@@ -780,7 +796,23 @@
                 }
             },
             
+            updateServerIp(newIp) {
+                const cleanIp = newIp.trim();
+                if (!cleanIp) return;
+                this.API = `http://${cleanIp}:3001/api`;
+                this.WS_URL = `ws://${cleanIp}:3001`;
+                if (document.getElementById('inpIp')) document.getElementById('inpIp').value = cleanIp;
+                if (document.getElementById('settingsIp')) document.getElementById('settingsIp').value = cleanIp;
+                if (window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: cleanIp }));
+                }
+            },
+            
             async login() {
+                const ip = document.getElementById('inpIp').value.trim();
+                if (ip) {
+                    this.updateServerIp(ip);
+                }
                 const phone = document.getElementById('inpId').value;
                 const pin = document.getElementById('inpPin').value;
                 const err = document.getElementById('loginError');

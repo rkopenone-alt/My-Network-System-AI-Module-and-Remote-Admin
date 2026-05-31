@@ -786,7 +786,7 @@
             <!-- SCREEN 1: LOGIN -->
             <div class="screen active" id="screenLogin">
                 <div class="brand-logo" style="background:none; box-shadow:none; border:none;">
-                    <img src="official_rescuer_icon.png"
+                    <img id="loginLogoImg" src="official_rescuer_icon.png"
                         style="width:100%; height:100%; border-radius:24px; object-fit:cover;">
                 </div>
                 <h1 class="brand-name">ARDMS-Rescue Officer App</h1>
@@ -800,6 +800,10 @@
                 <div style="margin-bottom:20px;">
                     <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Access PIN</label>
                     <input type="password" id="inpPin" class="input-field" placeholder="Enter PIN">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Server IP Address</label>
+                    <input type="text" id="inpIp" class="input-field" placeholder="e.g. 192.168.1.15" value="">
                 </div>
 
                 <button class="login-btn" onclick="core.login()">LOGIN</button>
@@ -1206,10 +1210,18 @@
          */
 
         const core = {
-            API: window.__API_BASE__ || `http://${window.location.hostname || '192.168.1.4'}:3001/api`,
-            WS_URL: window.__WS_BASE__ || `ws://${window.location.hostname || '192.168.1.4'}:3001`,
+            API: window.__API_BASE__ || `http://${window.location.hostname || ''}:3001/api`,
+            WS_URL: window.__WS_BASE__ || `ws://${window.location.hostname || ''}:3001`,
+            serverIp: '',
             user: null,
             map: null,
+            updateLogos() {
+                const ip = this.serverIp || window.location.hostname || '127.0.0.1';
+                const logoImg = document.getElementById('loginLogoImg');
+                if (logoImg) {
+                    logoImg.src = `http://${ip}:3001/official_rescuer_icon.png`;
+                }
+            },
             rescuerMarker: null,
             taskMarkers: {},
             groupPerimeters: {},
@@ -1221,16 +1233,34 @@
             capturedImages: {},
 
             init() {
+                // Resolve correct IP address
+                const isNative = window.__IS_NATIVE_APP__ || (typeof window.ReactNativeWebView !== 'undefined');
+                const storedIp = localStorage.getItem('serverIp');
+                const finalIp = storedIp || window.__SERVER_IP__ || (isNative ? '' : window.location.hostname) || '';
+                this.serverIp = finalIp;
+                this.API = finalIp ? `http://${finalIp}:3001/api` : '';
+                this.WS_URL = finalIp ? `ws://${finalIp}:3001` : '';
+                this.updateLogos();
+
+                const inpIp = document.getElementById('inpIp');
+                if (inpIp) inpIp.value = finalIp;
+                const inpServerIp = document.getElementById('inpServerIp');
+                if (inpServerIp) inpServerIp.value = finalIp;
+
+                this.setupIpInputListeners();
+
                 // Guarantee a completely clean login session on first launching a fresh installation or update
-                if (localStorage.getItem('app_installed_launch') !== 'true') {
+                const APP_VERSION = '1.1.0';
+                const storedVersion = localStorage.getItem('appVersion');
+                if (storedVersion !== APP_VERSION) {
                     localStorage.removeItem('rescuer_token');
                     localStorage.removeItem('rescue_user_v3');
-                    localStorage.setItem('app_installed_launch', 'true');
+                    localStorage.setItem('appVersion', APP_VERSION);
                 }
 
                 const saved = localStorage.getItem('rescue_user_v3');
                 const token = localStorage.getItem('rescuer_token');
-                if (saved && token) {
+                if (saved && token && this.API) {
                     this.showLoader(true);
                     fetch(`${this.API}/auth/verify`, {
                         headers: { 'Authorization': `Bearer ${token}` }
@@ -1241,6 +1271,9 @@
                             throw new Error('Invalid token');
                         }
                     }).then(data => {
+                        if (!data.user || data.user.role !== 'rescuer') {
+                            throw new Error('Unauthorized role');
+                        }
                         this.user = data.user;
                         localStorage.setItem('rescue_user_v3', JSON.stringify(this.user));
                         this.showScreen('screenHome');
@@ -1269,7 +1302,17 @@
             async login() {
                 const phone = document.getElementById('inpId').value;
                 const pin = document.getElementById('inpPin').value;
+                const ip = document.getElementById('inpIp').value.trim();
                 const err = document.getElementById('loginError');
+
+                if (!ip) {
+                    err.innerText = "SERVER IP ADDRESS REQUIRED";
+                    err.style.display = 'block';
+                    return;
+                }
+
+                // Update server IP settings
+                this.updateServerIp(ip);
 
                 let localDeviceId = localStorage.getItem('rescuer_device_id');
                 if (!localDeviceId) {
@@ -1289,6 +1332,12 @@
 
                     if (res.ok) {
                         const data = await res.json();
+                        if (data.user.role !== 'rescuer') {
+                            err.innerText = "ACCESS DENIED - OFFICERS ONLY";
+                            err.style.display = 'block';
+                            this.showLoader(false);
+                            return;
+                        }
                         this.user = data.user;
                         localStorage.setItem('rescuer_token', data.token);
                         localStorage.setItem('rescue_user_v3', JSON.stringify(this.user));
@@ -1314,16 +1363,49 @@
                 try {
                     window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOGOUT' }));
                 } catch(e) {}
-                location.reload();
+                
+                this.user = null;
+                if (this.ws) {
+                    try {
+                        this.ws.onclose = null;
+                        this.ws.onerror = null;
+                        this.ws.close();
+                    } catch(e) {}
+                    this.ws = null;
+                }
+                this.updateNetUI(false);
+                this.showScreen('screenLogin');
+                this.toast("LOGGED OUT", "🔑");
             },
 
-            updateServerIp() {
-                const ip = document.getElementById('inpServerIp').value.trim();
+            updateServerIp(ip) {
+                if (!ip) {
+                    const el = document.getElementById('inpServerIp');
+                    ip = el ? el.value.trim() : '';
+                }
+                if (!ip) {
+                    const el = document.getElementById('inpIp');
+                    ip = el ? el.value.trim() : '';
+                }
                 if (!ip) {
                     this.toast("INVALID IP ADDRESS", "⚠️");
                     return;
                 }
                 localStorage.setItem('serverIp', ip);
+                this.serverIp = ip;
+                this.API = `http://${ip}:3001/api`;
+                this.WS_URL = `ws://${ip}:3001`;
+                this.updateLogos();
+
+                // Reconnect Websocket
+                this.connectWS();
+
+                // Sync UI Inputs
+                const inpIp = document.getElementById('inpIp');
+                if (inpIp) inpIp.value = ip;
+                const inpServerIp = document.getElementById('inpServerIp');
+                if (inpServerIp) inpServerIp.value = ip;
+
                 try {
                     window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip }));
                 } catch(e) {
@@ -1331,14 +1413,72 @@
                 }
             },
 
+            setupIpInputListeners() {
+                const handleIpInput = (e) => {
+                    const val = e.target.value.trim();
+                    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+                    if (ipRegex.test(val)) {
+                        localStorage.setItem('serverIp', val);
+                        this.serverIp = val;
+                        this.API = `http://${val}:3001/api`;
+                        this.WS_URL = `ws://${val}:3001`;
+                        this.updateLogos();
+                        
+                        // Reconnect WebSocket dynamically
+                        this.connectWS();
+                        
+                        // Sync inputs
+                        const inpIp = document.getElementById('inpIp');
+                        if (inpIp && inpIp !== e.target) inpIp.value = val;
+                        const inpServerIp = document.getElementById('inpServerIp');
+                        if (inpServerIp && inpServerIp !== e.target) inpServerIp.value = val;
+
+                        try {
+                            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: val }));
+                        } catch(err) {}
+                    } else if (val === '') {
+                        localStorage.setItem('serverIp', '');
+                        this.API = '';
+                        this.WS_URL = '';
+                        try {
+                            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: '' }));
+                        } catch(err) {}
+                    }
+                };
+
+                const inpIp = document.getElementById('inpIp');
+                if (inpIp) inpIp.addEventListener('input', handleIpInput);
+                const inpServerIp = document.getElementById('inpServerIp');
+                if (inpServerIp) inpServerIp.addEventListener('input', handleIpInput);
+            },
+
             clearCache() {
-                const session = localStorage.getItem('rescue_user_v3');
                 localStorage.clear();
-                if (session) {
-                    localStorage.setItem('rescue_user_v3', session);
+                this.user = null;
+                this.serverIp = '';
+                this.API = '';
+                this.WS_URL = '';
+                if (this.ws) {
+                    try {
+                        this.ws.onclose = null;
+                        this.ws.onerror = null;
+                        this.ws.close();
+                    } catch(e) {}
+                    this.ws = null;
                 }
-                this.toast("CACHE CLEARED", "⚡");
-                setTimeout(() => location.reload(), 1000);
+                const inpIp = document.getElementById('inpIp');
+                if (inpIp) inpIp.value = '';
+                const inpServerIp = document.getElementById('inpServerIp');
+                if (inpServerIp) inpServerIp.value = '';
+                
+                try {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: '' }));
+                } catch(err) {}
+                
+                this.updateNetUI(false);
+                this.updateLogos();
+                this.showScreen('screenLogin');
+                this.toast("CACHE CLEARED", "🧹");
             },
 
             bootstrap() {
@@ -1348,10 +1488,7 @@
                 this.startSync();
                 this.connectWS();
                 this.fetchSyncSettings();
-
-                window.addEventListener('online', () => this.updateNetUI(true));
-                window.addEventListener('offline', () => this.updateNetUI(false));
-                this.updateNetUI(navigator.onLine);
+                this.updateNetUI(false);
 
                 // Listen for native GPS updates from App.js
                 let initialFix = false;
@@ -1423,7 +1560,7 @@
 
                 const serverIpField = document.getElementById('inpServerIp');
                 if (serverIpField) {
-                    serverIpField.value = window.__SERVER_IP__ || window.location.hostname || '192.168.1.4';
+                    serverIpField.value = this.serverIp;
                 }
             },
 
@@ -1437,7 +1574,7 @@
 
                 const icon = L.divIcon({
                     className: 'custom-marker',
-                    html: `<div style="background:url('official_rescuer_icon.png'); background-size:cover; width:48px; height:48px; border-radius:50%; border:3px solid white; box-shadow:0 0 20px rgba(220, 38, 38, 0.6);"></div>`,
+                    html: `<div style="background:url('http://${this.serverIp || window.location.hostname || '127.0.0.1'}:3001/official_rescuer_icon.png'); background-size:cover; width:48px; height:48px; border-radius:50%; border:3px solid white; box-shadow:0 0 20px rgba(220, 38, 38, 0.6);"></div>`,
                     iconSize: [48, 48]
                 });
 
@@ -1647,7 +1784,7 @@
                     let evidenceHtml = '';
                     if (t.image_url) {
                         evidenceHtml += `<div style="width:100%; height:120px; border-radius:12px; overflow:hidden; margin-bottom:12px; border:1px solid var(--border);">
-                            <img src="http://${window.__SERVER_IP__ || window.location.hostname || '192.168.1.4'}:3001${t.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                            <img src="http://${core.serverIp || window.location.hostname || '127.0.0.1'}:3001${t.image_url}" style="width:100%; height:100%; object-fit:cover;">
                         </div>`;
                     }
 
@@ -2440,6 +2577,11 @@
                                 location: { lat: this.pos.lat, lng: this.pos.lng, groupId: 1 }
                             })
                         });
+                        if (res.ok) {
+                            this.updateNetUI(true);
+                        } else {
+                            this.updateNetUI(false);
+                        }
                         const data = await res.json();
 
                         // Restore interrupted task if backend has it and we don't have an active mission
@@ -2462,7 +2604,9 @@
                                 if (el) el.innerText = this.refreshInterval + 's (Sync Active)';
                             }
                         }
-                    } catch (e) { }
+                    } catch (e) { 
+                        this.updateNetUI(false);
+                    }
 
                     // Schedule next sync
                     this.syncTimer = setTimeout(runSync, this.refreshInterval * 1000);
@@ -2472,11 +2616,30 @@
             },
 
             connectWS() {
+                if (this.ws) {
+                    try {
+                        this.ws.onclose = null;
+                        this.ws.onerror = null;
+                        this.ws.close();
+                    } catch(e) {}
+                }
+                if (!this.WS_URL) {
+                    this.updateNetUI(false);
+                    try {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'WS_STATUS', connected: false }));
+                    } catch(e) {}
+                    return;
+                }
                 const ws = new WebSocket(this.WS_URL);
+                this.ws = ws;
                 ws.onopen = () => {
                     console.log('Connected to WS');
                     ws.send(JSON.stringify({ type: 'REGISTER', deviceId: this.user?.device_id || 'RESCUER_' + Date.now() }));
                     this.refresh();
+                    this.updateNetUI(true);
+                    try {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'WS_STATUS', connected: true }));
+                    } catch(e) {}
                 };
                 ws.onmessage = (e) => {
                     const msg = JSON.parse(e.data);
@@ -2508,7 +2671,21 @@
                         }
                     }
                 };
-                ws.onclose = () => setTimeout(() => this.connectWS(), 5000);
+                ws.onerror = () => {
+                    this.updateNetUI(false);
+                    try {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'WS_STATUS', connected: false }));
+                    } catch(e) {}
+                };
+                ws.onclose = () => {
+                    this.updateNetUI(false);
+                    try {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'WS_STATUS', connected: false }));
+                    } catch(e) {}
+                    if (this.ws === ws) {
+                        setTimeout(() => this.connectWS(), 5000);
+                    }
+                };
             },
 
             handleCommand(c) {
@@ -2566,7 +2743,7 @@
                         
                         ${c.image_url ? `
                             <div style="width:100%; height:140px; border-radius:8px; overflow:hidden; margin-bottom:12px; border:1px solid #334155;">
-                                <img src="http://${window.__SERVER_IP__ || window.location.hostname || '192.168.1.4'}:3001${c.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                                <img src="http://${core.serverIp || window.location.hostname || '127.0.0.1'}:3001${c.image_url}" style="width:100%; height:100%; object-fit:cover;">
                             </div>
                         ` : ''}
 
@@ -2686,7 +2863,11 @@
 
             core.toast('📷 Photo attached via Native App!', '✅');
         };
-        window.onload = () => core.init();
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            core.init();
+        } else {
+            window.addEventListener('DOMContentLoaded', () => core.init());
+        }
     </script>
 </body>
 

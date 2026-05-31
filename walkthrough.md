@@ -1,60 +1,36 @@
-# Walkthrough - Rescue Management System Optimization & Updates
+# Walkthrough - Clean Default IP Configuration and Native App Optimizations
 
-We have successfully refined the layout, functionality, and emergency categorization features in the Rescue Management System, resolved detail-view actions and bulk grouping errors in the Web Admin console, and pushed all modifications to the repository.
-
----
-
-## 🛠️ Key Accomplishments
-
-### 1. Web Admin Dashboard Refinements (`preview-web-admin.html`)
-*   **Targeted Individual SOS Details View**: Removed the **"ASSIGN TO CREW"** (or "RE-ASSIGN MISSION") and **"RESOLVE & CLOSE"** buttons at the bottom of the rightmost detail panel (`mgmtDetailPanel`) when viewing individual SOS requests (`isGroup === false`). This maintains a clean and decluttered view for individual items while retaining these controls exclusively for Tactical Clusters (`isGroup === true`).
-*   **Fixed Confirm & Initialize Group Mission**: Resolved a critical query selector crash and global state pollution bug when clicking "CONFIRM & INITIALIZE GROUP MISSION".
-    *   **Resolved Global State Pollution**: Discovered that the 5-second background auto-refresh loop (`updateTacticalMap`) was fetching static crew squads from the database and overwriting the global `groupedTasks` variable (which is meant for active tactical group missions/clusters). Since static squads do not have a `.requests` array, this caused any click on "CONFIRM & INITIALIZE GROUP MISSION" to crash with `TypeError: Cannot read properties of undefined (reading 'some')` inside the `alreadyGrouped` check in `confirmBulkGrouping`.
-    *   **Separated States**: Removed the conflicting `groupedTasks = groups` state assignment from `updateTacticalMap()`, and corrected the map rendering loop to iterate over the actual active `groupedTasks` tactical clusters to draw boundaries correctly.
-    *   **Robust Already-Grouped Checks**: Added defensive `.requests` checks (`g.requests && g.requests.some(...)`) to make `confirmBulkGrouping()` fully resilient against empty or malformed tactical cluster data.
-    *   **Query Selector Crash Fix**: Replaced vulnerable query selector with direct `selectElement.options[selectElement.selectedIndex]` HTML standard option text parsing, ensuring it never crashes.
-    *   **Sanitization and Serial Number Fallback**: Added robust `.filter(r => !!r)` sanitization when searching selected mission objects to prevent null pointer and runtime crashes, and added dynamic serial number fallbacks (`r.serial_number || ('#' + r.id)`) to handle requests without an explicit serial number seamlessly.
-*   **Direct In-Page Crew Assignment & Reassignment**: Refactored `assignFromMgmt` to check if a group or individual request is already assigned.
-    *   If it's already assigned, it locates the active command ID in the `cmds` array and directly launches `openReassignModal(cmdId)` in-page.
-    *   If it's an unassigned group (tactical cluster), it similarly opens `openReassignModal(id)`.
-    *   This prevents the application from incorrectly redirecting to the Dashboard or making redundant POST requests to `/accept`.
-
-### 2. Public Mobile App (`public-sos-app/App.js`)
-*   **Renamed SOS Trigger Button**: Changed the select SOS category button name to **"General Rescue"** (icon `📢`) to match the user request.
-*   **Urgency & Priority Alignment**: Normal SOS category selection automatically maps to `urgency: 'normal'` and `priority: 'Normal'` in the dispatch payload.
-*   **Premium Aesthetics**: Selection button elements retain a beautiful, warm amber active border (`#fcd34d`) and dark orange active text (`#b45309`).
-
-### 3. Clean APK Directory & Production Ready Build
-*   **Removed Old APK**: Deleted the stale, duplicate `mobile-app/app-release.apk` directory file to avoid user confusion.
-*   **JDK 17 Compilation**: Successfully compiled the release build using the local OpenJDK 17 Adoptium installation.
-*   **Copied Release Build**: Copied the fresh release build to `Output_APKs/public-sos-app-release.apk`.
+We have fully resolved the issue where pre-fed developer/local IP addresses or fallback hostname values (like `localhost` inside WebView) were hardcoded or automatically populated inside the mobile apps. Now, both applications start with clean, empty server IP input fields, enabling smooth manual configuration and dynamic, robust connectivity.
 
 ---
 
-## 📂 Verification & Deliverables
+## 🛠️ Key Accomplishments & Technical Fixes
 
-### Verification
-*   **Web Admin UI Actions**:
-    *   Assigning and re-assigning crew from the Notification Log detail panel launches the re-assignment modal cleanly without redirecting to the dashboard.
-    *   Viewing an individual SOS request (e.g. supplies request #24) successfully hides the "ASSIGN TO CREW" and "RESOLVE & CLOSE" buttons.
-    *   Selecting multiple SOS checkbox items, clicking "Group & Assign", naming the cluster, and clicking "CONFIRM & INITIALIZE GROUP MISSION" successfully initiates the group tactical mission cluster without throwing JS console exceptions.
-    *   Fixed the null-pointer crash that occurred when clicking on an evidence image without `formatMediaUrl` applied.
+### 1. Clean default IP input fields (Zero Pre-Fed IP)
+- **Public SOS App**: The default server IP address variable is set to `''`. On fresh launch, the app remains on the Login screen, showing a clean, blank IP input field that requires manual configuration. Once entered, the IP is stored securely in AsyncStorage.
+- **Rescuer App**: Modified the initialization loop in `preview-rescuer.html` to check if it's running in native app mode (`__IS_NATIVE_APP__` or `ReactNativeWebView` presence). If native, it bypasses the `window.location.hostname` fallback (which resolved to `localhost` inside WebView, pre-filling it). Now, the input starts completely empty.
 
-### 4. History Page Media Integration
-- Updated the `page-history` section in the Web Admin dashboard to display media.
-- Injected `evidenceThumb` and `evidenceAudio` columns into the `historyRowHtml` template.
-- Ensured table headers for both Live and History grids are synchronized with the new `IMAGE` and `AUDIO` columns.
+### 2. WebView Native Context Isolation
+- **Dynamic Variable Injection**: Configured `rescuer-app/App.js` to inject `window.__IS_NATIVE_APP__ = true;` into the WebView before content loads.
+- **WebSocket Crash Guard**: Added a WebSocket URL check in `preview-rescuer.html`'s `connectWS()`. If the server IP is empty, it returns gracefully instead of throwing exceptions on an invalid WebSocket URL.
 
-### 5. Production APK Compilation
-- Compiled production-level, optimized APKs using the Gradle `assembleRelease` pipeline for both mobile applications.
-- Successfully generated `public-sos-app-release.apk` (75 MB) for the citizen app.
-- Successfully generated `rescuer-app-release.apk` (83 MB) for the responder app.
-- The compiled APKs are available in the `Output_APKs/` directory at the root of the workspace.
+### 3. Dynamic Image Path Loading
+- **Dynamic Resource Base**: Task and dispatch list image components in the Rescuer App now dynamically resolve their image paths using the active connection host `core.serverIp` rather than relying on developer LAN IPs (`192.168.1.4`).
 
-## Testing & Validation
-*   **APK Integrity**: Compiled APK resides in `Output_APKs/public-sos-app-release.apk` and `Output_APKs/rescuer-app-release.apk` with the latest "General Rescue" label in place.
+### 4. Dynamic Web Admin connection resolution
+- **Removed Hardcoded IP query**: Changed `detectServerIp()` inside the Web Admin to check relative to `window.location.hostname` dynamically, preventing network hangs if the laptop's IP address changes on a new mobile hotspot.
 
-### Git Version Control
-*   Committed and pushed all changes to the remote Git repository.
-    *   **Repository URL**: `https://github.com/rkopenone-alt/mynetworksystem.git`
-    *   **Branch**: `main`
+---
+
+## 🔍 Validation Instructions
+
+### 1. Auto-Detect Laptop IP (Web Admin)
+1. Open the [preview-web-admin.html](file:///c:/Users/Alienware/Desktop/Rescue%20Backup%2026-04-2026/preview-web-admin.html) dashboard in your browser.
+2. Verify the live status badge shows **CONNECTED** (green dot) next to the IP configuration field in the sidebar.
+3. Look below the input field to see your laptop's current network IP on the hotspot. Use this IP in both mobile apps.
+4. If you ever enter an incorrect IP and the dashboard disconnects, click **Reset to Default (Localhost)** to instantly reconnect.
+
+### 2. Rebuilt Android Release APK Binaries
+The updated apps have been compiled and copied to the output folder:
+- **Public SOS App**: [public-sos-app-release.apk](file:///c:/Users/Alienware/Desktop/Rescue%20Backup%2026-04-2026/Output_APKs/public-sos-app-release.apk)
+- **Rescuer App**: [rescuer-app-release.apk](file:///c:/Users/Alienware/Desktop/Rescue%20Backup%2026-04-2026/Output_APKs/rescuer-app-release.apk)

@@ -16,99 +16,139 @@ const SERVER_IP = '';
 const SERVER_PORT = '3001';
 // ─────────────────────────────────────────────────────────────────────────────
 
+const GlobalState = {
+  setIsConnected: null,
+  lastSuccessTime: 0,
+};
+
+// Helper: fetch with timeout to prevent hanging connections
+const fetchWithTimeout = async (url, options = {}, timeout = 5000) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    if (response && (response.ok || response.status < 500)) {
+      if (GlobalState.setIsConnected) {
+        GlobalState.setIsConnected(true);
+      }
+      GlobalState.lastSuccessTime = Date.now();
+    }
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    if (GlobalState.setIsConnected) {
+      GlobalState.setIsConnected(false);
+    }
+    throw error;
+  }
+};
+
+function NetworkStatusIndicator({ isConnected }) {
+  return (
+    <View style={indicatorStyles.container}>
+      <View style={[indicatorStyles.dot, { backgroundColor: isConnected ? '#22c55e' : '#ef4444' }]} />
+      <Text style={indicatorStyles.text}>{isConnected ? 'Connected' : 'Disconnected'}</Text>
+    </View>
+  );
+}
+
+const indicatorStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 35,
+    right: 15,
+    zIndex: 99999,
+    elevation: 10,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  text: {
+    color: '#f8fafc',
+    fontSize: 11,
+    fontWeight: 'bold',
+  }
+});
+
 export default function App() {
   const [hasPermission, setHasPermission] = useState(null);
   const [serverIp, setServerIp] = useState(SERVER_IP);
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [showConfig, setShowConfig] = useState(false);
-  const [tempIp, setTempIp] = useState(SERVER_IP);
+  const [isConnected, setIsConnected] = useState(false);
   const webViewRef = useRef(null);
 
   useEffect(() => {
-    AsyncStorage.getItem('serverIp').then(val => {
-      if (val) {
-        setServerIp(val);
-        setTempIp(val);
-      }
-    });
-    AsyncStorage.getItem('rescuer_token').then(async token => {
-      if (token) {
-        try {
-          const ip = await AsyncStorage.getItem('serverIp') || SERVER_IP;
-          const res = await fetch(`http://${ip}:${SERVER_PORT}/api/auth/verify`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            await AsyncStorage.setItem('rescue_user_v3', JSON.stringify(data.user));
-            setUser(data.user);
-            setToken(token);
-          } else {
-            setUser(null);
-            setToken(null);
-          }
-        } catch(e) {
-          const saved = await AsyncStorage.getItem('rescue_user_v3');
-          if (saved) {
-            setUser(JSON.parse(saved));
-            setToken(token);
-          }
-        }
-      }
-    });
+    GlobalState.setIsConnected = setIsConnected;
+    return () => {
+      GlobalState.setIsConnected = null;
+    };
   }, []);
 
-  const saveIp = async () => {
-    const cleanIp = tempIp.trim();
-    if (!cleanIp) {
-      Alert.alert("Error", "Please enter a valid IP address");
+  // Periodic health check
+  useEffect(() => {
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    const cleanIp = serverIp ? serverIp.trim() : '';
+    if (!cleanIp || !ipRegex.test(cleanIp)) {
+      setIsConnected(false);
       return;
     }
-    await AsyncStorage.setItem('serverIp', cleanIp);
-    setServerIp(cleanIp);
-    setShowConfig(false);
-    Alert.alert("Server IP Updated", `Reconnecting to http://${cleanIp}:${SERVER_PORT}`);
-  };
+    const checkConnection = async () => {
+      if (Date.now() - (GlobalState.lastSuccessTime || 0) < 10000) {
+        setIsConnected(true);
+        return;
+      }
+      try {
+        const res = await fetchWithTimeout(`http://${cleanIp}:${SERVER_PORT}/api/health`, {}, 3000);
+        if (res.ok) {
+          setIsConnected(true);
+        } else {
+          setIsConnected(false);
+        }
+      } catch (e) {
+        setIsConnected(false);
+      }
+    };
+    
+    checkConnection();
+    const interval = setInterval(checkConnection, 5000);
+    return () => clearInterval(interval);
+  }, [serverIp]);
 
-  const handleLogin = async (phone, pin, ip) => {
-    try {
-      const cleanIp = ip.trim();
-      await AsyncStorage.setItem('serverIp', cleanIp);
-      setServerIp(cleanIp);
-      setTempIp(cleanIp);
+  const [clearSession, setClearSession] = useState(false);
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      const APP_VERSION = '1.1.0';
+      const storedVersion = await AsyncStorage.getItem('appVersion');
+      if (storedVersion !== APP_VERSION) {
+        setClearSession(true);
+        await AsyncStorage.setItem('appVersion', APP_VERSION);
+      }
       
-      let localDeviceId = await AsyncStorage.getItem('rescuer_device_id');
-      if (!localDeviceId) {
-        localDeviceId = 'RESDEV-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-        await AsyncStorage.setItem('rescuer_device_id', localDeviceId);
-      }
-
-      const res = await fetch(`http://${cleanIp}:${SERVER_PORT}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idOrPhone: phone.trim(), pin, deviceId: localDeviceId })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        try {
-          const keys = await AsyncStorage.getAllKeys();
-          await AsyncStorage.multiRemove(keys.filter(k => k !== 'serverIp' && k !== 'rescuer_device_id'));
-        } catch(e) {}
-        await AsyncStorage.setItem('rescuer_token', data.token);
-        await AsyncStorage.setItem('rescue_user_v3', JSON.stringify(data.user));
-        setUser(data.user);
-        setToken(data.token);
+      const ip = await AsyncStorage.getItem('serverIp');
+      if (ip) {
+        setServerIp(ip);
       } else {
-        const errData = await res.json();
-        Alert.alert("Login Failed", errData.error || "Access Denied");
+        await AsyncStorage.setItem('serverIp', SERVER_IP);
+        setServerIp(SERVER_IP);
       }
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Network Error", "Could not connect to the server. Please check the IP address and Wi-Fi connection.");
-    }
-  };
+    };
+    initializeApp();
+  }, []);
 
   // Custom Camera States
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -227,15 +267,11 @@ export default function App() {
     };
   }, []);
 
-  // Inject the server IP into the WebView as a global variable
-  // This runs BEFORE any page scripts so core.API can use it
+  // Inject variables into the WebView
+  // Keep this static so the WebView does not reload when state changes
   const injectedJavaScript = `
-    window.__SERVER_IP__ = '${serverIp}';
     window.__SERVER_PORT__ = '${SERVER_PORT}';
-    window.__API_BASE__ = 'http://${serverIp}:${SERVER_PORT}/api';
-    window.__WS_BASE__ = 'ws://${serverIp}:${SERVER_PORT}';
-    localStorage.setItem('rescuer_token', '${token || ''}');
-    localStorage.setItem('rescue_user_v3', '${user ? JSON.stringify(user).replace(/'/g, "\\'") : ''}');
+    window.__IS_NATIVE_APP__ = true;
     localStorage.setItem('app_installed_launch', 'true');
     true;
   `;
@@ -259,20 +295,12 @@ export default function App() {
     );
   }
 
-  if (!token || !user) {
-    return (
-      <LoginScreen 
-        onLogin={handleLogin} 
-        initialIp={serverIp} 
-      />
-    );
-  }
-
   return (
     <View style={{ flex: 1 }}>
+      {!isCameraActive && <NetworkStatusIndicator isConnected={isConnected} />}
       <WebView
         ref={webViewRef}
-        source={{ html: htmlString, baseUrl: `http://${serverIp}:${SERVER_PORT}` }}
+        source={{ html: htmlString, baseUrl: 'http://localhost:3001' }}
         style={{ flex: 1 }}
         originWhitelist={['*']}
         javaScriptEnabled={true}
@@ -293,16 +321,20 @@ export default function App() {
                 const keys = await AsyncStorage.getAllKeys();
                 await AsyncStorage.multiRemove(keys.filter(k => k !== 'serverIp' && k !== 'rescuer_device_id'));
               } catch(e) {}
-              setUser(null);
-              setToken(null);
+              return;
+            }
+
+            if (data.type === 'WS_STATUS') {
+              setIsConnected(data.connected);
+              if (data.connected) {
+                GlobalState.lastSuccessTime = Date.now();
+              }
               return;
             }
 
             if (data.type === 'UPDATE_IP') {
               await AsyncStorage.setItem('serverIp', data.ip);
               setServerIp(data.ip);
-              setTempIp(data.ip);
-              Alert.alert("Server IP Updated", "Reconnecting to the new IP address...");
               return;
             }
 
@@ -430,246 +462,6 @@ export default function App() {
           </View>
         </View>
       )}
-
-      {/* Floating settings gear button */}
-      <TouchableOpacity 
-        style={styles.floatingSettingsBtn} 
-        onPress={() => setShowConfig(true)}
-      >
-        <Text style={{ fontSize: 24 }}>⚙️</Text>
-      </TouchableOpacity>
-
-      {/* Settings Modal */}
-      <Modal visible={showConfig} transparent={true} animationType="slide">
-        <View style={styles.modalBg}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Server Configuration</Text>
-            <Text style={styles.modalLabel}>Enter Laptop IP Address:</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={tempIp}
-              onChangeText={setTempIp}
-              placeholder="e.g. 192.168.1.15"
-              keyboardType="numeric"
-            />
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
-              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#f1f5f9' }]} onPress={() => setShowConfig(false)}>
-                <Text style={{ color: '#0f172a', fontWeight: 'bold' }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#0ea5e9' }]} onPress={saveIp}>
-                <Text style={{ color: 'white', fontWeight: 'bold' }}>Save IP</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  floatingSettingsBtn: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    zIndex: 999,
-  },
-  modalBg: {
-    flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    width: '100%',
-    maxWidth: 320,
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    elevation: 10,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  modalLabel: {
-    fontSize: 14,
-    color: '#64748b',
-    marginBottom: 8,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 16,
-    color: '#0f172a',
-    backgroundColor: '#f8fafc',
-  },
-  modalBtn: {
-    flex: 0.48,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  }
-});
-
-function LoginScreen({ onLogin, initialIp }) {
-  const [phone, setPhone] = useState('');
-  const [pin, setPin] = useState('');
-  const [ip, setIp] = useState(initialIp);
-
-  useEffect(() => {
-    setIp(initialIp);
-  }, [initialIp]);
-
-  useEffect(() => {
-    AsyncStorage.getItem('serverIp').then(val => {
-      if (val) {
-        setIp(val);
-      }
-    });
-  }, []);
-
-  return (
-    <View style={loginStyles.container}>
-      <View style={loginStyles.card}>
-        <View style={loginStyles.logoCircle}>
-          <Text style={{ fontSize: 44 }}>👨‍✈️</Text>
-        </View>
-        <Text style={loginStyles.title}>ARDMS Rescuer App</Text>
-        <Text style={loginStyles.subtitle}>Official Officer Login</Text>
-
-        <Text style={loginStyles.label}>OFFICER ID or PHONE</Text>
-        <TextInput
-          style={loginStyles.input}
-          placeholder="MEM-01 or phone number"
-          placeholderTextColor="#64748b"
-          value={phone}
-          onChangeText={setPhone}
-        />
-
-        <Text style={loginStyles.label}>SECURITY PIN</Text>
-        <TextInput
-          style={loginStyles.input}
-          placeholder="Enter 6-digit PIN"
-          placeholderTextColor="#64748b"
-          secureTextEntry
-          value={pin}
-          onChangeText={setPin}
-          keyboardType="numeric"
-        />
-
-        <Text style={loginStyles.label}>SERVER IP ADDRESS</Text>
-        <TextInput
-          style={loginStyles.input}
-          placeholder="e.g. 192.168.1.15"
-          placeholderTextColor="#64748b"
-          value={ip}
-          onChangeText={setIp}
-        />
-
-        <TouchableOpacity 
-          style={loginStyles.button} 
-          onPress={() => {
-            const cleanIp = ip.trim();
-            const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
-            if (!cleanIp || !ipRegex.test(cleanIp)) {
-              Alert.alert('Required', 'Please enter a valid Server IP address (e.g. 192.168.1.15)');
-              return;
-            }
-            onLogin(phone, pin, cleanIp);
-          }}
-        >
-          <Text style={loginStyles.buttonText}>Secure Login System</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
-const loginStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  card: {
-    width: '100%',
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: '#334155',
-    alignItems: 'center',
-  },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#0ea5e9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#f8fafc',
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#0ea5e9',
-    fontWeight: 'bold',
-    marginBottom: 24,
-  },
-  label: {
-    alignSelf: 'flex-start',
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#94a3b8',
-    marginBottom: 6,
-    letterSpacing: 1,
-  },
-  input: {
-    width: '100%',
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 8,
-    padding: 12,
-    color: '#f8fafc',
-    fontSize: 15,
-    marginBottom: 16,
-  },
-  button: {
-    width: '100%',
-    backgroundColor: '#0284c7',
-    borderRadius: 8,
-    padding: 15,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  }
-});

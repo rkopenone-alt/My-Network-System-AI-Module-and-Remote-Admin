@@ -59,15 +59,7 @@ for filepath in [preview_rescuer, preview_mobile, preview_admin]:
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
 
-# 2. Update React Native App JS files
-for filepath in [rescuer_app_js, public_app_js]:
-    if os.path.exists(filepath):
-        print(f"[*] Updating IP in React Native file: {filepath}")
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
-        content = replace_ip_in_content(content, local_ip)
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
+# Step 2 (Update React Native App JS files) has been removed to avoid pre-feeding IP addresses into APKs.
 
 # 3. Generate htmlStr.js for rescuer-app
 if os.path.exists(preview_rescuer) and os.path.exists(rescuer_html_str):
