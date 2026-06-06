@@ -49,15 +49,9 @@ def replace_ip_in_content(content, new_ip):
     return content
 
 
-# 1. Update preview files
-for filepath in [preview_rescuer, preview_mobile, preview_admin]:
-    if os.path.exists(filepath):
-        print(f"[*] Updating IP in preview file: {filepath}")
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
-        content = replace_ip_in_content(content, local_ip)
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
+# 1. IP Injection removed per user request.
+
+
 
 # Step 2 (Update React Native App JS files) has been removed to avoid pre-feeding IP addresses into APKs.
 

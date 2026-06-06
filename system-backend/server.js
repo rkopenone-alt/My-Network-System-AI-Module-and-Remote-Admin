@@ -31,6 +31,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Serve root directory files (previews) for easy local testing
+app.get('/', (req, res) => res.redirect('/Web%20ADMIN.html'));
 app.use('/', express.static(path.join(__dirname, '..')));
 
 // Ensure uploads directory exists
@@ -705,17 +706,24 @@ app.get('/api/server-ip', (req, res) => {
     try {
         const interfaces = os.networkInterfaces();
         let ip = '127.0.0.1';
+        let fallbackIp = null;
         for (const devName in interfaces) {
             const iface = interfaces[devName];
+            const isVirtual = devName.toLowerCase().includes('virtual') || devName.toLowerCase().includes('veth') || devName.toLowerCase().includes('wsl');
             for (let i = 0; i < iface.length; i++) {
                 const alias = iface[i];
                 if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
-                    ip = alias.address;
-                    break;
+                    if (!isVirtual) {
+                        ip = alias.address;
+                        break;
+                    } else if (!fallbackIp) {
+                        fallbackIp = alias.address;
+                    }
                 }
             }
             if (ip !== '127.0.0.1') break;
         }
+        if (ip === '127.0.0.1' && fallbackIp) ip = fallbackIp;
         res.json({ ip });
     } catch(e) {
         res.json({ ip: '127.0.0.1' });
