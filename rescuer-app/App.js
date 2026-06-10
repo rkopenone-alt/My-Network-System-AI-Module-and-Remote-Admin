@@ -86,10 +86,6 @@ const indicatorStyles = StyleSheet.create({
 });
 
 export default function App() {
-  const [appState, setAppState] = useState('NETWORK_SETUP');
-  const [adminId, setAdminId] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [ipInput, setIpInput] = useState(SERVER_IP);
   const [hasPermission, setHasPermission] = useState(null);
   const [serverIp, setServerIp] = useState(SERVER_IP);
   const [isConnected, setIsConnected] = useState(false);
@@ -146,16 +142,9 @@ export default function App() {
       const ip = await AsyncStorage.getItem('serverIp');
       if (ip) {
         setServerIp(ip);
-        setIpInput(ip);
       } else {
         await AsyncStorage.setItem('serverIp', SERVER_IP);
         setServerIp(SERVER_IP);
-        setIpInput(SERVER_IP);
-      }
-      
-      const session = await AsyncStorage.getItem('adminSession');
-      if (session === 'active') {
-        setAppState('DASHBOARD');
       }
     };
     initializeApp();
@@ -243,7 +232,7 @@ export default function App() {
 
       if (status === 'granted') {
         try {
-          const initialLoc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
+          const initialLoc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
           if (webViewRef.current) {
             const payload = JSON.stringify({
               type: 'GPS_UPDATE',
@@ -256,7 +245,7 @@ export default function App() {
 
         locationSubscription = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.BestForNavigation,
+            accuracy: Location.Accuracy.High,
             timeInterval: 2000,
             distanceInterval: 1,
           },
@@ -284,104 +273,24 @@ export default function App() {
     window.__SERVER_PORT__ = '${SERVER_PORT}';
     window.__IS_NATIVE_APP__ = true;
     localStorage.setItem('app_installed_launch', 'true');
-    localStorage.setItem('manualServerIp', '${serverIp}');
     true;
   `;
 
-  if (hasPermission === null && appState === 'DASHBOARD') {
+  if (hasPermission === null) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' }}>
         <ActivityIndicator size="large" color="#0ea5e9" />
-        <Text style={{ color: '#fff', marginTop: 10 }}>Initializing Admin Dashboard...</Text>
+        <Text style={{ color: '#fff', marginTop: 10 }}>Initializing Rescuer System...</Text>
       </View>
     );
   }
 
-  if (appState === 'NETWORK_SETUP') {
+  if (!hasPermission) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', padding: 20 }}>
-        <View style={{ backgroundColor: '#ffffff', padding: 30, borderRadius: 15, width: '100%', maxWidth: 400, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}>
-          <Text style={{ color: '#0f172a', fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' }}>Network Configuration</Text>
-          <Text style={{ color: '#64748b', marginBottom: 10 }}>Enter Backend Server IP:</Text>
-          <TextInput 
-            style={{ backgroundColor: '#f1f5f9', color: '#0f172a', padding: 15, borderRadius: 10, marginBottom: 20, borderWidth: 1, borderColor: '#cbd5e1' }}
-            value={ipInput}
-            onChangeText={setIpInput}
-            placeholder="e.g. 192.168.1.100"
-            placeholderTextColor="#94a3b8"
-            keyboardType="numeric"
-          />
-          <TouchableOpacity 
-            style={{ backgroundColor: '#0ea5e9', padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 10 }}
-            onPress={async () => {
-              const clean = ipInput.trim();
-              if(clean) {
-                await AsyncStorage.setItem('serverIp', clean);
-                setServerIp(clean);
-                setAppState('LOGIN');
-              }
-            }}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Save & Continue</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={{ backgroundColor: '#1e40af', padding: 15, borderRadius: 10, alignItems: 'center' }}
-            onPress={async () => {
-              const localEmu = '10.0.2.2';
-              await AsyncStorage.setItem('serverIp', localEmu);
-              setServerIp(localEmu);
-              setAppState('LOGIN');
-            }}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Local Emulator (10.0.2.2)</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  if (appState === 'LOGIN') {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', padding: 20 }}>
-        <View style={{ backgroundColor: '#ffffff', padding: 30, borderRadius: 15, width: '100%', maxWidth: 400, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}>
-          <Text style={{ color: '#0f172a', fontSize: 24, fontWeight: 'bold', marginBottom: 5, textAlign: 'center' }}>Admin Login</Text>
-          <Text style={{ color: '#64748b', fontSize: 14, marginBottom: 25, textAlign: 'center' }}>AntiGravity Tactical Command</Text>
-          
-          <TextInput 
-            style={{ backgroundColor: '#f1f5f9', color: '#0f172a', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: '#cbd5e1' }}
-            value={adminId}
-            onChangeText={setAdminId}
-            placeholder="Admin ID"
-            placeholderTextColor="#94a3b8"
-            autoCapitalize="none"
-          />
-          <TextInput 
-            style={{ backgroundColor: '#f1f5f9', color: '#0f172a', padding: 15, borderRadius: 10, marginBottom: 25, borderWidth: 1, borderColor: '#cbd5e1' }}
-            value={adminPassword}
-            onChangeText={setAdminPassword}
-            placeholder="Password"
-            placeholderTextColor="#94a3b8"
-            secureTextEntry
-          />
-          
-          <TouchableOpacity 
-            style={{ backgroundColor: '#22c55e', padding: 15, borderRadius: 10, alignItems: 'center' }}
-            onPress={async () => {
-              if (adminId === 'admin' && adminPassword === '123456') {
-                await AsyncStorage.setItem('adminSession', 'active');
-                setAppState('DASHBOARD');
-              } else {
-                Alert.alert('Access Denied', 'Invalid Admin ID or Password.');
-              }
-            }}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Authenticate</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => setAppState('NETWORK_SETUP')} style={{ marginTop: 20 }}>
-            <Text style={{ color: '#0ea5e9', textAlign: 'center' }}>&larr; Back to Network Config</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a', padding: 20 }}>
+        <Text style={{ color: '#f43f5e', fontSize: 18, textAlign: 'center' }}>
+          Location permissions are strictly required for the Field Rescuer App to function. Please enable them in your device settings.
+        </Text>
       </View>
     );
   }
@@ -391,19 +300,13 @@ export default function App() {
       {!isCameraActive && <NetworkStatusIndicator isConnected={isConnected} />}
       <WebView
         ref={webViewRef}
-        source={{ html: htmlString, baseUrl: `http://${serverIp}:${SERVER_PORT}` }}
+        source={{ html: htmlString, baseUrl: 'http://localhost:3001' }}
         style={{ flex: 1 }}
         originWhitelist={['*']}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         geolocationEnabled={true}
         allowFileAccess={true}
-        scalesPageToFit={true}
-        setBuiltInZoomControls={true}
-        setDisplayZoomControls={false}
-        showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}
-        bounces={false}
         allowUniversalAccessFromFileURLs={true}
         mixedContentMode="always"
         injectedJavaScriptBeforeContentLoaded={injectedJavaScript}

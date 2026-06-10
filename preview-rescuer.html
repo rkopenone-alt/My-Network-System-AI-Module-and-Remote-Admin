@@ -1,0 +1,2874 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ARDMS-Rescue Officer App</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- HTML2PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        :root {
+            /* Professional Light Palette */
+            --primary: #0ea5e9;
+            --primary-dark: #0284c7;
+            --primary-light: #e0f2fe;
+            --secondary: #10b981;
+            --danger: #f43f5e;
+            --warning: #f59e0b;
+            --info: #6366f1;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --radius: 20px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body,
+        html {
+            height: 100%;
+            height: 100dvh;
+            font-family: 'Outfit', sans-serif;
+            background-color: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Phone Mockup Wrapper */
+        .phone-mockup {
+            width: 400px;
+            max-width: 100%;
+            height: 100%;
+            max-height: 850px;
+            background: #1e293b;
+            border-radius: 40px;
+            padding: 12px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 450px) {
+            .phone-mockup {
+                max-width: none;
+                max-height: none;
+                border-radius: 0;
+                padding: 0;
+            }
+        }
+
+        .phone-inner {
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            border-radius: 32px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        @media (max-width: 450px) {
+            .phone-inner {
+                border-radius: 0;
+            }
+        }
+
+        /* Screen Management */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            background: var(--bg);
+            z-index: 10;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Login Screen */
+        #screenLogin {
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        }
+
+        .brand-logo {
+            width: 90px;
+            height: 90px;
+            background: var(--surface);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            box-shadow: var(--shadow-lg);
+            font-size: 44px;
+            border: 2px solid var(--primary-light);
+            animation: bounce 2s infinite ease-in-out;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .brand-name {
+            font-size: 30px;
+            font-weight: 900;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .brand-tagline {
+            font-size: 14px;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .input-group {
+            width: 100%;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-label {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: block;
+            text-transform: uppercase;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 18px;
+            border-radius: var(--radius);
+            border: 2px solid var(--border);
+            background: var(--surface);
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 5px var(--primary-light);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 20px;
+            border-radius: var(--radius);
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-size: 17px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 12px 20px -5px rgba(14, 165, 233, 0.4);
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+
+        .login-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* Dashboard Styles */
+        .dashboard-header {
+            padding: 24px 20px 12px;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .header-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            border: 2px solid var(--primary);
+        }
+
+        .header-title-box h2 {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .header-title-box p {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        #map {
+            width: 100%;
+            height: 55%;
+            position: relative;
+            z-index: 50;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .control-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+        }
+
+        .notif-section {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: var(--bg);
+        }
+
+        .notif-label {
+            font-size: 12px;
+            font-weight: 900;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .notif-card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .notif-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .notif-badge {
+            font-size: 11px;
+            font-weight: 900;
+            padding: 4px 12px;
+            border-radius: 30px;
+            text-transform: uppercase;
+        }
+
+        .badge-sos {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .badge-food {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+
+        .badge-medical {
+            background: #d1fae5;
+            color: var(--secondary);
+        }
+
+        .badge-critical {
+            background: #ede9fe;
+            color: var(--info);
+        }
+
+        .badge-group {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
+
+        .notif-time {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .notif-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .notif-loc {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .notif-btns {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-action {
+            flex: 1;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 800;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding-bottom: 15px;
+            z-index: 100;
+        }
+
+        .nav-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .nav-link.active {
+            color: var(--primary);
+        }
+
+        .nav-link i {
+            font-size: 24px;
+            font-style: normal;
+        }
+
+        .nav-link span {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        /* History Page */
+        .history-content {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .history-search {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .history-search input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .hist-item {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .hist-details h4 {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .hist-details p {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .hist-meta {
+            text-align: right;
+        }
+
+        .hist-status {
+            font-size: 10px;
+            font-weight: 900;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .status-done {
+            background: #d1fae5;
+            color: var(--secondary);
+        }
+
+        /* Settings Page */
+        .settings-content {
+            padding: 24px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .profile-card {
+            text-align: center;
+            background: var(--surface);
+            padding: 30px 20px;
+            border-radius: 30px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+
+        .profile-img {
+            width: 110px;
+            height: 110px;
+            background: var(--primary-light);
+            border-radius: 35px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 44px;
+            border: 3px solid var(--primary);
+        }
+
+        .profile-name {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .profile-info {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .settings-group {
+            background: var(--surface);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .settings-item {
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-label {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .item-val {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .logout-btn {
+            background: #fee2e2;
+            color: var(--danger);
+            padding: 20px;
+            border-radius: 20px;
+            text-align: center;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* Filter Buttons */
+        .filter-btn {
+            padding: 6px 12px;
+            border-radius: 12px;
+            border: none;
+            background: #f1f5f9;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 10px -2px rgba(14, 165, 233, 0.4);
+        }
+
+        /* Active Task Card (previously banner) */
+        .active-mission-banner {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            border-radius: 20px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            box-shadow: 0 12px 24px -8px rgba(14, 165, 233, 0.5);
+            animation: slideUp 0.4s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mission-info h4 {
+            font-size: 14px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .mission-info p {
+            font-size: 11px;
+            font-weight: 700;
+            opacity: 0.9;
+        }
+
+        .btn-complete {
+            background: white;
+            color: var(--primary);
+            padding: 8px 16px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 900;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* Camera Capture Button */
+        .btn-camera {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1.5px solid rgba(255, 255, 255, 0.6);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .btn-camera:active {
+            transform: scale(0.92);
+        }
+
+        .btn-camera.captured {
+            background: rgba(16, 185, 129, 0.3);
+            border-color: #10b981;
+        }
+
+        .btn-camera-card {
+            background: #e0f2fe;
+            border: 1.5px solid var(--primary);
+            color: var(--primary);
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-camera-card:active {
+            transform: scale(0.95);
+        }
+
+        .btn-camera-card.captured {
+            background: #d1fae5;
+            border-color: #10b981;
+            color: #059669;
+        }
+
+        /* Loader */
+        .full-loader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 5px solid var(--primary-light);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Marker UI */
+        .custom-marker {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 3px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-lg);
+            color: white;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="phone-mockup">
+        <div class="phone-inner">
+
+            <!-- SCREEN 1: LOGIN -->
+            <div class="screen active" id="screenLogin">
+                <div class="brand-logo" style="background:none; box-shadow:none; border:none;">
+                    <img id="loginLogoImg" src="official_rescuer_icon.png"
+                        style="width:100%; height:100%; border-radius:24px; object-fit:cover;">
+                </div>
+                <h1 class="brand-name">ARDMS-Rescue Officer App</h1>
+                <p class="brand-tagline">Emergency Field Operations</p>
+
+                <div class="input-group">
+                    <label class="input-label">Officer Login ID</label>
+                    <input type="text" id="inpId" class="input-field" placeholder="Enter Phone or ID"
+                        >
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Access PIN</label>
+                    <input type="password" id="inpPin" class="input-field" placeholder="Enter PIN">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Server IP Address</label>
+                    <input type="text" id="inpIp" class="input-field" placeholder="e.g. 192.168.1.15" value="">
+                </div>
+
+                <button class="login-btn" onclick="core.login()">LOGIN</button>
+                <p id="loginError"
+                    style="color:var(--danger); font-size:12px; font-weight:800; margin-top:20px; display:none;">ACCESS
+                    DENIED - INVALID CREDENTIALS</p>
+                <p
+                    style="color:var(--text-muted); font-size:11px; margin-top:30px; text-align:center; font-weight:700;">
+                    Credentials are issued and managed by HQ administration.</p>
+            </div>
+
+            <!-- SCREEN 2: DASHBOARD -->
+            <div class="screen" id="screenHome">
+                <div class="dashboard-header">
+                    <div class="header-profile">
+                        <div class="avatar-box">👨‍✈️</div>
+                        <div class="header-title-box">
+                            <h2 id="dispName">Officer Name</h2>
+                            <p id="dispZone">Monitoring Active Zones</p>
+                        </div>
+                    </div>
+                    <div class="control-btn" onclick="core.refresh()">🔄</div>
+                </div>
+
+                <div id="map">
+                    <div class="map-controls">
+                        <div class="control-btn" onclick="core.locateSelf()">📍</div>
+                        <div class="control-btn" onclick="core.toggleMapType()">🗺️</div>
+                    </div>
+                </div>
+
+                <div class="notif-section" id="notifSection"
+                    style="background:transparent; box-shadow:none; padding:10px;">
+                    <div class="active-mission-banner" id="missionBanner">
+                        <div class="mission-info">
+                            <h4 id="missType">Medical Rescue</h4>
+                            <p id="missLoc">Sector 4, Block A</p>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                            <button class="btn-camera" id="bannerCameraBtn" title="Capture Completion Photo" onclick="core.triggerCamera('__banner__', 'banner')">📷</button>
+                            <button class="btn-complete" onclick="core.completeMission()">COMPLETE</button>
+                        </div>
+                    </div>
+
+                    <div class="notif-label" style="margin-top:10px;">
+                        <span>🚨 Current Critical Mission</span>
+                    </div>
+                    <div id="homeListCritical">
+                        <!-- Critical Dispatches -->
+                    </div>
+
+                    <div class="notif-label" style="margin-top:20px;">
+                        <span>📦 Current Normal Mission</span>
+                    </div>
+                    <div id="homeListNormal">
+                        <!-- Normal Dispatches -->
+                    </div>
+
+                    <div class="notif-label" style="margin-top:20px;">
+                        <span>📦 Grouped Mission Clusters</span>
+                    </div>
+                    <div id="homeListGrouped">
+                        <!-- Grouped Dispatches -->
+                    </div>
+
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="nav-link active" onclick="core.nav('Home')"><i>🏠</i><span>Home</span></div>
+                    <div class="nav-link" onclick="core.nav('Tasks')"><i>📡</i><span>Current Tasks</span></div>
+                    <div class="nav-link" onclick="core.nav('History')"><i>📋</i><span>History</span></div>
+                    <div class="nav-link" onclick="core.nav('Settings')"><i>⚙️</i><span>Settings</span></div>
+                </div>
+            </div>
+
+            <!-- SCREEN 2B: CURRENT TASKS -->
+            <div class="screen" id="screenTasks">
+                <div class="dashboard-header">
+                    <h2 style="font-size: 22px; font-weight: 900;">Current Tasks</h2>
+                    <div class="control-btn" onclick="core.refresh()">🔄</div>
+                </div>
+
+                <div class="notif-section" id="tasksSection"
+                    style="padding: 20px; padding-bottom: 90px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;">
+                    <div class="notif-label">
+                        <span>🚨 Current Critical Mission</span>
+                    </div>
+                    <div id="tasksListCritical">
+                        <!-- Critical Dispatches -->
+                    </div>
+
+                    <div class="notif-label" style="margin-top:20px;">
+                        <span>📦 Current Normal Mission</span>
+                    </div>
+                    <div id="tasksListNormal">
+                        <!-- Normal Dispatches -->
+                    </div>
+
+                    <div class="notif-label" style="margin-top:20px;">
+                        <span>📦 Grouped Mission Clusters</span>
+                    </div>
+                    <div id="tasksListGrouped">
+                        <!-- Grouped Dispatches -->
+                    </div>
+
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="nav-link" onclick="core.nav('Home')"><i>🏠</i><span>Home</span></div>
+                    <div class="nav-link active" onclick="core.nav('Tasks')"><i>📡</i><span>Current Tasks</span></div>
+                    <div class="nav-link" onclick="core.nav('History')"><i>📋</i><span>History</span></div>
+                    <div class="nav-link" onclick="core.nav('Settings')"><i>⚙️</i><span>Settings</span></div>
+                </div>
+            </div>
+
+            <!-- SCREEN 3: HISTORY -->
+            <div class="screen" id="screenHistory">
+                <div class="dashboard-header">
+                    <h2 style="font-size: 22px; font-weight: 900;">Mission History</h2>
+                    <div class="control-btn" onclick="core.nav('Home')">✕</div>
+                </div>
+
+                <div class="history-content">
+                    <div class="history-search">
+                        <i>🔍</i>
+                        <input type="text" id="histSearch" placeholder="Search mission ID, type, sector..."
+                            oninput="core.filterHistory()">
+                    </div>
+
+                    <div class="filter-row" style="display: flex; gap: 5px; margin-top: 10px; padding: 0 10px;">
+                        <button class="filter-btn active" onclick="core.setHistoryFilter('full', event)">Full</button>
+                        <button class="filter-btn" onclick="core.setHistoryFilter('day', event)">Day</button>
+                        <button class="filter-btn" onclick="core.setHistoryFilter('week', event)">Week</button>
+                        <button class="filter-btn" onclick="core.setHistoryFilter('yearly', event)">Year</button>
+                        <button class="filter-btn" style="margin-left: auto; background: var(--danger); color: white;"
+                            onclick="core.downloadHistoryPDF()">📄 PDF</button>
+                    </div>
+
+                    <div id="pdfContent" style="padding-top: 5px; background: #fff;">
+                        <div
+                            style="margin-top:15px; font-size:12px; font-weight:800; color:var(--danger); padding:0 10px;">
+                            CRITICAL MISSIONS</div>
+                        <div id="histListCritical"></div>
+
+                        <div
+                            style="margin-top:20px; font-size:12px; font-weight:800; color:var(--primary); padding:0 10px;">
+                            NORMAL MISSIONS</div>
+                        <div id="histListNormal"></div>
+                    </div>
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="nav-link" onclick="core.nav('Home')"><i>🏠</i><span>Home</span></div>
+                    <div class="nav-link" onclick="core.nav('Tasks')"><i>📡</i><span>Current Tasks</span></div>
+                    <div class="nav-link active" onclick="core.nav('History')"><i>📋</i><span>History</span></div>
+                    <div class="nav-link" onclick="core.nav('Settings')"><i>⚙️</i><span>Settings</span></div>
+                </div>
+            </div>
+
+            <!-- SCREEN 4: SETTINGS -->
+            <div class="screen" id="screenSettings">
+                <div class="dashboard-header">
+                    <h2 style="font-size: 22px; font-weight: 900;">Officer Profile</h2>
+                    <div class="control-btn" onclick="core.nav('Home')">✕</div>
+                </div>
+
+                <div class="settings-content">
+                    <div class="profile-card">
+                        <div class="profile-img">👨‍✈️</div>
+                        <h2 class="profile-name" id="profName">Officer Rajan</h2>
+                        <p class="profile-info" id="profId">ID: MEM-01 • Rescue Division</p>
+                    </div>
+
+                    <div class="settings-group">
+                        <div class="settings-item">
+                            <div class="item-label"><i>📱</i> Phone Number</div>
+                            <div class="item-val" id="profPhone">+91 9876543210</div>
+                        </div>
+                        <div class="settings-item">
+                            <div class="item-label"><i>🏢</i> Department</div>
+                            <div class="item-val">Emergency Ops</div>
+                        </div>
+                        <div class="settings-item">
+                            <div class="item-label"><i>👥</i> Assigned Groups</div>
+                            <div class="item-val" id="profGroups">No Groups</div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <div class="settings-item">
+                            <div class="item-label"><i>🔔</i> Dispatch Alerts</div>
+                            <div class="item-val">ACTIVE</div>
+                        </div>
+                        <div class="settings-item" style="background: var(--primary-light);">
+                            <div class="item-label">
+                                <div id="syncStatusDot"
+                                    style="width:10px; height:10px; border-radius:50%; background:var(--secondary); box-shadow:0 0 10px var(--secondary);">
+                                </div>
+                                <i>🔄</i> Reconnect Timing
+                            </div>
+                            <div class="item-val" id="dispSyncInterval">15s (Admin Set)</div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <div class="settings-item" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 15px 20px;">
+                            <div class="item-label" style="font-weight: 800; color: var(--primary); font-size: 11px; letter-spacing: 0.5px;"><i>📡</i> SERVER NETWORK SETTINGS</div>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                                <input type="text" id="inpServerIp" placeholder="e.g. 192.168.1.15" 
+                                    style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-body); color: var(--text-main); font-family: 'Inter'; font-size: 14px;">
+                                <button onclick="core.updateServerIp()" 
+                                    style="background: var(--accent); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer;">SAVE</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="logout-btn" onclick="core.clearCache()" style="background:var(--warning); color:var(--text-main); margin-bottom:10px;">CLEAR APP CACHE & REFRESH</div>
+                    <div class="logout-btn" onclick="core.logout()">SECURE SESSION LOGOUT</div>
+
+                    <div
+                        style="text-align:center; margin-top:20px; color:var(--text-muted); font-size:12px; font-weight:700;">
+                        PLATFORM VERSION 3.1.0-PRO<br>
+                        FIELD RESCUER OPERATIONS
+                    </div>
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="nav-link" onclick="core.nav('Home')"><i>🏠</i><span>Home</span></div>
+                    <div class="nav-link" onclick="core.nav('Tasks')"><i>📡</i><span>Current Tasks</span></div>
+                    <div class="nav-link" onclick="core.nav('History')"><i>📋</i><span>History</span></div>
+                    <div class="nav-link active" onclick="core.nav('Settings')"><i>⚙️</i><span>Settings</span></div>
+                </div>
+            </div>
+
+            <!-- LOADER -->
+            <div class="full-loader" id="loader">
+                <div class="spinner"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Hidden Camera / File Input for completion photo capture -->
+    <input type="file" id="hiddenCameraInput" accept="image/*" capture="environment" style="display:none;">
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+
+        // --- OFFLINE SYNC MANAGER ---
+        const originalFetch = window.fetch;
+        window.offlineQueue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+        window.fetch = async function(url, options) {
+            const isMutation = options && ['POST', 'PUT', 'DELETE'].includes(options.method);
+            if (!navigator.onLine && isMutation) {
+                console.log('[OFFLINE] Queuing request', url);
+                window.offlineQueue.push({ url, options });
+                localStorage.setItem('offline_queue', JSON.stringify(window.offlineQueue));
+                return new Response(JSON.stringify({ success: true, offline: true, id: Date.now() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            
+            try {
+                const res = await originalFetch(url, options);
+                if (options === undefined || options.method === 'GET' || !options.method) {
+                    if (url.includes('/history') || url.includes('/rescue-requests') || url.includes('/dashboard-stats') || url.includes('/zones') || url.includes('/users')) {
+                        const clone = res.clone();
+                        clone.text().then(data => {
+                            localStorage.setItem('cache_' + url, data);
+                        }).catch(() => {});
+                    }
+                }
+                return res;
+            } catch (e) {
+                // If the fetch fails for any reason (e.g. server unreachable despite Wi-Fi connection)
+                if (isMutation) {
+                    console.log('[OFFLINE FALLBACK] Queuing request due to fetch failure', url);
+                    window.offlineQueue.push({ url, options });
+                    localStorage.setItem('offline_queue', JSON.stringify(window.offlineQueue));
+                    return new Response(JSON.stringify({ success: true, offline: true, id: Date.now() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+                } else {
+                    const cached = localStorage.getItem('cache_' + url);
+                    if (cached) {
+                        return new Response(cached, { status: 200, headers: { 'Content-Type': 'application/json' } });
+                    }
+                }
+                throw e;
+            }
+        };
+
+        window.addEventListener('online', async () => {
+            console.log('[ONLINE] Syncing offline queue...');
+            const queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+            window.offlineQueue = [];
+            localStorage.setItem('offline_queue', '[]');
+            for (const req of queue) {
+                try {
+                    await originalFetch(req.url, req.options);
+                } catch (e) {
+                    console.error('Failed to sync', req, e);
+                }
+            }
+            if (window.core && window.core.refresh) window.core.refresh();
+            if (window.core && window.core.updateNetUI) window.core.updateNetUI(true);
+        });
+        // -----------------------------
+
+
+        // Timezone conversion helpers
+        function formatLocalTime(dbTimeStr) {
+            if (!dbTimeStr) return '--:--';
+            let t = dbTimeStr.trim();
+            if (!t.includes('T')) t = t.replace(' ', 'T');
+            if (!t.endsWith('Z') && !t.includes('+')) t += 'Z';
+            try {
+                const d = new Date(t);
+                if (isNaN(d)) return dbTimeStr;
+                let h = d.getHours();
+                let m = d.getMinutes();
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12;
+                h = h ? h : 12;
+                m = m < 10 ? '0' + m : m;
+                return h + ':' + m + ' ' + ampm;
+            } catch(e) { return dbTimeStr; }
+        }
+
+        function formatLocalDate(dbTimeStr) {
+            if (!dbTimeStr) return '--/--/----';
+            let t = dbTimeStr.trim();
+            if (!t.includes('T')) t = t.replace(' ', 'T');
+            if (!t.endsWith('Z') && !t.includes('+')) t += 'Z';
+            try {
+                const d = new Date(t);
+                if (isNaN(d)) return dbTimeStr;
+                return d.toLocaleString();
+            } catch(e) { return dbTimeStr; }
+        }
+
+        function getConvexHull(points) {
+            if (points.length <= 2) return points;
+            const pts = points.slice().sort((a, b) => a[0] !== b[0] ? a[0] - b[0] : a[1] - b[1]);
+            const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+            const lower = [];
+            for (let i = 0; i < pts.length; i++) {
+                while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], pts[i]) <= 0) lower.pop();
+                lower.push(pts[i]);
+            }
+            const upper = [];
+            for (let i = pts.length - 1; i >= 0; i--) {
+                while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], pts[i]) <= 0) upper.pop();
+                upper.push(pts[i]);
+            }
+            upper.pop();
+            lower.pop();
+            return lower.concat(upper);
+        }
+
+        function generateTacticalPolygon(coords) {
+            if (!coords || coords.length === 0) return [];
+            const offset = 0.0001; // ~10 meters
+            if (coords.length >= 3) {
+                const hull = getConvexHull(coords);
+                const centerLat = hull.reduce((sum, p) => sum + p[0], 0) / hull.length;
+                const centerLng = hull.reduce((sum, p) => sum + p[1], 0) / hull.length;
+                return hull.map(p => {
+                    const dLat = p[0] - centerLat;
+                    const dLng = p[1] - centerLng;
+                    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+                    if (dist === 0) return [p[0] + offset, p[1] + offset];
+                    const ratio = (dist + offset) / dist;
+                    return [centerLat + dLat * ratio, centerLng + dLng * ratio];
+                });
+            }
+            if (coords.length === 2) {
+                const bounds = L.latLngBounds(coords);
+                const n = bounds.getNorth() + offset;
+                const s = bounds.getSouth() - offset;
+                const e = bounds.getEast() + offset;
+                const w = bounds.getWest() - offset;
+                return [
+                    [n, w],
+                    [n, e],
+                    [s, e],
+                    [s, w]
+                ];
+            }
+            if (coords.length === 1) {
+                const lat = coords[0][0];
+                const lng = coords[0][1];
+                return [
+                    [lat + offset, lng - offset],
+                    [lat + offset, lng + offset],
+                    [lat - offset, lng + offset],
+                    [lat - offset, lng - offset]
+                ];
+            }
+            return [];
+        }
+
+        /**
+         * ANTIGRAVITY RESCUER PRO
+         * Professional Realtime Emergency Response Platform
+         */
+
+        const core = {
+            API: window.__API_BASE__ || `http://${window.location.hostname || ''}:3001/api`,
+            WS_URL: window.__WS_BASE__ || `ws://${window.location.hostname || ''}:3001`,
+            serverIp: '',
+            user: null,
+            map: null,
+            updateLogos() {
+                const ip = this.serverIp || window.location.hostname || '127.0.0.1';
+                const logoImg = document.getElementById('loginLogoImg');
+                if (logoImg) {
+                    logoImg.src = `http://${ip}:3001/official_rescuer_icon.png`;
+                }
+            },
+            rescuerMarker: null,
+            taskMarkers: {},
+            groupPerimeters: {},
+            activeMission: null,
+            interruptedMission: null,
+            navPolyline: null,
+            pos: { lat: 13.0750, lng: 80.2600 },
+            allHistory: [],
+            capturedImages: {},
+
+            init() {
+                // Resolve correct IP address
+                const isNative = window.__IS_NATIVE_APP__ || (typeof window.ReactNativeWebView !== 'undefined');
+                const storedIp = localStorage.getItem('serverIp');
+                const finalIp = storedIp || window.__SERVER_IP__ || (isNative ? '' : window.location.hostname) || '';
+                this.serverIp = finalIp;
+                this.API = finalIp ? `http://${finalIp}:3001/api` : '';
+                this.WS_URL = finalIp ? `ws://${finalIp}:3001` : '';
+                this.updateLogos();
+
+                const inpIp = document.getElementById('inpIp');
+                if (inpIp) inpIp.value = finalIp;
+                const inpServerIp = document.getElementById('inpServerIp');
+                if (inpServerIp) inpServerIp.value = finalIp;
+
+                this.setupIpInputListeners();
+
+                // Guarantee a completely clean login session on first launching a fresh installation or update
+                const APP_VERSION = '1.1.0';
+                const storedVersion = localStorage.getItem('appVersion');
+                if (storedVersion !== APP_VERSION) {
+                    localStorage.removeItem('rescuer_token');
+                    localStorage.removeItem('rescue_user_v3');
+                    localStorage.setItem('appVersion', APP_VERSION);
+                }
+
+                const saved = localStorage.getItem('rescue_user_v3');
+                const token = localStorage.getItem('rescuer_token');
+                if (saved && token && this.API) {
+                    this.showLoader(true);
+                    fetch(`${this.API}/auth/verify`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }).then(res => {
+                        if (res.ok) {
+                            return res.json();
+                        } else {
+                            throw new Error('Invalid token');
+                        }
+                    }).then(data => {
+                        if (!data.user || data.user.role !== 'rescuer') {
+                            throw new Error('Unauthorized role');
+                        }
+                        this.user = data.user;
+                        localStorage.setItem('rescue_user_v3', JSON.stringify(this.user));
+                        this.showScreen('screenHome');
+                        this.bootstrap();
+                        this.showLoader(false);
+                    }).catch(e => {
+                        console.error('Verification failed:', e);
+                        if (!navigator.onLine) {
+                            // If completely offline and fetch failed, proceed with cached credentials
+                            this.user = JSON.parse(saved);
+                            this.showScreen('screenHome');
+                            this.bootstrap();
+                        } else {
+                            // Online but invalid token: log out
+                            this.logout();
+                        }
+                        this.showLoader(false);
+                    });
+                } else {
+                    // Make sure everything is clean if no valid session
+                    localStorage.removeItem('rescue_user_v3');
+                    localStorage.removeItem('rescuer_token');
+                }
+            },
+
+            async login() {
+                const phone = document.getElementById('inpId').value;
+                const pin = document.getElementById('inpPin').value;
+                const ip = document.getElementById('inpIp').value.trim();
+                const err = document.getElementById('loginError');
+
+                if (!ip) {
+                    err.innerText = "SERVER IP ADDRESS REQUIRED";
+                    err.style.display = 'block';
+                    return;
+                }
+
+                // Update server IP settings
+                this.updateServerIp(ip);
+
+                let localDeviceId = localStorage.getItem('rescuer_device_id');
+                if (!localDeviceId) {
+                    localDeviceId = 'RESDEV-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+                    localStorage.setItem('rescuer_device_id', localDeviceId);
+                }
+
+                console.log('[LOGIN] Attempting Rescuer login...', { idOrPhone: phone, pin, deviceId: localDeviceId });
+                this.showLoader(true);
+                try {
+                    const res = await fetch(`${this.API}/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ idOrPhone: phone, pin, deviceId: localDeviceId })
+                    });
+                    console.log('[LOGIN] Response status:', res.status);
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.user.role !== 'rescuer') {
+                            err.innerText = "ACCESS DENIED - OFFICERS ONLY";
+                            err.style.display = 'block';
+                            this.showLoader(false);
+                            return;
+                        }
+                        this.user = data.user;
+                        localStorage.setItem('rescuer_token', data.token);
+                        localStorage.setItem('rescue_user_v3', JSON.stringify(this.user));
+                        this.showScreen('screenHome');
+                        this.bootstrap();
+                    } else {
+                        const errData = await res.json();
+                        err.innerText = errData.error || "ACCESS DENIED";
+                        err.style.display = 'block';
+                    }
+                } catch (e) {
+                    console.error("Login Error:", e);
+                    err.innerText = "NETWORK ERROR - CHECK CONNECTION";
+                    err.style.display = 'block';
+                } finally {
+                    this.showLoader(false);
+                }
+            },
+
+            logout() {
+                localStorage.removeItem('rescue_user_v3');
+                localStorage.removeItem('rescuer_token');
+                try {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOGOUT' }));
+                } catch(e) {}
+                
+                this.user = null;
+                if (this.ws) {
+                    try {
+                        this.ws.onclose = null;
+                        this.ws.onerror = null;
+                        this.ws.close();
+                    } catch(e) {}
+                    this.ws = null;
+                }
+                this.updateNetUI(false);
+                this.showScreen('screenLogin');
+                this.toast("LOGGED OUT", "🔑");
+            },
+
+            updateServerIp(ip) {
+                if (!ip) {
+                    const el = document.getElementById('inpServerIp');
+                    ip = el ? el.value.trim() : '';
+                }
+                if (!ip) {
+                    const el = document.getElementById('inpIp');
+                    ip = el ? el.value.trim() : '';
+                }
+                if (!ip) {
+                    this.toast("INVALID IP ADDRESS", "⚠️");
+                    return;
+                }
+                localStorage.setItem('serverIp', ip);
+                this.serverIp = ip;
+                this.API = `http://${ip}:3001/api`;
+                this.WS_URL = `ws://${ip}:3001`;
+                this.updateLogos();
+
+                // Reconnect Websocket
+                this.connectWS();
+
+                // Sync UI Inputs
+                const inpIp = document.getElementById('inpIp');
+                if (inpIp) inpIp.value = ip;
+                const inpServerIp = document.getElementById('inpServerIp');
+                if (inpServerIp) inpServerIp.value = ip;
+
+                try {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip }));
+                } catch(e) {
+                    this.toast("IP SAVED - REBOOT PREVIEW TO APPLY", "📡");
+                }
+            },
+
+            setupIpInputListeners() {
+                const handleIpInput = (e) => {
+                    const val = e.target.value.trim();
+                    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+                    if (ipRegex.test(val)) {
+                        localStorage.setItem('serverIp', val);
+                        this.serverIp = val;
+                        this.API = `http://${val}:3001/api`;
+                        this.WS_URL = `ws://${val}:3001`;
+                        this.updateLogos();
+                        
+                        // Reconnect WebSocket dynamically
+                        this.connectWS();
+                        
+                        // Sync inputs
+                        const inpIp = document.getElementById('inpIp');
+                        if (inpIp && inpIp !== e.target) inpIp.value = val;
+                        const inpServerIp = document.getElementById('inpServerIp');
+                        if (inpServerIp && inpServerIp !== e.target) inpServerIp.value = val;
+
+                        try {
+                            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: val }));
+                        } catch(err) {}
+                    } else if (val === '') {
+                        localStorage.setItem('serverIp', '');
+                        this.API = '';
+                        this.WS_URL = '';
+                        try {
+                            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: '' }));
+                        } catch(err) {}
+                    }
+                };
+
+                const inpIp = document.getElementById('inpIp');
+                if (inpIp) inpIp.addEventListener('input', handleIpInput);
+                const inpServerIp = document.getElementById('inpServerIp');
+                if (inpServerIp) inpServerIp.addEventListener('input', handleIpInput);
+            },
+
+            clearCache() {
+                localStorage.clear();
+                this.user = null;
+                this.serverIp = '';
+                this.API = '';
+                this.WS_URL = '';
+                if (this.ws) {
+                    try {
+                        this.ws.onclose = null;
+                        this.ws.onerror = null;
+                        this.ws.close();
+                    } catch(e) {}
+                    this.ws = null;
+                }
+                const inpIp = document.getElementById('inpIp');
+                if (inpIp) inpIp.value = '';
+                const inpServerIp = document.getElementById('inpServerIp');
+                if (inpServerIp) inpServerIp.value = '';
+                
+                try {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: '' }));
+                } catch(err) {}
+                
+                this.updateNetUI(false);
+                this.updateLogos();
+                this.showScreen('screenLogin');
+                this.toast("CACHE CLEARED", "🧹");
+            },
+
+            bootstrap() {
+                this.updateUI();
+                this.initMap();
+                this.refresh();
+                this.startSync();
+                this.connectWS();
+                this.fetchSyncSettings();
+                this.updateNetUI(false);
+
+                // Listen for native GPS updates from App.js
+                let initialFix = false;
+                window.addEventListener('message', (event) => {
+                    try {
+                        const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+                        if (msg.type === 'GPS_UPDATE' && msg.lat && msg.lng) {
+                            this.pos.lat = msg.lat;
+                            this.pos.lng = msg.lng;
+                            if (this.rescuerMarker) this.rescuerMarker.setLatLng([msg.lat, msg.lng]);
+                            if (!initialFix && this.map) {
+                                this.map.flyTo([msg.lat, msg.lng], 15, { animate: false });
+                                initialFix = true;
+                            }
+                        }
+                    } catch (e) {}
+                });
+            },
+
+            async fetchSyncSettings() {
+                try {
+                    const res = await fetch(`${this.API}/settings`);
+                    if (res.ok) {
+                        const settings = await res.json();
+                        if (settings.system_name) {
+                            const brandEls = document.querySelectorAll('.brand-name');
+                            brandEls.forEach(el => el.innerText = settings.system_name);
+                        }
+                        if (settings.refresh_interval) {
+                            this.refreshInterval = parseInt(settings.refresh_interval) || 10;
+                            const el = document.getElementById('dispSyncInterval');
+                            if (el) el.innerText = this.refreshInterval + 's (Sync Active)';
+                        } else if (settings.retry_intervals) {
+                            this.refreshInterval = parseInt(settings.retry_intervals.split(',')[0]) || 15;
+                            const el = document.getElementById('dispSyncInterval');
+                            if (el) el.innerText = this.refreshInterval + 's (Legacy)';
+                        }
+                    }
+                } catch (e) { console.error('[SYNC] Failed to fetch settings', e); }
+            },
+
+            refreshInterval: 15,
+
+            updateNetUI(online) {
+                const dot = document.getElementById('syncStatusDot');
+                const label = document.getElementById('dispSyncInterval');
+                if (dot) {
+                    dot.style.background = online ? 'var(--secondary)' : 'var(--danger)';
+                    dot.style.boxShadow = online ? '0 0 10px var(--secondary)' : '0 0 10px var(--danger)';
+                }
+                if (!online && label) {
+                    label.innerText = `RECONNECTING: ${this.refreshInterval}s`;
+                    label.style.color = 'var(--danger)';
+                } else if (label) {
+                    label.innerText = `${this.refreshInterval}s (Admin Set)`;
+                    label.style.color = 'var(--primary)';
+                }
+            },
+
+            updateUI() {
+                document.getElementById('dispName').innerText = this.user.name;
+                document.getElementById('profName').innerText = this.user.name;
+                document.getElementById('profId').innerText = `ID: ${this.user.serial_number || 'MEM-01'} • Emergency Response`;
+                document.getElementById('profPhone').innerText = this.user.phone;
+
+                const groupNames = (this.user.groups && this.user.groups.length > 0) ? this.user.groups.map(g => g.group_name).join(', ') : 'No Groups Assigned';
+                document.getElementById('profGroups').innerText = groupNames;
+                document.getElementById('dispZone').innerText = `Active in: ${groupNames}`;
+
+                const serverIpField = document.getElementById('inpServerIp');
+                if (serverIpField) {
+                    serverIpField.value = this.serverIp;
+                }
+            },
+
+            initMap() {
+                if (this.map) return;
+                this.map = L.map('map', { zoomControl: false }).setView([this.pos.lat, this.pos.lng], 13);
+
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    attribution: '©Antigravity Systems'
+                }).addTo(this.map);
+
+                const icon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="background:url('http://${this.serverIp || window.location.hostname || '127.0.0.1'}:3001/official_rescuer_icon.png'); background-size:cover; width:48px; height:48px; border-radius:50%; border:3px solid white; box-shadow:0 0 20px rgba(220, 38, 38, 0.6);"></div>`,
+                    iconSize: [48, 48]
+                });
+
+                this.rescuerMarker = L.marker([this.pos.lat, this.pos.lng], { icon }).addTo(this.map);
+            },
+
+            showScreen(id) {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById(id).classList.add('active');
+                if (id === 'screenHome' && this.map) {
+                    setTimeout(() => this.map.invalidateSize(), 300);
+                }
+            },
+
+            nav(tab) {
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+
+                const updateNavUI = (index) => {
+                    document.querySelectorAll('.screen.active .nav-link')[index].classList.add('active');
+                };
+
+                if (tab === 'Home') {
+                    this.showScreen('screenHome');
+                    updateNavUI(0);
+                    document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
+                } else if (tab === 'Tasks') {
+                    this.showScreen('screenTasks');
+                    updateNavUI(1);
+                    this.refresh();
+                } else if (tab === 'History') {
+                    this.showScreen('screenHistory');
+                    updateNavUI(2);
+                    this.loadHistory();
+                } else if (tab === 'Settings') {
+                    this.showScreen('screenSettings');
+                    updateNavUI(3);
+                }
+            },
+
+            async refresh() {
+                try {
+                    // 1. Sync User Profile (Groups, Status, etc.)
+                    if (this.user && this.user.id) {
+                        const resProfile = await fetch(`${this.API}/users/${this.user.id}`).catch(() => null);
+                        if (resProfile && resProfile.ok) {
+                            const updatedUser = await resProfile.json();
+                            this.user = { ...this.user, ...updatedUser };
+                            localStorage.setItem('rescue_user_v3', JSON.stringify(this.user));
+                            this.updateUI();
+                        }
+                    }
+
+                    // 2. Sync Combined History (Personal + Group Missions)
+                    const resHistory = await fetch(`${this.API}/users/${this.user.id}/combined-history`).catch(() => ({ ok: false, json: () => [] }));
+                    const historyData = resHistory.ok ? await resHistory.json() : [];
+
+                    // Sort: Latest on top
+                    historyData.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+
+                    // Filter: Show all active statuses (assigned = awaiting acceptance, accepted/ongoing = in progress)
+                    const activeData = historyData.filter(t => t.status && !['completed', 'resolved', 'inactive', 'declined', 'cancelled'].includes(t.status.toLowerCase()));
+
+                    // Deduplicate identical tasks (Requests vs Commands)
+                    const reqIdsInCmds = new Set();
+                    activeData.forEach(t => {
+                        if (t.source === 'command' && t.command_payload) {
+                            try {
+                                const p = typeof t.command_payload === 'string' ? JSON.parse(t.command_payload) : t.command_payload;
+                                if (p.rescue_req_id) reqIdsInCmds.add(String(p.rescue_req_id));
+                                if (p.request_ids && Array.isArray(p.request_ids)) {
+                                    p.request_ids.forEach(id => reqIdsInCmds.add(String(id)));
+                                }
+                            } catch (e) {}
+                        }
+                    });
+                    const dedupedData = activeData.filter(t => !(t.source === 'request' && reqIdsInCmds.has(String(t.id))));
+
+                    // Check if there is an active mission that we should resume visually
+                    const ongoingTask = dedupedData.find(t => t.status === 'accepted' || t.status === 'ongoing' || t.status === 'in_progress');
+                    if (ongoingTask && !this.activeMission) {
+                        this.startMission(ongoingTask.id, ongoingTask.type, ongoingTask.sector, ongoingTask.lat, ongoingTask.lng, ongoingTask.source || 'request');
+                    }
+
+                    this.renderDispatches(dedupedData);
+                } catch (e) { console.error("Refresh Error:", e); }
+            },
+
+            renderDispatches(tasks) {
+                const homeCrit = document.getElementById('homeListCritical');
+                const homeNorm = document.getElementById('homeListNormal');
+                const homeGrouped = document.getElementById('homeListGrouped');
+                const tasksCrit = document.getElementById('tasksListCritical');
+                const tasksNorm = document.getElementById('tasksListNormal');
+                const tasksGrouped = document.getElementById('tasksListGrouped');
+
+                homeCrit.innerHTML = '';
+                homeNorm.innerHTML = '';
+                if (homeGrouped) homeGrouped.innerHTML = '';
+                tasksCrit.innerHTML = '';
+                tasksNorm.innerHTML = '';
+                if (tasksGrouped) tasksGrouped.innerHTML = '';
+
+                // Clear old task markers from map
+                for (let key in this.taskMarkers) {
+                    if (this.taskMarkers[key]) {
+                        this.map.removeLayer(this.taskMarkers[key]);
+                    }
+                }
+                this.taskMarkers = {};
+
+                // Clear old group perimeters from map
+                for (let gid in this.groupPerimeters) {
+                    if (this.groupPerimeters[gid]) {
+                        this.map.removeLayer(this.groupPerimeters[gid]);
+                    }
+                }
+                this.groupPerimeters = {};
+
+                const groupedTasks = tasks.filter(t => {
+                    if (t.type === 'group') return true;
+                    try {
+                        const d = typeof t.details === 'string' ? JSON.parse(t.details) : t.details;
+                        return d && d.isGroup;
+                    } catch(e) { return false; }
+                });
+                const critTasks = tasks.filter(t => !groupedTasks.includes(t) && (t.priority === 'critical' || ['sos', 'medical', 'pregnancy', 'critical'].includes((t.type || '').toLowerCase())));
+                const normTasks = tasks.filter(t => !groupedTasks.includes(t) && !critTasks.includes(t));
+
+                // Draw group perimeters on map
+                groupedTasks.forEach(g => {
+                    let d = null;
+                    try {
+                        d = typeof g.details === 'string' ? JSON.parse(g.details) : g.details;
+                    } catch(e) {}
+
+                    if (d && d.isGroup && d.missions && d.missions.length > 0) {
+                        const coords = d.missions.map(m => [parseFloat(m.lat), parseFloat(m.lng)]).filter(c => !isNaN(c[0]));
+                        if (coords.length === 0) return;
+
+                        let style = {
+                            color: '#a855f7',
+                            fillColor: '#a855f7',
+                            fillOpacity: 0.1,
+                            dashArray: '5, 8',
+                            weight: 2.5
+                        };
+
+                        const hull = d.custom_polygon || generateTacticalPolygon(coords);
+                        if (hull && hull.length > 0) {
+                            const poly = L.polygon(hull, style).addTo(this.map);
+                            poly.bindPopup(`<b>${g.sector || 'Group Cluster'}</b><br>${d.missions.length} Clusters`);
+                            this.groupPerimeters[g.id] = poly;
+                        }
+                    }
+                });
+
+                if (critTasks.length === 0) {
+                    homeCrit.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No critical alerts</div>';
+                    tasksCrit.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No critical alerts</div>';
+                }
+                if (normTasks.length === 0) {
+                    homeNorm.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No routine logistics</div>';
+                    tasksNorm.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No routine logistics</div>';
+                }
+                if (groupedTasks.length === 0) {
+                    if (homeGrouped) homeGrouped.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No grouped clusters</div>';
+                    if (tasksGrouped) tasksGrouped.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No grouped clusters</div>';
+                }
+
+
+                tasks.forEach(t => {
+                    const isGroup = groupedTasks.includes(t);
+                    const isCrit = !isGroup && critTasks.includes(t);
+                    
+                    const targetHome = isGroup ? homeGrouped : (isCrit ? homeCrit : homeNorm);
+                    const targetTasks = isGroup ? tasksGrouped : (isCrit ? tasksCrit : tasksNorm);
+
+
+                    const isOngoing = (t.status === 'accepted' || t.status === 'ongoing' || t.status === 'in_progress');
+                    const isAssigned = (t.status === 'assigned' || t.status === 'pending');
+
+                    let btnHtml = '';
+                    let badgeHtml = '';
+
+                    if (isOngoing) {
+                        const hasCaptured = !!this.capturedImages[t.id];
+                        const cameraLabel = hasCaptured ? '✅ Photo' : '📷 Photo';
+                        const cameraCls = hasCaptured ? 'btn-camera-card captured' : 'btn-camera-card';
+                        btnHtml = `
+                            <button class="${cameraCls}" id="camBtn_${t.id}" onclick="core.triggerCamera('${t.id}', '${t.source}')">${cameraLabel}</button>
+                            <button class="btn-action" style="background:#ef4444; color:white; flex:1;" onclick="core.completeTask('${t.id}', '${t.source}')">COMPLETE MISSION</button>`;
+                        badgeHtml = `<span class="notif-badge" style="background:var(--warning); color:white;">ONGOING - ${t.type.toUpperCase()}</span>`;
+                    } else if (isAssigned) {
+                        btnHtml = `<button class="btn-action" style="background:#0ea5e9; color:white;" onclick="core.accept('${t.id}', '${t.type}', '${encodeURIComponent(t.sector||'')}', ${t.lat||0}, ${t.lng||0}, '${t.source||'request'}')">✅ ACCEPT</button>
+                                   <button class="btn-action" style="background:#64748b; color:white;" onclick="core.declineTask('${t.id}', event)">❌ IGNORE</button>`;
+                        badgeHtml = `<span class="notif-badge" style="background:#3b82f6; color:white; animation: pulse 1.5s infinite;">📋 ASSIGNED - AWAITING ACCEPTANCE</span>`;
+                    } else {
+                        btnHtml = `<button class="btn-action" style="background:#0ea5e9; color:white;" onclick="core.accept('${t.id}', '${t.type}', '${encodeURIComponent(t.sector||'')}', ${t.lat||0}, ${t.lng||0}, '${t.source||'request'}')">ACCEPT</button>
+                                   <button class="btn-action" style="background:#64748b; color:white;" onclick="core.declineTask('${t.id}', event)">IGNORE</button>`;
+                        badgeHtml = `<span class="notif-badge badge-${t.type}">${t.type}</span>`;
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = 'notif-card';
+                    if (isOngoing) card.style.borderLeft = '4px solid var(--warning)';
+
+                    let evidenceHtml = '';
+                    if (t.image_url) {
+                        evidenceHtml += `<div style="width:100%; height:120px; border-radius:12px; overflow:hidden; margin-bottom:12px; border:1px solid var(--border);">
+                            <img src="http://${core.serverIp || window.location.hostname || '127.0.0.1'}:3001${t.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                        </div>`;
+                    }
+
+                    let commentHtml = '';
+                    if (t.details) {
+                        try {
+                            const d = typeof t.details === 'string' ? JSON.parse(t.details) : t.details;
+                            if (d.isGroup && d.missions) {
+                                commentHtml = `<div style="background:var(--bg); border:1px solid var(--border); padding:10px; border-radius:12px; margin-bottom:12px;">
+                                    <h5 style="font-size:12px; margin-bottom:6px; color:var(--primary); font-weight: 800;">📦 CLUSTERED MISSIONS (${d.missions.length})</h5>`;
+                                d.missions.forEach(m => {
+                                    let reqs = '';
+                                    if (m.details) {
+                                        try {
+                                            const md = typeof m.details === 'string' ? JSON.parse(m.details) : m.details;
+                                            const items = [];
+                                            if (md.food) items.push(`🍞 ${md.food}`);
+                                            if (md.med) items.push(`💊 ${md.med}`);
+                                            if (md.sanitary) items.push(`🧻 ${md.sanitary}`);
+                                            if (md.persons) items.push(`👥 ${md.persons}`);
+                                            if (items.length > 0) reqs = `<br><span style="color:var(--primary); font-size:10px;">Requires: ${items.join(' | ')}</span>`;
+                                        } catch (e) { }
+                                    }
+                                    commentHtml += `<div style="font-size:11px; padding:6px; background:white; border-radius:6px; margin-bottom:4px; box-shadow:var(--shadow-sm); font-weight:600;">
+                                        <b style="color:var(--text-main);">${m.type.toUpperCase()}</b> <span style="color:var(--text-muted);">• ${m.sector}</span>${reqs}
+                                    </div>`;
+                                });
+                                commentHtml += `</div>`;
+                            } else if (d.comments) {
+                                commentHtml = `<p style="font-size:12px; color:var(--primary); font-style:italic; margin-bottom:12px; background:var(--primary-light); padding:8px; border-radius:8px;">"${d.comments}"</p>`;
+                            }
+                        } catch (e) { }
+                    }
+
+                    card.innerHTML = `
+                        <div class="notif-top">
+                            ${badgeHtml}
+                            <span class="notif-time">${formatLocalTime(t.created_at)}</span>
+                        </div>
+                        <h4 class="notif-title">${t.type.toUpperCase()} ${isCrit ? 'EMERGENCY' : 'DISPATCH'}</h4>
+                        <p class="notif-loc">📍 ${t.sector || 'Coordinate Point'}</p>
+                        ${commentHtml}
+                        ${evidenceHtml}
+                        <div class="notif-btns">
+                            ${btnHtml}
+                        </div>
+                    `;
+
+                    targetHome.appendChild(card);
+                    targetTasks.appendChild(card.cloneNode(true));
+                    this.addTaskMarker(t);
+                });
+            },
+
+            addTaskMarker(t) {
+                if (t.type === 'group' && t.details) {
+                    try {
+                        const d = typeof t.details === 'string' ? JSON.parse(t.details) : t.details;
+                        if (d.isGroup && d.missions) {
+                            d.missions.forEach(m => {
+                                const subTask = { id: `sub_${m.id}`, type: m.type, lat: m.lat, lng: m.lng, sector: m.sector };
+                                this.addTaskMarker(subTask);
+                            });
+                        }
+                    } catch (e) { }
+                    return;
+                }
+
+                if (this.taskMarkers[t.id]) return;
+                const colors = { sos: '#f43f5e', food: '#f59e0b', medical: '#10b981', pregnancy: '#10b981' };
+                const icons = { sos: '🚨', food: '🍱', medical: '🏥', pregnancy: '🤰' };
+
+                const icon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="background:${colors[t.type] || '#6366f1'}; width:32px; height:32px; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; font-size:14px;">${icons[t.type] || '🛡️'}</div>`,
+                    iconSize: [36, 36]
+                });
+
+                const m = L.marker([t.lat, t.lng], { icon }).addTo(this.map);
+                m.bindPopup(`<b>${t.type.toUpperCase()}</b><br>${t.sector}`);
+                this.taskMarkers[t.id] = m;
+            },
+
+            async accept(id, type, sector, lat, lng, source = 'request') {
+                this.showLoader(true);
+                try {
+                    const endpoint = source === 'command' ? 'commands' : 'rescue-requests';
+                    await fetch(`${this.API}/${endpoint}/${id}/status`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'accepted', rescuer_phone: this.user.phone })
+                    });
+
+                    const isCrit = ['sos', 'medical', 'pregnancy', 'critical'].includes(type.toLowerCase());
+                    // If this is a critical task and we had a normal task active, mark it as interrupted
+                    if (isCrit && this.activeMission && !['sos', 'medical', 'pregnancy', 'critical'].includes(this.activeMission.type.toLowerCase())) {
+                        this.interruptedMission = { ...this.activeMission };
+                        try {
+                            await fetch(`${this.API}/users/${this.user.id}/interrupted-task`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ task_id: this.activeMission.id }),
+                            });
+                        } catch { }
+                    }
+
+                    await this.startMission(id, type, sector, lat, lng, source);
+                } catch (e) {
+                    await this.startMission(id, type, sector, lat, lng); // Fallback
+                } finally {
+                    this.showLoader(false);
+                }
+            },
+
+            async startMission(id, type, sector, lat, lng, source = 'request') {
+                let finalLat = Number(lat);
+                let finalLng = Number(lng);
+                let finalSector = sector;
+
+                let groupCoords = [];
+                let isGroupMission = false;
+                let customGroupPolygon = null;
+
+                try {
+                    const resHistory = await fetch(`${this.API}/users/${this.user.id}/combined-history`);
+                    const historyData = await resHistory.json();
+                    const task = historyData.find(t => String(t.id) === String(id) && t.source === source);
+
+                    if (task && task.details) {
+                        const d = typeof task.details === 'string' ? JSON.parse(task.details) : task.details;
+                        if (d.custom_polygon) {
+                            customGroupPolygon = d.custom_polygon;
+                        }
+                        if (d.isGroup && d.missions && d.missions.length > 0) {
+                            isGroupMission = true;
+                            groupCoords = d.missions.map(m => [Number(m.lat), Number(m.lng)]).filter(c => !isNaN(c[0]));
+                            if (groupCoords.length > 0 && (!finalLat || finalLat === 0)) {
+                                finalLat = groupCoords[0][0];
+                                finalLng = groupCoords[0][1];
+                            }
+                        }
+                    }
+                } catch (e) { }
+
+                // If coming from a command update and we didn't find group details, check payload
+                if (source === 'command') {
+                    try {
+                        const res = await fetch(`${this.API}/commands/${id}`);
+                        const cmd = await res.json();
+                        const payload = JSON.parse(cmd.command_payload);
+
+                        if (!finalLat || finalLat === 0) {
+                            finalLat = Number(payload.lat) || finalLat;
+                            finalLng = Number(payload.lng) || finalLng;
+                        }
+
+                        finalSector = payload.name || payload.sector || sector;
+
+                        if (payload.custom_polygon) {
+                            customGroupPolygon = payload.custom_polygon;
+                            isGroupMission = true;
+                        }
+
+                        if (payload.is_group_mission && payload.missions) {
+                            isGroupMission = true;
+                            groupCoords = payload.missions.map(m => [Number(m.lat), Number(m.lng)]).filter(c => !isNaN(c[0]));
+                        }
+                    } catch (e) { console.error(e); }
+                }
+
+                if (isGroupMission && groupCoords.length > 0 && (!finalLat || finalLat === 0 || isNaN(finalLat))) {
+                    finalLat = groupCoords[0][0];
+                    finalLng = groupCoords[0][1];
+                }
+
+                this.activeMission = { id, type, sector: finalSector, lat: finalLat, lng: finalLng, source };
+
+                document.getElementById('missionBanner').style.display = 'flex';
+                document.getElementById('missType').innerText = `${type.toUpperCase()} MISSION`;
+                document.getElementById('missLoc').innerText = finalSector;
+
+                if (this.navPolyline) this.map.removeLayer(this.navPolyline);
+                if (this.missionZoneLayer) this.map.removeLayer(this.missionZoneLayer);
+
+                const isCrit = ['sos', 'medical', 'pregnancy', 'critical'].includes(type.toLowerCase());
+                const routeColor = isCrit ? 'var(--danger)' : 'var(--primary)';
+
+                this.navPolyline = L.polyline([[this.pos.lat, this.pos.lng], [Number(finalLat), Number(finalLng)]], {
+                    color: routeColor, weight: 6, opacity: 0.8, dashArray: '10, 15'
+                }).addTo(this.map);
+
+                if (isGroupMission && groupCoords.length > 0) {
+                    const style = {
+                        color: '#a855f7',
+                        fillColor: '#a855f7',
+                        fillOpacity: 0.15,
+                        dashArray: '5, 8',
+                        weight: 2.5
+                    };
+
+                    const getConvexHull = (points) => {
+                        if (points.length <= 2) return points;
+                        const pts = points.slice().sort((a, b) => a[0] !== b[0] ? a[0] - b[0] : a[1] - b[1]);
+                        const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+                        const lower = [];
+                        for (let i = 0; i < pts.length; i++) {
+                            while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], pts[i]) <= 0) lower.pop();
+                            lower.push(pts[i]);
+                        }
+                        const upper = [];
+                        for (let i = pts.length - 1; i >= 0; i--) {
+                            while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], pts[i]) <= 0) upper.pop();
+                            upper.push(pts[i]);
+                        }
+                        upper.pop();
+                        lower.pop();
+                        return lower.concat(upper);
+                    };
+
+                    if (groupCoords.length === 1) {
+                        this.missionZoneLayer = L.circle(groupCoords[0], { ...style, radius: 400 }).addTo(this.map);
+                    } else if (groupCoords.length === 2 && !customGroupPolygon) {
+                        this.missionZoneLayer = L.rectangle(L.latLngBounds(groupCoords).pad(0.2), style).addTo(this.map);
+                    } else {
+                        const hull = customGroupPolygon || getConvexHull(groupCoords);
+                        this.missionZoneLayer = L.polygon(hull, style).addTo(this.map);
+                    }
+
+                    this.missionZoneLayer.bindPopup(`
+                        <div style="font-family:'Inter'; padding:5px; text-align:center;">
+                            <b style="color:var(--special); font-size:14px;">${finalSector}</b><br>
+                            <span style="font-size:11px; color:var(--text-muted);">${groupCoords.length} Tasks in Group</span><br>
+                            <span style="font-size:11px; color:var(--primary); font-weight:600;">Status: Active</span>
+                        </div>
+                    `);
+                } else {
+                    // Fetch dynamic zone marking created by Admin
+                    try {
+                        const res = await fetch(`${this.API}/zones`);
+                        const zones = await res.json();
+                        const activeZone = zones.find(z => z.status === 'active' && z.zone_name === sector);
+
+                        if (activeZone) {
+                            const geo = JSON.parse(activeZone.zone_geometry);
+                            const latlng = geo.latlng || geo.center;
+                            const radius = geo.radius;
+
+                            const style = {
+                                color: activeZone.color || 'var(--primary)',
+                                fillOpacity: 0.1,
+                                weight: 3,
+                                dashArray: '5, 10'
+                            };
+
+                            if (geo.type === 'Circle' || geo.type === 'radius' || (latlng && radius)) {
+                                this.missionZoneLayer = L.circle([latlng.lat, latlng.lng], { ...style, radius: radius }).addTo(this.map);
+                            } else if (geo.bounds) {
+                                this.missionZoneLayer = L.rectangle(geo.bounds, style).addTo(this.map);
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to fetch zones", e);
+                    }
+                }
+
+                let bounds = this.navPolyline.getBounds();
+                if (this.missionZoneLayer) bounds.extend(this.missionZoneLayer.getBounds());
+                this.map.fitBounds(bounds, { padding: [50, 50] });
+
+                this.nav('Home');
+                this.toast('MISSION COMMENCED - NAVIGATING', '🚀');
+            },
+
+            async completeMission() {
+                if (!this.activeMission) return;
+                // Merge banner capture into the active mission ID slot
+                if (this.capturedImages['__banner__'] && !this.capturedImages[this.activeMission.id]) {
+                    this.capturedImages[this.activeMission.id] = this.capturedImages['__banner__'];
+                    delete this.capturedImages['__banner__'];
+                }
+                await this.completeTask(this.activeMission.id, this.activeMission.source);
+            },
+
+            // ───────────────────────────────────────────────────
+            // CAMERA CAPTURE & CANVAS COMPRESSION
+            // ───────────────────────────────────────────────────
+
+            triggerCamera(id, source) {
+                if (window.ReactNativeWebView) {
+                    // Send to native bridge
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'CAPTURE_IMAGE',
+                        taskId: id,
+                        source: source
+                    }));
+                    return;
+                }
+
+                const input = document.getElementById('hiddenCameraInput');
+                if (!input) return;
+
+                // Detach previous listener to avoid stacking
+                input.onchange = null;
+
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    input.value = ''; // Reset so same file can be re-chosen
+
+                    try {
+                        const base64 = await this._compressImage(file, 1280, 720, 500 * 1024);
+                        this.capturedImages[id] = base64;
+
+                        // Update banner camera button icon
+                        const bannerBtn = document.getElementById('bannerCameraBtn');
+                        if (bannerBtn && (id === '__banner__' || (this.activeMission && String(this.activeMission.id) === String(id)))) {
+                            bannerBtn.textContent = '✅';
+                            bannerBtn.classList.add('captured');
+                        }
+
+                        // Update card camera button
+                        const cardBtn = document.getElementById('camBtn_' + id);
+                        if (cardBtn) {
+                            cardBtn.textContent = '✅ Photo';
+                            cardBtn.classList.add('captured');
+                        }
+
+                        this.toast('📷 Photo attached!', '✅');
+                    } catch (err) {
+                        console.error('[Camera] Compression failed:', err);
+                        this.toast('Photo capture failed', '❌');
+                    }
+                };
+
+                input.click();
+            },
+
+            // Compress & resize an image File to JPEG base64 ≤ maxBytes
+            _compressImage(file, maxW, maxH, maxBytes) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            let w = img.naturalWidth;
+                            let h = img.naturalHeight;
+
+                            // Downscale to fit within maxW x maxH
+                            if (w > maxW || h > maxH) {
+                                const ratio = Math.min(maxW / w, maxH / h);
+                                w = Math.floor(w * ratio);
+                                h = Math.floor(h * ratio);
+                            }
+
+                            const canvas = document.createElement('canvas');
+                            canvas.width = w;
+                            canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+
+                            // Iteratively lower quality until under maxBytes
+                            let quality = 0.85;
+                            let dataUrl;
+                            do {
+                                dataUrl = canvas.toDataURL('image/jpeg', quality);
+                                const byteLen = Math.ceil((dataUrl.length - dataUrl.indexOf(',') - 1) * 0.75);
+                                if (byteLen <= maxBytes || quality <= 0.2) break;
+                                quality -= 0.1;
+                            } while (true);
+
+                            resolve(dataUrl); // full data URL
+                        };
+                        img.onerror = reject;
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            },
+            // ───────────────────────────────────────────────────
+
+            async completeTask(id, source = 'request') {
+                // ── Photo verification gate (Now Optional) ───────────────
+                const photoBase64 = this.capturedImages[id] || this.capturedImages['__banner__'] || null;
+                // ─────────────────────────────────────────────────────────
+
+                this.showLoader(true);
+                try {
+                    const endpoint = (source === 'command' || this.activeMission?.source === 'command') ? 'commands' : 'rescue-requests';
+                    await fetch(`${this.API}/${endpoint}/${id}/status`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            status: 'completed',
+                            rescuer_phone: this.user.phone,
+                            completion_image: photoBase64
+                        })
+                    });
+
+                    // Clear captured image after successful submit
+                    delete this.capturedImages[id];
+                    delete this.capturedImages['__banner__'];
+
+                    this.toast('MISSION SUCCESSFUL', '✅');
+
+                    // --- LOCAL HISTORY INJECTION ---
+                    try {
+                        const histCacheKey = 'cache_' + this.API + '/users/' + this.user.id + '/combined-history';
+                        let cachedHist = JSON.parse(localStorage.getItem(histCacheKey) || '[]');
+                        let existing = cachedHist.find(h => String(h.id) === String(id) && h.source === (source === 'command' ? 'command' : 'request'));
+                        if (existing) {
+                            existing.status = 'completed';
+                            existing.updated_at = new Date().toISOString();
+                        } else if (this.activeMission) {
+                            cachedHist.push({
+                                id: id,
+                                type: this.activeMission.type || 'unknown',
+                                sector: this.activeMission.sector || 'Unknown Sector',
+                                lat: this.activeMission.lat,
+                                lng: this.activeMission.lng,
+                                source: (source === 'command' ? 'command' : 'request'),
+                                status: 'completed',
+                                created_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString(),
+                                priority: ['sos', 'medical', 'pregnancy', 'critical'].includes((this.activeMission.type || '').toLowerCase()) ? 'critical' : 'normal'
+                            });
+                        }
+                        localStorage.setItem(histCacheKey, JSON.stringify(cachedHist));
+                    } catch (err) { console.error("History cache update failed", err); }
+                    // -------------------------------
+
+                    if (this.activeMission && String(this.activeMission.id) === String(id)) {
+                        this.endMission();
+                    } else {
+                        if (this.taskMarkers[id]) this.map.removeLayer(this.taskMarkers[id]);
+                        delete this.taskMarkers[id];
+                        this.refresh();
+                    }
+
+                    // If we just completed a critical mission and have an interrupted task, reopen it
+                    const isCritCompletion = ['sos', 'medical', 'pregnancy', 'critical'].includes(this.activeMission?.type?.toLowerCase() || '');
+                    if (isCritCompletion && this.interruptedMission) {
+                        setTimeout(async () => {
+                            const restored = this.interruptedMission;
+                            this.interruptedMission = null;
+                            this.toast("Restoring interrupted normal task...", '🔄');
+
+                            // Clear interrupted task in backend
+                            fetch(`${this.API}/users/${this.user.id}/interrupted-task`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ task_id: null }),
+                            }).catch(() => { });
+
+                            await this.startMission(restored.id, restored.type, restored.sector, restored.lat, restored.lng);
+                        }, 2000);
+                    }
+                } catch (e) {
+                    this.toast('MISSION COMPLETED (OFFLINE)', '✅');
+
+                    // --- LOCAL HISTORY INJECTION (OFFLINE FALLBACK) ---
+                    try {
+                        const histCacheKey = 'cache_' + this.API + '/users/' + this.user.id + '/combined-history';
+                        let cachedHist = JSON.parse(localStorage.getItem(histCacheKey) || '[]');
+                        let existing = cachedHist.find(h => String(h.id) === String(id) && h.source === (source === 'command' ? 'command' : 'request'));
+                        if (existing) {
+                            existing.status = 'completed';
+                            existing.updated_at = new Date().toISOString();
+                        } else if (this.activeMission) {
+                            cachedHist.push({
+                                id: id,
+                                type: this.activeMission.type || 'unknown',
+                                sector: this.activeMission.sector || 'Unknown Sector',
+                                lat: this.activeMission.lat,
+                                lng: this.activeMission.lng,
+                                source: (source === 'command' ? 'command' : 'request'),
+                                status: 'completed',
+                                created_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString(),
+                                priority: ['sos', 'medical', 'pregnancy', 'critical'].includes((this.activeMission.type || '').toLowerCase()) ? 'critical' : 'normal'
+                            });
+                        }
+                        localStorage.setItem(histCacheKey, JSON.stringify(cachedHist));
+                    } catch (err) { console.error("History cache update failed", err); }
+                    // --------------------------------------------------
+
+                    if (this.activeMission && String(this.activeMission.id) === String(id)) this.endMission();
+                } finally {
+                    this.showLoader(false);
+                }
+            },
+
+            declineTask(id, event) {
+                this.toast('Task Ignored', 'ℹ️');
+                if (event && event.target) {
+                    const card = event.target.closest('.notif-card');
+                    if (card) card.remove();
+                }
+                if (this.taskMarkers[id]) {
+                    this.map.removeLayer(this.taskMarkers[id]);
+                    delete this.taskMarkers[id];
+                }
+                if (this.groupPerimeters[id]) {
+                    this.map.removeLayer(this.groupPerimeters[id]);
+                    delete this.groupPerimeters[id];
+                }
+            },
+
+            endMission() {
+                document.getElementById('missionBanner').style.display = 'none';
+                if (this.navPolyline) this.map.removeLayer(this.navPolyline);
+                if (this.missionZoneLayer) {
+                    this.map.removeLayer(this.missionZoneLayer);
+                    this.missionZoneLayer = null;
+                }
+                if (this.taskMarkers[this.activeMission.id]) this.map.removeLayer(this.taskMarkers[this.activeMission.id]);
+                delete this.taskMarkers[this.activeMission.id];
+                this.activeMission = null;
+                this.refresh();
+                this.map.setView([this.pos.lat, this.pos.lng], 14);
+                this.nav('Tasks');
+            },
+
+            async loadHistory() {
+                const listCrit = document.getElementById('histListCritical');
+                const listNorm = document.getElementById('histListNormal');
+                if (listCrit) listCrit.innerHTML = '<div style="text-align:center; padding:20px;"><div class="spinner" style="width:24px; height:24px; margin:0 auto;"></div></div>';
+                if (listNorm) listNorm.innerHTML = '';
+
+                let rawHistory = [];
+                try {
+                    const res = await fetch(`${this.API}/users/${this.user.id}/combined-history`);
+                    rawHistory = await res.json();
+                    
+                    // Update cache on success
+                    if (Array.isArray(rawHistory)) {
+                        try {
+                            const histCacheKey = 'cache_' + this.API + '/users/' + this.user.id + '/combined-history';
+                            localStorage.setItem(histCacheKey, JSON.stringify(rawHistory));
+                        } catch(e) {}
+                    }
+                } catch (e) {
+                    console.error('Fetch history failed:', e);
+                }
+
+                // Fallback to cache if rawHistory is not an array or is empty
+                if (!Array.isArray(rawHistory) || rawHistory.length === 0) {
+                    const histCacheKey = 'cache_' + this.API + '/users/' + this.user.id + '/combined-history';
+                    const cached = localStorage.getItem(histCacheKey);
+                    if (cached) {
+                        try {
+                            rawHistory = JSON.parse(cached);
+                        } catch(err) {}
+                    }
+                }
+
+                if (!Array.isArray(rawHistory)) {
+                    rawHistory = [];
+                }
+
+                try {
+                    rawHistory.sort((a, b) => new Date(b.updated_at || b.created_at || b.time) - new Date(a.updated_at || a.created_at || a.time));
+                    
+                    // Deduplicate identical tasks (Requests vs Commands) from history
+                    const reqIdsInCmds = new Set();
+                    rawHistory.forEach(t => {
+                        if (t.source === 'command' && t.command_payload) {
+                            try {
+                                const p = typeof t.command_payload === 'string' ? JSON.parse(t.command_payload) : t.command_payload;
+                                if (p.rescue_req_id) reqIdsInCmds.add(String(p.rescue_req_id));
+                                if (p.request_ids && Array.isArray(p.request_ids)) {
+                                    p.request_ids.forEach(id => reqIdsInCmds.add(String(id)));
+                                }
+                            } catch (e) {}
+                        }
+                    });
+                    const dedupedHistory = rawHistory.filter(t => !(t.source === 'request' && reqIdsInCmds.has(String(t.id))));
+                    this.allHistory = dedupedHistory;
+                    this.renderHistory(this.allHistory);
+                } catch (err) {
+                    console.error('Sorting or rendering history failed:', err);
+                    if (listCrit) listCrit.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);">Failed to load mission logs.</div>';
+                }
+            },
+
+            renderHistory(items) {
+                const listCrit = document.getElementById('histListCritical');
+                const listNorm = document.getElementById('histListNormal');
+
+                listCrit.innerHTML = '';
+                listNorm.innerHTML = '';
+
+                if (items.length === 0) {
+                    listCrit.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No history found</div>';
+                    listNorm.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No history found</div>';
+                    return;
+                }
+
+                items.forEach(h => {
+                    const safeType = (h.type || 'unknown').toLowerCase();
+                    const isCrit = h.priority === 'critical' || ['sos', 'medical', 'pregnancy', 'critical'].includes(safeType);
+                    const targetList = isCrit ? listCrit : listNorm;
+
+                    const card = document.createElement('div');
+                    card.className = 'hist-item';
+                    const sourcePrefix = h.source === 'command' ? 'CMD' : 'REQ';
+                    
+                    let histEvidence = '';
+                    const displayImage = h.completion_image_url || h.image_url;
+                    if (displayImage) {
+                        const serverBase = this.API.replace('/api', '');
+                        histEvidence = `<div style="width:50px; height:50px; border-radius:8px; overflow:hidden; border:1px solid var(--border); margin-left:10px;">
+                            <img src="${serverBase}${displayImage}" style="width:100%; height:100%; object-fit:cover;">
+                        </div>`;
+                    }
+
+                    let commentHtml = '';
+                    if (h.details) {
+                        try {
+                            const d = typeof h.details === 'string' ? JSON.parse(h.details) : h.details;
+                            if (d.comments) {
+                                commentHtml = `<p style="font-size:10px; color:var(--primary); font-style:italic; margin-top:6px; border-left: 2px solid var(--primary); padding-left: 6px;">"${d.comments}"</p>`;
+                            }
+                        } catch (e) {
+                            if (h.details.length > 0) commentHtml = `<p style="font-size:10px; color:var(--primary); font-style:italic; margin-top:6px; border-left: 2px solid var(--primary); padding-left: 6px;">"${h.details}"</p>`;
+                        }
+                    }
+
+                    const safeStatus = (h.status || '').toLowerCase();
+                    let badgeBg = '#f1f5f9';
+                    let badgeColor = '#475569';
+                    if (['completed', 'resolved', 'done', 'success'].includes(safeStatus)) {
+                        badgeBg = '#d1fae5';
+                        badgeColor = 'var(--secondary)';
+                    } else if (['declined', 'cancelled', 'rejected', 'failed'].includes(safeStatus)) {
+                        badgeBg = '#fee2e2';
+                        badgeColor = '#991b1b';
+                    } else if (['assigned', 'pending'].includes(safeStatus)) {
+                        badgeBg = '#fef3c7';
+                        badgeColor = '#92400e';
+                    } else if (['accepted', 'ongoing', 'in_progress', 'moving'].includes(safeStatus)) {
+                        badgeBg = '#dbeafe';
+                        badgeColor = '#1e40af';
+                    }
+
+                    let timeLabel = 'Finished';
+                    if (['assigned', 'pending', 'accepted', 'ongoing', 'in_progress', 'moving'].includes(safeStatus)) {
+                        timeLabel = 'Updated';
+                    }
+
+                    const recordTime = h.updated_at || h.created_at || h.time;
+
+                    card.innerHTML = `
+                        <div class="hist-details" style="flex:1;">
+                            <h4>${(h.type || 'unknown').toUpperCase()} • ${h.sector || ''}</h4>
+                            <p>ID: #${sourcePrefix}-${h.id} • ${formatLocalDate(recordTime)}</p>
+                            <p style="margin-top:4px; font-style:italic;">${timeLabel}: ${formatLocalTime(recordTime)}</p>
+                            ${commentHtml}
+                        </div>
+                        ${histEvidence}
+                        <div class="hist-meta" style="margin-left:10px;">
+                            <span class="hist-status" style="background: ${badgeBg}; color: ${badgeColor};">${h.status}</span>
+                        </div>
+                    `;
+                    targetList.appendChild(card);
+                });
+            },
+
+            historyFilterRange: 'full',
+
+            setHistoryFilter(range, event) {
+                this.historyFilterRange = range;
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                if (event && event.currentTarget) {
+                    event.currentTarget.classList.add('active');
+                }
+                this.filterHistory();
+            },
+
+            filterHistory() {
+                const q = document.getElementById('histSearch').value.toLowerCase();
+                const now = new Date();
+
+                const filtered = this.allHistory.filter(h => {
+                    const matchQ = h.type.toLowerCase().includes(q) ||
+                        (h.sector && h.sector.toLowerCase().includes(q)) ||
+                        String(h.id).includes(q);
+
+                    let matchTime = true;
+                    if (this.historyFilterRange !== 'full') {
+                        const hDate = new Date(h.updated_at);
+                        const diffTime = Math.abs(now - hDate);
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                        if (this.historyFilterRange === 'day' && diffDays > 1) matchTime = false;
+                        if (this.historyFilterRange === 'week' && diffDays > 7) matchTime = false;
+                        if (this.historyFilterRange === 'yearly' && diffDays > 365) matchTime = false;
+                    }
+
+                    return matchQ && matchTime;
+                });
+                this.renderHistory(filtered);
+            },
+
+            downloadHistoryPDF() {
+                const element = document.getElementById('pdfContent');
+                const opt = {
+                    margin: 0.5,
+                    filename: `Mission_History_${new Date().toISOString().split('T')[0]}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                };
+                if (window.html2pdf) {
+                    if (window.ReactNativeWebView) {
+                        this.toast("Preparing PDF for save...", '📄');
+                        html2pdf().set(opt).from(element).outputPdf('datauristring').then((pdfBase64) => {
+                            window.ReactNativeWebView.postMessage(JSON.stringify({
+                                type: 'DOWNLOAD_PDF',
+                                filename: opt.filename,
+                                base64: pdfBase64
+                            }));
+                        });
+                    } else {
+                        html2pdf().set(opt).from(element).save();
+                    }
+                } else {
+                    window.print();
+                }
+            },
+
+            commandState: {},
+            syncTimer: null,
+            refreshInterval: 10,
+
+            startSync() {
+                // Initialize real geolocation tracking
+                const startSimulation = () => {
+                    if (!this.simTimer) {
+                        this.simTimer = setInterval(() => {
+                            if (this.activeMission && this.activeMission.lat) {
+                                const dLat = this.activeMission.lat - this.pos.lat;
+                                const dLng = this.activeMission.lng - this.pos.lng;
+                                const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+                                if (dist > 0.0001) {
+                                    this.pos.lat += dLat * 0.05; // Move 5% of the distance every 2 seconds
+                                    this.pos.lng += dLng * 0.05;
+                                }
+                            } else {
+                                // Random drift if no mission
+                                this.pos.lat += (Math.random() - 0.5) * 0.0005;
+                                this.pos.lng += (Math.random() - 0.5) * 0.0005;
+                            }
+                            if (this.rescuerMarker) this.rescuerMarker.setLatLng([this.pos.lat, this.pos.lng]);
+                            if (this.navPolyline && this.activeMission) {
+                                this.navPolyline.setLatLngs([[this.pos.lat, this.pos.lng], [this.activeMission.lat, this.activeMission.lng]]);
+                            }
+                        }, 2000);
+                    }
+                };
+
+                const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+                if (navigator.geolocation && isSecure) {
+                    navigator.geolocation.watchPosition((position) => {
+                        this.pos.lat = position.coords.latitude;
+                        this.pos.lng = position.coords.longitude;
+                        if (this.rescuerMarker) this.rescuerMarker.setLatLng([this.pos.lat, this.pos.lng]);
+                        if (this.navPolyline && this.activeMission) {
+                            this.navPolyline.setLatLngs([[this.pos.lat, this.pos.lng], [this.activeMission.lat, this.activeMission.lng]]);
+                        }
+                    }, (err) => {
+                        console.warn("Rescuer GPS error, falling back to simulation:", err);
+                        startSimulation();
+                    }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
+                } else {
+                    console.warn("Insecure context or no geolocation, using simulation.");
+                    startSimulation();
+                }
+
+                const runSync = async () => {
+
+                    try {
+                        const res = await fetch(`${this.API}/sync`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                phone: this.user.phone,
+                                deviceId: this.user.serial_number || 'MEM-01',
+                                location: { lat: this.pos.lat, lng: this.pos.lng, groupId: 1 }
+                            })
+                        });
+                        if (res.ok) {
+                            this.updateNetUI(true);
+                        } else {
+                            this.updateNetUI(false);
+                        }
+                        const data = await res.json();
+
+                        // Restore interrupted task if backend has it and we don't have an active mission
+                        if (data.user?.interrupted_task_id && !this.activeMission && !this.interruptedMission) {
+                            // Fetch task list or search for this ID
+                            // For simplicity in web preview, we'll try to find it in history/active data next refresh
+                            // or just use the ID to fetch it if needed. 
+                            // In this preview, we usually rely on 'refresh' to populate task list.
+                        }
+
+                        if (data.commands) data.commands.forEach(c => this.handleCommand(c));
+
+                        // Update refresh interval from server
+                        if (data.refresh_interval) {
+                            const newInterval = parseInt(data.refresh_interval);
+                            if (newInterval > 0 && newInterval !== this.refreshInterval) {
+                                console.log(`[Rescuer] Sync interval updated to ${newInterval}s`);
+                                this.refreshInterval = newInterval;
+                                const el = document.getElementById('dispSyncInterval');
+                                if (el) el.innerText = this.refreshInterval + 's (Sync Active)';
+                            }
+                        }
+                    } catch (e) { 
+                        this.updateNetUI(false);
+                    }
+
+                    // Schedule next sync
+                    this.syncTimer = setTimeout(runSync, this.refreshInterval * 1000);
+                };
+
+                runSync();
+            },
+
+            connectWS() {
+                if (this.ws) {
+                    try {
+                        this.ws.onclose = null;
+                        this.ws.onerror = null;
+                        this.ws.close();
+                    } catch(e) {}
+                }
+                if (!this.WS_URL) {
+                    this.updateNetUI(false);
+                    try {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'WS_STATUS', connected: false }));
+                    } catch(e) {}
+                    return;
+                }
+                const ws = new WebSocket(this.WS_URL);
+                this.ws = ws;
+                ws.onopen = () => {
+                    console.log('Connected to WS');
+                    ws.send(JSON.stringify({ type: 'REGISTER', deviceId: this.user?.device_id || 'RESCUER_' + Date.now() }));
+                    this.refresh();
+                    this.updateNetUI(true);
+                    try {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'WS_STATUS', connected: true }));
+                    } catch(e) {}
+                };
+                ws.onmessage = (e) => {
+                    const msg = JSON.parse(e.data);
+                    
+                    if (msg.type === 'USER_DISABLED' || msg.type === 'FORCE_LOGOUT') {
+                        this.toast(msg.data?.reason || 'SESSION EXPIRED: PLEASE LOGIN AGAIN', '🚫');
+                        setTimeout(() => this.logout(), 2000);
+                        return;
+                    }
+
+                    const updateTypes = ['NEW_RESCUE_REQUEST', 'COMMAND_STATUS_UPDATE', 'COMMAND_COMPLETED', 'RESCUE_REQUEST_UPDATE', 'RESCUE_REQUEST_ACCEPTED', 'NEW_COMMAND'];
+
+                    if (updateTypes.includes(msg.type)) {
+                        this.refresh();
+
+                        // If it's a direct command, handle the modal/notification
+                        if (msg.type === 'NEW_COMMAND' && msg.data) {
+                            this.handleCommand(msg.data);
+                        }
+
+                        // If current mission is completed by admin, clear it
+                        if ((msg.type === 'COMMAND_STATUS_UPDATE' || msg.type === 'COMMAND_COMPLETED') && msg.data?.status === 'completed') {
+                            if (this.activeMission && (this.activeMission.id === msg.data.id || ('CMD-' + this.activeMission.id) === msg.data.id)) {
+                                this.activeMission = null;
+                                document.getElementById('missionBanner').style.display = 'none';
+                                if (this.navPolyline) this.map.removeLayer(this.navPolyline);
+                                this.refresh();
+                            }
+                        }
+                    }
+                };
+                ws.onerror = () => {
+                    this.updateNetUI(false);
+                    try {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'WS_STATUS', connected: false }));
+                    } catch(e) {}
+                };
+                ws.onclose = () => {
+                    this.updateNetUI(false);
+                    try {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'WS_STATUS', connected: false }));
+                    } catch(e) {}
+                    if (this.ws === ws) {
+                        setTimeout(() => this.connectWS(), 5000);
+                    }
+                };
+            },
+
+            handleCommand(c) {
+                if (c.status === 'completed' || c.status === 'declined') return;
+
+                // Security/Targeting check: only show if for this rescuer or their group
+                const myPhone = this.user?.phone;
+                const myDeviceId = this.user?.device_id;
+                const myGroups = (this.user?.groups || []).map(g => Number(g.id || g.group_id));
+
+                // Match phone normalized (last 10 digits) or device_id directly
+                const myPhoneClean = (myPhone || '').replace(/\D/g,'').slice(-10);
+                const tpClean = (c.target_phone || '').replace(/\D/g,'').slice(-10);
+                const isTargeted = c.target_phone && (
+                    c.target_phone === myPhone ||
+                    c.target_phone === myDeviceId ||
+                    (myPhoneClean && tpClean && tpClean === myPhoneClean)
+                );
+                const isGroupTargeted = (c.group_id && myGroups.includes(Number(c.group_id)));
+                const isGeneral = (!c.target_phone && !c.group_id);
+
+                if (!isTargeted && !isGroupTargeted && !isGeneral) {
+                    return; // Not for us
+                }
+
+                // Track commands by ID and timestamp to handle updates
+                const lastSeen = this.commandState[c.id];
+                if (lastSeen === c.updated_at) return;
+                this.commandState[c.id] = c.updated_at;
+
+                // Silent update if it's the current active mission
+                if (this.activeMission && (String(this.activeMission.id) === String(c.id))) {
+                    this.toast('MISSION UPDATED BY HQ', 'ℹ️');
+                    this.startMission(c.id, this.activeMission.type, this.activeMission.sector, 0, 0, 'command'); // startMission will parse payload
+                    return;
+                }
+
+                if (c.status === 'accepted' || c.status === 'ongoing') return;
+
+                let payload = {};
+                try { payload = JSON.parse(c.command_payload); } catch (e) { }
+
+                const isCrit = c.priority === 'critical' || c.command_type === 'critical';
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.8); z-index: 10000;
+                    display: flex; align-items: center; justify-content: center; padding: 20px;
+                `;
+
+                modal.innerHTML = `
+                    <div style="background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid ${isCrit ? '#ef4444' : '#3b82f6'}; width: 100%; max-width: 400px; text-align: center;">
+                        <h2 style="color: ${isCrit ? '#ef4444' : '#3b82f6'}; margin-top: 0;">${isCrit ? '🚨 CRITICAL DIRECTIVE' : '📢 NEW TASK'}</h2>
+                        <p style="color: #fff; font-size: 16px; margin: 10px 0;">${payload.message || 'New task assigned from HQ'}</p>
+                        
+                        ${c.image_url ? `
+                            <div style="width:100%; height:140px; border-radius:8px; overflow:hidden; margin-bottom:12px; border:1px solid #334155;">
+                                <img src="http://${core.serverIp || window.location.hostname || '127.0.0.1'}:3001${c.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                            </div>
+                        ` : ''}
+
+                        ${c.rescue_details ? (() => {
+                        try {
+                            const d = typeof c.rescue_details === 'string' ? JSON.parse(c.rescue_details) : c.rescue_details;
+                            if (d.comments) {
+                                return `<p style="font-size:12px; color:#cbd5e1; font-style:italic; margin-bottom:12px; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px;">"${d.comments}"</p>`;
+                            }
+                        } catch (e) { }
+                        return '';
+                    })() : ''}
+
+                        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Priority: ${c.priority || c.command_type || 'normal'}</p>
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button class="btn-action btn-primary" onclick="core.acceptCommandFromModal('${c.id}', ${payload.lat || 0}, ${payload.lng || 0}); this.closest('div').parentElement.parentElement.remove();">ACCEPT</button>
+                            <button class="btn-action btn-secondary" onclick="core.declineCommandFromModal('${c.id}'); this.closest('div').parentElement.parentElement.remove();">DECLINE</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            },
+
+            async acceptCommandFromModal(id, lat, lng) {
+                this.toast('ACCEPTING TASK...', '⏳');
+                try {
+                    await fetch(`${this.API}/commands/${id}/status`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'accepted', rescuer_phone: this.user.phone })
+                    });
+
+                    const isCrit = c.priority === 'critical' || c.command_type === 'critical';
+                    if (isCrit && this.activeMission && !['sos', 'medical', 'pregnancy', 'critical'].includes(this.activeMission.type.toLowerCase())) {
+                        this.interruptedMission = { ...this.activeMission };
+                        fetch(`${this.API}/users/${this.user.id}/interrupted-task`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ task_id: this.activeMission.id }),
+                        }).catch(() => { });
+                    }
+
+                    this.refresh();
+                    if (lat && lng) {
+                        this.activeMission = { id: 'CMD-' + id, type: 'command', sector: 'Direct HQ Order', lat, lng };
+                        document.getElementById('missionBanner').style.display = 'flex';
+                        document.getElementById('missType').innerText = `HQ COMMAND`;
+                        document.getElementById('missLoc').innerText = 'Proceed to Target Point';
+                        if (this.navPolyline) this.map.removeLayer(this.navPolyline);
+                        this.navPolyline = L.polyline([[this.pos.lat, this.pos.lng], [lat, lng]], {
+                            color: '#ef4444', weight: 6, opacity: 0.8, dashArray: '10, 15'
+                        }).addTo(this.map);
+                        this.map.fitBounds(this.navPolyline.getBounds(), { padding: [50, 50] });
+                    }
+                    this.toast('TASK ACCEPTED', '✅');
+                } catch (e) {
+                    this.toast('FAILED TO ACCEPT', '❌');
+                }
+            },
+
+            async declineCommandFromModal(id) {
+                this.toast('DECLINING TASK...', '⏳');
+                try {
+                    await fetch(`${this.API}/commands/${id}/status`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'declined', rescuer_phone: this.user.phone })
+                    });
+                    this.refresh();
+                    this.toast('TASK DECLINED', '❌');
+                } catch (e) {
+                    this.toast('FAILED TO DECLINE', '❌');
+                }
+            },
+
+            locateSelf() {
+                this.map.setView([this.pos.lat, this.pos.lng], 16);
+            },
+
+            toggleMapType() {
+                this.toast('Switching to Satellite View...', '🗺️');
+            },
+
+            toast(msg, icon = 'ℹ️') {
+                const t = document.createElement('div');
+                t.style.cssText = `position:absolute; bottom:110px; left:50%; transform:translateX(-50%); background:#0f172a; color:white; padding:14px 24px; border-radius:30px; font-size:14px; font-weight:800; z-index:10000; box-shadow:var(--shadow-lg); display:flex; align-items:center; gap:12px; animation:pop 0.3s ease-out;`;
+                t.innerHTML = `<span>${icon}</span> ${msg}`;
+                document.querySelector('.phone-inner').appendChild(t);
+                setTimeout(() => t.remove(), 3500);
+            },
+
+            showLoader(val) { document.getElementById('loader').style.display = val ? 'flex' : 'none'; }
+        };
+
+        // Leaflet CSS Override
+        const style = document.createElement('style');
+        style.innerHTML = `.leaflet-container { background: #f1f5f9 !important; } .leaflet-bar { border: none !important; } .leaflet-bar a { background: white !important; border: 1px solid #e2e8f0 !important; color: #1e293b !important; }`;
+        document.head.appendChild(style);
+
+        window.core = core;
+        window.onImageCaptured = (base64, id) => {
+            core.capturedImages[id] = base64;
+
+            // Update banner camera button icon
+            const bannerBtn = document.getElementById('bannerCameraBtn');
+            if (bannerBtn && (id === '__banner__' || (core.activeMission && String(core.activeMission.id) === String(id)))) {
+                bannerBtn.textContent = '✅';
+                bannerBtn.classList.add('captured');
+            }
+
+            // Update card camera button
+            const cardBtn = document.getElementById('camBtn_' + id);
+            if (cardBtn) {
+                cardBtn.textContent = '✅ Photo';
+                cardBtn.classList.add('captured');
+            }
+
+            core.toast('📷 Photo attached via Native App!', '✅');
+        };
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            core.init();
+        } else {
+            window.addEventListener('DOMContentLoaded', () => core.init());
+        }
+    </script>
+</body>
+
+</html>

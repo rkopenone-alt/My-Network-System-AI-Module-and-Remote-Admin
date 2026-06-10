@@ -63,7 +63,8 @@ export const htmlString = `<!DOCTYPE html>
             background: var(--bg-body);
             color: var(--text-main);
             height: 100vh;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
         }
@@ -130,6 +131,7 @@ export const htmlString = `<!DOCTYPE html>
             display: flex;
             width: 100%;
             height: 100%;
+            min-height: 800px;
         }
 
         .panel {
@@ -169,6 +171,7 @@ export const htmlString = `<!DOCTYPE html>
         .db-split-layout {
             display: flex;
             height: calc(100vh - 64px);
+            min-height: 800px;
             overflow: hidden;
             background: var(--bg-body);
         }

@@ -3,8 +3,8 @@
     "name": "ARDMS Admin",
     "slug": "admin-app",
     "version": "1.0.0",
-    "orientation": "default",
-    "icon": "./assets/icon.png",
+    "orientation": "landscape",
+    "icon": "./assets/official_rescuer_icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -15,7 +15,7 @@
       "package": "com.rescue.admin",
       "allowBackup": false,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/official_rescuer_icon.png",
         "backgroundColor": "#10b981"
       },
       "permissions": [
