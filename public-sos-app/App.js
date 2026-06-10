@@ -386,7 +386,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
               return;
             }
             let result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ['images'],
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
               await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
@@ -408,7 +408,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
               return;
             }
             let result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ['images'],
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
               await compressAndAttachImage(result.assets[0].uri, (base64Str) => {

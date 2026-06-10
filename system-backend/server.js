@@ -2282,6 +2282,16 @@ async function runAIAssignment() {
                 busyUserIds.add(assignedUserId);
 
                 let commandType = req.priority || 'critical';
+                if (!req.priority || req.priority === 'normal') {
+                    const lowType = (req.type || '').toLowerCase();
+                    if (['food', 'delivery', 'supply', 'medical_delivery'].some(t => lowType.includes(t))) {
+                        commandType = 'normal';
+                    } else if (req.urgency === 'low' || req.urgency === 'medium') {
+                        commandType = 'normal';
+                    } else {
+                        commandType = 'critical';
+                    }
+                }
                 const safeTypeStr = (req.type || 'Request').toUpperCase();
                 const cmdPayload = JSON.stringify({
                     message: `AI ASSIGNED: ${safeTypeStr} at ${req.sector || 'Unknown'}`,
