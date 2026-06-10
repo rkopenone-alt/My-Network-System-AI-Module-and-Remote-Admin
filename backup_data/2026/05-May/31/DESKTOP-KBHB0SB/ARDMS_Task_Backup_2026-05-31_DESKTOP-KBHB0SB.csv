@@ -1,7 +1,7 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-05-31
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 6/6/2026, 10:26:37 pm
+Generated At: , 10/6/2026, 8:18:13 am
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
@@ -9,7 +9,7 @@ Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Resp
 44,medical,critical,completed,12.9943588,80.1939576,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-31 10:29:17,2026-05-31 10:32:10,DESKTOP-KBHB0SB
 45,medical,critical,completed,12.9943625,80.1956744,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-05-31 14:32:57,2026-05-31 14:33:23,DESKTOP-KBHB0SB
 46,supplies,normal,completed,12.9942743,80.1957261,"{""transportMode"":""ROAD"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-05-31 15:05:31,2026-05-31 15:06:25,DESKTOP-KBHB0SB
-47,supplies,normal,declined,12.9942743,80.1957261,"{""transportMode"":""ROAD"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Unassigned,2026-05-31 15:05:32,2026-05-31 15:05:39,DESKTOP-KBHB0SB
+47,supplies,normal,completed,12.9942743,80.1957261,"{""transportMode"":""ROAD"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Unassigned,2026-05-31 15:05:32,2026-05-31 15:05:39,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES

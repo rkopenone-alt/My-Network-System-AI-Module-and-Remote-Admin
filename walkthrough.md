@@ -1,36 +1,50 @@
-# Walkthrough - Clean Default IP Configuration and Native App Optimizations
+# Walkthrough - AntiGravity AI Engine & Admin System
 
-We have fully resolved the issue where pre-fed developer/local IP addresses or fallback hostname values (like `localhost` inside WebView) were hardcoded or automatically populated inside the mobile apps. Now, both applications start with clean, empty server IP input fields, enabling smooth manual configuration and dynamic, robust connectivity.
+We have successfully completed all planned phases for the AntiGravity AI Engine and the new Native Admin Application. The system now features autonomous assignment capabilities, offline-first admin controls, and robust media compression.
 
 ---
 
 ## 🛠️ Key Accomplishments & Technical Fixes
 
-### 1. Clean default IP input fields (Zero Pre-Fed IP)
-- **Public SOS App**: The default server IP address variable is set to `''`. On fresh launch, the app remains on the Login screen, showing a clean, blank IP input field that requires manual configuration. Once entered, the IP is stored securely in AsyncStorage.
-- **Rescuer App**: Modified the initialization loop in `preview-rescuer.html` to check if it's running in native app mode (`__IS_NATIVE_APP__` or `ReactNativeWebView` presence). If native, it bypasses the `window.location.hostname` fallback (which resolved to `localhost` inside WebView, pre-filling it). Now, the input starts completely empty.
+### 1. AI Engine Implementation
+- **Intelligent Routing**: Integrated the `runAIAssignment` logic into the backend, automatically handling new incident triggers and completion events.
+- **Admin Controls**: Added full AI configuration hooks into the Web Admin panel, including an "Enable AI Routing" master toggle and individual AI enablement checkboxes for Users and Groups.
 
-### 2. WebView Native Context Isolation
-- **Dynamic Variable Injection**: Configured `rescuer-app/App.js` to inject `window.__IS_NATIVE_APP__ = true;` into the WebView before content loads.
-- **WebSocket Crash Guard**: Added a WebSocket URL check in `preview-rescuer.html`'s `connectWS()`. If the server IP is empty, it returns gracefully instead of throwing exceptions on an invalid WebSocket URL.
+### 2. Native Android Admin Application
+- **Offline-First Wrapper**: Built a new native Android app (`admin-app`) using the existing web dashboard.
+- **Request Queueing**: Injected an offline `fetch` interceptor that queues administrative commands (POST/PUT requests) when internet drops and replays them automatically upon reconnection.
+- **Persistent State**: The React Native WebView caches the React dashboard HTML and configuration, enabling full dashboard rendering even in dead zones.
+- **Responsive Layout**: Forced the native WebView viewport to scale dynamically to the mobile screen bounds (`scalesPageToFit={false}`) and enabled text wrapping for map tooltips to prevent UI layout overlaps on smaller screens.
+- **Setup Theme**: Implemented a modern light theme UI for the Network Configuration and Login screens to match ARDMS corporate identity.
+- **Custom Branding**: Integrated custom white-and-blue "ARDMS ADMIN" high-resolution logos for the app icon, splash screen, and launcher icons.
+- **Subtle AI Styling**: Refined the AI Theme toggle to specifically target the header and AI buttons, preventing aggressive "full green" color overrides in the main dashboard workspace.
 
-### 3. Dynamic Image Path Loading
-- **Dynamic Resource Base**: Task and dispatch list image components in the Rescuer App now dynamically resolve their image paths using the active connection host `core.serverIp` rather than relying on developer LAN IPs (`192.168.1.4`).
+### 3. Media Upload Fixes & Compression
+- **Native Compression**: Integrated local image compression inside native applications using `expo-image-manipulator`, capping sizes at 200KB for faster transmission.
+- **Web Compression**: Implemented client-side HTML canvas-based compression for the mobile web previews.
+- **Audio Limits**: Enforced a strict 100KB limit on voice recordings in the Public SOS app.
 
-### 4. Dynamic Web Admin connection resolution
-- **Removed Hardcoded IP query**: Changed `detectServerIp()` inside the Web Admin to check relative to `window.location.hostname` dynamically, preventing network hangs if the laptop's IP address changes on a new mobile hotspot.
+### 4. System Optimizations
+- **Real-Time Admin Replies**: Replaced broken broadcast logic with targeted WebSocket direct messaging (`socketManager.send`) and added database persistence for reply messages.
+- **Media Viewing Fixes**: Standardized Web Admin media URLs and fixed a potential null-pointer crash on the evidence container.
 
 ---
 
 ## 🔍 Validation Instructions
 
-### 1. Auto-Detect Laptop IP (Web Admin)
-1. Open the [preview-web-admin.html](file:///c:/Users/Alienware/Desktop/Rescue%20Backup%2026-04-2026/preview-web-admin.html) dashboard in your browser.
-2. Verify the live status badge shows **CONNECTED** (green dot) next to the IP configuration field in the sidebar.
-3. Look below the input field to see your laptop's current network IP on the hotspot. Use this IP in both mobile apps.
-4. If you ever enter an incorrect IP and the dashboard disconnects, click **Reset to Default (Localhost)** to instantly reconnect.
+### 1. Test the AI Routing
+1. Launch the Web Admin dashboard and toggle **Enable AI Routing** in the top header.
+2. Enable AI for specific Users or Groups in their respective configuration modals.
+3. Submit a new SOS request from the Public app and verify that the AI engine automatically assigns the optimal rescuer based on the new logic.
 
-### 2. Rebuilt Android Release APK Binaries
-The updated apps have been compiled and copied to the output folder:
-- **Public SOS App**: [public-sos-app-release.apk](file:///c:/Users/Alienware/Desktop/Rescue%20Backup%2026-04-2026/Output_APKs/public-sos-app-release.apk)
-- **Rescuer App**: [rescuer-app-release.apk](file:///c:/Users/Alienware/Desktop/Rescue%20Backup%2026-04-2026/Output_APKs/rescuer-app-release.apk)
+### 2. Test Offline Admin Capabilities
+1. Install and launch the **AntiGravity Admin** native app.
+2. Disable the device's internet connection (Airplane Mode).
+3. Attempt to update a user's status or make an administrative change; observe the offline queueing.
+4. Re-enable the connection and verify that the queued changes automatically sync to the backend.
+
+### 3. Rebuilt Android Release APK Binaries
+The updated apps have been compiled and copied to the `Output_APKs` folder:
+- **Admin App**: [Admin_App_Rescue.apk](file:///c:/Users/Alienware/Desktop/Rescue%20Backup%20AI%2009-06-2026/Output_APKs/Admin_App_Rescue.apk)
+- **Public SOS App**: [public-sos-app-release.apk](file:///c:/Users/Alienware/Desktop/Rescue%20Backup%20AI%2009-06-2026/Output_APKs/public-sos-app-release.apk)
+- **Rescuer App**: [rescuer-app-release.apk](file:///c:/Users/Alienware/Desktop/Rescue%20Backup%20AI%2009-06-2026/Output_APKs/rescuer-app-release.apk)

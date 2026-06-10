@@ -1,0 +1,18 @@
+ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-10
+Device Hostname: , DESKTOP-KBHB0SB
+Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
+Generated At: , 10/6/2026, 8:18:13 am
+
+SECTION 1: RESCUE REQUESTS & TASKS
+Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
+64,medical,critical,completed,12.994321,80.1957689,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-10 02:47:44,2026-06-10 02:48:12,DESKTOP-KBHB0SB
+
+
+SECTION 2: RESCUER COMMAND DISPATCHES
+Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
+45,N/A,919000000001,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.994321,""lng"":80.1957689,""urgency"":""critical"",""rescue_req_id"":64,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,completed,2026-06-10 02:47:44,,DESKTOP-KBHB0SB
+
+
+SECTION 3: PUBLIC SOS ALERTS
+SOS ID,Device ID,Phone,Latitude,Longitude,Details,Status,Priority,Alert Time,Device Node
+NO SOS ALERTS FOR THIS DATE

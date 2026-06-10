@@ -811,7 +811,7 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
     try {
       let location = null;
       try {
-        location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
       } catch (e) {
         // Fallback or handle missing location
       }
@@ -1317,7 +1317,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
     try {
       let location = null;
       try {
-        location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
       } catch (e) {
         // Handle location error/missing
       }

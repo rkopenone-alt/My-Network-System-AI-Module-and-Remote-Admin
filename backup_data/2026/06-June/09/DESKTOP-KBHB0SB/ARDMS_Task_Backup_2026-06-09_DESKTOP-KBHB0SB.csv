@@ -1,0 +1,26 @@
+ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-09
+Device Hostname: , DESKTOP-KBHB0SB
+Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
+Generated At: , 10/6/2026, 8:18:13 am
+
+SECTION 1: RESCUE REQUESTS & TASKS
+Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
+56,pregnancy,critical,completed,13.0723417,80.1805308,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-09 14:36:20,2026-06-09 14:38:40,DESKTOP-KBHB0SB
+57,pregnancy,critical,completed,12.994454,80.1957433,Critical Emergency Triggered,Sarah Khan (MEM-02),2026-06-09 14:36:23,2026-06-09 14:38:55,DESKTOP-KBHB0SB
+58,pregnancy,critical,completed,12.9942461,80.1957281,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-09 14:38:19,2026-06-09 14:38:50,DESKTOP-KBHB0SB
+59,pregnancy,critical,completed,12.9942461,80.1957281,Critical Emergency Triggered,Unassigned,2026-06-09 14:39:23,2026-06-09 14:44:50,DESKTOP-KBHB0SB
+60,medical,critical,completed,12.9941883,80.1956891,Critical Emergency Triggered,Unassigned,2026-06-09 16:52:36,2026-06-09 17:21:21,DESKTOP-KBHB0SB
+61,pregnancy,high,completed,40.713,-74.007,Testing AI SOS,Unassigned,2026-06-09 17:28:01,2026-06-09 17:28:01,DESKTOP-KBHB0SB
+62,pregnancy,high,completed,40.713,-74.007,Testing AI SOS,Arjun Singh (MEM-01),2026-06-09 17:29:36,2026-06-09 17:33:58,DESKTOP-KBHB0SB
+63,medical,critical,completed,13.085,80.272,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-09 17:34:11,2026-06-09 17:35:46,DESKTOP-KBHB0SB
+
+
+SECTION 2: RESCUER COMMAND DISPATCHES
+Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
+43,N/A,919000000001,"{""message"":""AI ASSIGNED: PREGNANCY at Unknown Zone"",""sector"":""Unknown Zone"",""lat"":40.713,""lng"":-74.007,""urgency"":""high"",""rescue_req_id"":62,""requester_name"":""Citizen"",""requester_phone"":""111222333"",""details"":""Testing AI SOS""}",normal,completed,2026-06-09 17:29:36,,DESKTOP-KBHB0SB
+44,N/A,919000000001,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":13.085,""lng"":80.272,""urgency"":""critical"",""rescue_req_id"":63,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",Critical,completed,2026-06-09 17:34:11,,DESKTOP-KBHB0SB
+
+
+SECTION 3: PUBLIC SOS ALERTS
+SOS ID,Device ID,Phone,Latitude,Longitude,Details,Status,Priority,Alert Time,Device Node
+NO SOS ALERTS FOR THIS DATE

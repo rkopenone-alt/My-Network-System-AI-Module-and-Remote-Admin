@@ -194,6 +194,8 @@ db.serialize(() => {
     db.run(`ALTER TABLE rescue_requests ADD COLUMN phone TEXT`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE rescue_requests ADD COLUMN completion_image_url TEXT`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE command_queue ADD COLUMN completion_image_url TEXT`, (err) => { /* ignore */ });
+    db.run(`ALTER TABLE groups ADD COLUMN ai_managed INTEGER DEFAULT 0`, (err) => { /* ignore */ });
+    db.run(`ALTER TABLE users ADD COLUMN ai_managed INTEGER DEFAULT 0`, (err) => { /* ignore */ });
 
     // Backfill serial numbers for existing users
     db.all("SELECT id, role FROM users WHERE serial_number IS NULL", [], (err, rows) => {
@@ -238,6 +240,7 @@ db.serialize(() => {
     db.run(`ALTER TABLE command_queue ADD COLUMN command_type TEXT DEFAULT 'zone'`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE command_queue ADD COLUMN priority TEXT DEFAULT 'normal'`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE command_queue ADD COLUMN updated_at DATETIME`, (err) => { /* ignore */ });
+    db.run(`ALTER TABLE command_queue ADD COLUMN assigned_by VARCHAR(20) DEFAULT 'Admin'`, (err) => { /* ignore */ });
 
 
     db.run(`CREATE TABLE IF NOT EXISTS settings (
@@ -778,9 +781,9 @@ app.get('/api/groups', async (req, res) => {
 });
 
 app.post('/api/groups', async (req, res) => {
-    const { group_name, role_type, description } = req.body;
+    const { group_name, role_type, description, ai_managed } = req.body;
     try {
-        const result = await run(`INSERT INTO groups (group_name, role_type, description) VALUES (?, ?, ?)`, [group_name, role_type, description]);
+        const result = await run(`INSERT INTO groups (group_name, role_type, description, ai_managed) VALUES (?, ?, ?, ?)`, [group_name, role_type, description, ai_managed ? 1 : 0]);
         await logCommand('GROUP_CREATED', 'Commander', group_name, { role_type });
         const grp = await get(`SELECT * FROM groups WHERE id = ?`, [result.lastID]);
         broadcast('GROUP_UPDATE', grp);
@@ -789,9 +792,9 @@ app.post('/api/groups', async (req, res) => {
 });
 
 app.put('/api/groups/:id', async (req, res) => {
-    const { group_name, role_type, description } = req.body;
+    const { group_name, role_type, description, ai_managed } = req.body;
     try {
-        await run(`UPDATE groups SET group_name = ?, role_type = ?, description = ? WHERE id = ?`, [group_name, role_type, description, req.params.id]);
+        await run(`UPDATE groups SET group_name = ?, role_type = ?, description = ?, ai_managed = ? WHERE id = ?`, [group_name, role_type, description, ai_managed ? 1 : 0, req.params.id]);
         const grp = await get(`SELECT * FROM groups WHERE id = ?`, [req.params.id]);
         broadcast('GROUP_UPDATE', grp);
         res.json(grp);
@@ -1008,9 +1011,9 @@ app.get('/api/users/:id', async (req, res) => {
 });
 
 app.post('/api/users', async (req, res) => {
-    const { name, role, phone, device_id, group_ids, photo_url, password, serial_number } = req.body;
+    const { name, role, phone, device_id, group_ids, photo_url, password, serial_number, ai_managed } = req.body;
     try {
-        const result = await run(`INSERT INTO users (name, role, phone, device_id, photo_url, password, serial_number) VALUES (?, ?, ?, ?, ?, ?, ?)`, [name, role, phone, device_id, photo_url, password, serial_number]);
+        const result = await run(`INSERT INTO users (name, role, phone, device_id, photo_url, password, serial_number, ai_managed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [name, role, phone, device_id, photo_url, password, serial_number, ai_managed ? 1 : 0]);
         const userId = result.lastID;
 
         if (group_ids && Array.isArray(group_ids)) {
@@ -1029,11 +1032,24 @@ app.post('/api/users', async (req, res) => {
 });
 
 app.put('/api/users/:id', async (req, res) => {
-    const { name, role, phone, device_id, status, group_ids, photo_url, password, serial_number } = req.body;
+    const { name, role, phone, device_id, status, group_ids, photo_url, password, serial_number, ai_managed } = req.body;
     const userId = req.params.id;
     try {
         const oldUser = await get(`SELECT * FROM users WHERE id = ?`, [userId]);
-        await run(`UPDATE users SET name = ?, role = ?, phone = ?, device_id = ?, status = ?, photo_url = ?, password = ?, serial_number = ? WHERE id = ?`, [name, role, phone, device_id, status, photo_url, password, serial_number, userId]);
+        if (!oldUser) return res.status(404).json({ error: 'User not found' });
+
+        const safeName = name !== undefined ? name : oldUser.name;
+        const safeRole = role !== undefined ? role : oldUser.role;
+        const safePhone = phone !== undefined ? phone : oldUser.phone;
+        const safeDeviceId = device_id !== undefined ? device_id : oldUser.device_id;
+        const safeStatus = status !== undefined ? status : oldUser.status;
+        const safePhotoUrl = photo_url !== undefined ? photo_url : oldUser.photo_url;
+        const safePassword = password !== undefined ? password : oldUser.password;
+        const safeSerialNumber = serial_number !== undefined ? serial_number : oldUser.serial_number;
+        const safeAiManaged = ai_managed !== undefined ? (ai_managed ? 1 : 0) : oldUser.ai_managed;
+
+        await run(`UPDATE users SET name = ?, role = ?, phone = ?, device_id = ?, status = ?, photo_url = ?, password = ?, serial_number = ?, ai_managed = ? WHERE id = ?`, 
+            [safeName, safeRole, safePhone, safeDeviceId, safeStatus, safePhotoUrl, safePassword, safeSerialNumber, safeAiManaged, userId]);
 
         if (group_ids && Array.isArray(group_ids)) {
             await run(`DELETE FROM group_members WHERE user_id = ?`, [userId]);
@@ -1223,6 +1239,12 @@ app.post('/api/sync', async (req, res) => {
                     broadcast('SOS_ALERT', alertData);
                     await logCommand('SOS_RECEIVED', effectiveDeviceId, 'Command Center', alertData);
                     triggerBackup();
+
+                    // Insert into rescue_requests to trigger AI auto-assignment
+                    const reqDetails = JSON.stringify({ source: 'public_app', isPriority: isPriority, ...sosAlert.details });
+                    db.run(`INSERT INTO rescue_requests (device_id, phone, type, lat, lng, details, urgency) VALUES (?, ?, 'sos', ?, ?, ?, ?)`, 
+                        [effectiveDeviceId, phone || (user ? user.phone : null), sosAlert.lat, sosAlert.lng, reqDetails, isPriority ? 'critical' : 'high']);
+
                     // Notify public user
                     const msg = isPriority
                         ? 'Your priority SOS request is received. A rescue team has been dispatched to your location.'
@@ -1433,8 +1455,14 @@ app.post('/api/rescue-requests', async (req, res) => {
         await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
             [device_id, 'rescue_ack', `Your priority ${type} rescue request is received. A team will be assigned shortly.`, 0]);
 
+        // Trigger AI auto-assignment immediately
+        runAIAssignment();
+
         triggerBackup();
         res.json(reqData);
+
+        // Trigger AI auto-assignment
+        setTimeout(runAIAssignment, 500);
 
         // Trigger regrouping after new request for normal tasks
         const normalTypes = ['food', 'supply', 'medical supply'];
@@ -1623,6 +1651,10 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
         } else {
             broadcast('RESCUE_REQUEST_' + finalStatus.toUpperCase(), reqData);
             await logCommand('RESCUE_STATUS_UPDATE', rescuer_phone || 'Rescuer', `Request ID: ${req.params.id}`, { status: finalStatus });
+        }
+
+        if (finalStatus === 'completed' || finalStatus === 'declined') {
+            setTimeout(runAIAssignment, 500);
         }
 
         triggerBackup();
@@ -2088,6 +2120,181 @@ app.get('/api/export/log', async (req, res) => {
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 const PORT = 3001;
+
+// ─── AI Engine ────────────────────────────────────────────────────────────────
+app.get('/api/ai/status', async (req, res) => {
+    try {
+        const setting = await get(`SELECT value FROM settings WHERE key = 'ai_enabled'`);
+        res.json({ enabled: setting && setting.value === 'true' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/ai/toggle', async (req, res) => {
+    const { enabled } = req.body;
+    try {
+        await run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('ai_enabled', ?)`, [enabled ? 'true' : 'false']);
+        if (enabled) {
+            runAIAssignment();
+            startAITimer();
+        } else {
+            stopAITimer();
+        }
+        res.json({ success: true, enabled });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/ai/interval', async (req, res) => {
+    try {
+        const valSet = await get(`SELECT value FROM settings WHERE key = 'ai_interval_val'`);
+        const unitSet = await get(`SELECT value FROM settings WHERE key = 'ai_interval_unit'`);
+        res.json({ 
+            value: valSet ? parseInt(valSet.value) : 5, 
+            unit: unitSet ? unitSet.value : 'Minutes' 
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/ai/interval', async (req, res) => {
+    const { value, unit } = req.body;
+    try {
+        await run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('ai_interval_val', ?)`, [String(value)]);
+        await run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('ai_interval_unit', ?)`, [String(unit)]);
+        const setting = await get(`SELECT value FROM settings WHERE key = 'ai_enabled'`);
+        if (setting && setting.value === 'true') {
+            startAITimer(); // restart timer with new interval
+        }
+        res.json({ success: true, value, unit });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+let aiIntervalTimer = null;
+function stopAITimer() {
+    if (aiIntervalTimer) {
+        clearInterval(aiIntervalTimer);
+        aiIntervalTimer = null;
+    }
+}
+async function startAITimer() {
+    stopAITimer();
+    try {
+        const valSet = await get(`SELECT value FROM settings WHERE key = 'ai_interval_val'`);
+        const unitSet = await get(`SELECT value FROM settings WHERE key = 'ai_interval_unit'`);
+        const val = valSet ? parseInt(valSet.value) : 5;
+        const unit = unitSet ? unitSet.value : 'Minutes';
+        
+        let ms = 5 * 60 * 1000;
+        if (unit === 'Seconds') ms = val * 1000;
+        if (unit === 'Minutes') ms = val * 60 * 1000;
+        if (unit === 'Hours') ms = val * 60 * 60 * 1000;
+
+        aiIntervalTimer = setInterval(runAIAssignment, ms);
+    } catch (e) { console.error('Failed to start AI Timer', e); }
+}
+
+// Start on boot if enabled
+setTimeout(async () => {
+    try {
+        const setting = await get(`SELECT value FROM settings WHERE key = 'ai_enabled'`);
+        if (setting && setting.value === 'true') startAITimer();
+    } catch(e) {}
+}, 2000);
+
+async function runAIAssignment() {
+    try {
+        const setting = await get(`SELECT value FROM settings WHERE key = 'ai_enabled'`);
+        if (!setting || setting.value !== 'true') return;
+
+        const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE status = 'pending'`);
+        if (pendingRequests.length === 0) return;
+
+        // Fetch AI Managed Users
+        const aiUsers = await all(`SELECT * FROM users WHERE ai_managed = 1 AND status = 'active'`);
+        if (aiUsers.length === 0) return;
+
+        // Get latest rescuer locations
+        const locations = await all(`SELECT * FROM rescuer_locations`);
+
+        // Check for busy rescuers (those with ongoing or incomplete tasks)
+        const activeTasks = await all(`SELECT assigned_user_id FROM rescue_requests WHERE status NOT IN ('completed', 'declined', 'finished') AND assigned_user_id IS NOT NULL`);
+        const busyUserIds = new Set(activeTasks.map(t => t.assigned_user_id));
+
+        for (const req of pendingRequests) {
+            let bestUser = null;
+            let shortestDistance = Infinity;
+
+            // Sequential Assignment Logic & Smart GPS Assignment
+            for (const user of aiUsers) {
+                // 1. Skip if rescuer already has an ongoing or incomplete assignment
+                if (busyUserIds.has(user.id)) continue;
+
+                // 2. Find location (Prioritize logged-in/available rescuers)
+                const loc = locations.find(l => l.device_id === user.device_id || l.device_id === user.phone);
+                
+                let dist = Infinity;
+                if (loc && loc.lat && loc.lng && req.lat && req.lng) {
+                    dist = getDistance(req.lat, req.lng, loc.lat, loc.lng);
+                }
+
+                // 3. Selection: Prioritize geographically closer rescuer
+                if (dist < shortestDistance) {
+                    shortestDistance = dist;
+                    bestUser = user;
+                } else if (dist === shortestDistance && !bestUser) {
+                    bestUser = user; // Fallback if no location data is available
+                }
+            }
+
+            if (bestUser) {
+                // Execution: Assign to the nearest eligible rescuer
+                const assignedUserId = bestUser.id;
+                const assignedName = bestUser.name;
+                const assignedPhone = bestUser.phone || bestUser.device_id;
+
+                await run(`UPDATE rescue_requests SET status = 'assigned', assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                    [assignedUserId, req.id]);
+
+                // Mark them as busy for subsequent requests in this loop
+                busyUserIds.add(assignedUserId);
+
+                let commandType = req.priority || 'critical';
+                const safeTypeStr = (req.type || 'Request').toUpperCase();
+                const cmdPayload = JSON.stringify({
+                    message: `AI ASSIGNED: ${safeTypeStr} at ${req.sector || 'Unknown'}`,
+                    sector: req.sector || 'Unknown',
+                    lat: req.lat || 0,
+                    lng: req.lng || 0,
+                    urgency: req.urgency || 'high',
+                    rescue_req_id: req.id,
+                    requester_name: req.name || 'Citizen',
+                    requester_phone: req.phone || 'Unknown',
+                    details: req.details || '',
+                    assigned_by: 'AI'
+                });
+
+                await run(`INSERT INTO command_queue (target_phone, command_type, command_payload, status, priority, assigned_by) VALUES (?, ?, ?, 'assigned', ?, 'AI')`,
+                    [assignedPhone, commandType, cmdPayload, commandType]);
+
+                // Notify public user
+                if (req.device_id) {
+                    await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
+                        [req.device_id, 'rescue_dispatched', `Update: ${assignedName} has been automatically assigned to your request by the AI Engine.`, 0]);
+                }
+
+                // Notify the assigned rescuer
+                await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
+                    [assignedPhone, 'new_task', `AI Engine assigned a new ${safeTypeStr} task to you. Distance: ${shortestDistance === Infinity ? 'Unknown' : shortestDistance.toFixed(1) + ' km'}.`, 1]);
+
+                broadcast('RESCUE_REQUEST_ACCEPTED', { ...req, assignedName, priority: commandType });
+                broadcast('AI_ASSIGNED', { message: `Task ID #${req.id} auto-assigned by AI to ${assignedName}`, rescue_req_id: req.id, assignedName });
+                await logCommand('AI_AUTO_ASSIGNED', 'System Engine', `Request ID: ${req.id}`, { assigned_user_id: assignedUserId, distance_km: shortestDistance === Infinity ? 'unknown' : shortestDistance.toFixed(2) });
+            }
+        }
+        triggerBackup();
+    } catch (e) {
+        console.error("AI Assignment Error:", e);
+    }
+}
+
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Rescue Backend running on http://0.0.0.0:${PORT}`);
     triggerBackup();
