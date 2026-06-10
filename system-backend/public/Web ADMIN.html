@@ -3521,17 +3521,25 @@
                         }
                         if (data.type === 'AI_ASSIGNED') {
                             showAdminToast(`🤖 AI System: ${data.message}`, 'success');
+                            if (window.currentSosAudio) { window.currentSosAudio.pause(); window.currentSosAudio.currentTime = 0; }
+                            closeModal('sosAlertModal');
                             refreshAllModules(); // Refresh tasks
                             return;
                         }
 
                         if (updateTypes.includes(data.type)) {
+                            if (data.type === 'RESCUE_REQUEST_ACCEPTED' || data.type === 'RESCUE_REQUEST_DECLINED') {
+                                if (window.currentSosAudio) { window.currentSosAudio.pause(); window.currentSosAudio.currentTime = 0; }
+                                closeModal('sosAlertModal');
+                            }
                             if (data.type === 'NEW_RESCUE_REQUEST' || data.type === 'SOS_ALERT') {
                                 showAdminToast(`🚨 SOS/Emergency Alert from ${data.data?.sector || 'field'}!`, 'error');
                                 showSosAlertModal(data.data);
-                                // Play standard HTML5 beep/siren sound
-                                const audio = new Audio('data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq');
-                                audio.play().catch(e => console.log('Audio play failed: ', e));
+                                // Play standard HTML5 beep/siren sound and loop it
+                                if (window.currentSosAudio) { window.currentSosAudio.pause(); }
+                                window.currentSosAudio = new Audio('data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq');
+                                window.currentSosAudio.loop = true;
+                                window.currentSosAudio.play().catch(e => console.log('Audio play failed: ', e));
                             } else if (data.type === 'RESCUE_REQUEST_COMPLETED') {
                                 showAdminToast(`✅ Mission complete: ${data.data?.sector || 'request'} marked done`);
                             }
@@ -4130,6 +4138,10 @@
         }
         function closeModal(id) {
             document.getElementById(id).style.display = 'none';
+            if (id === 'sosAlertModal' && window.currentSosAudio) {
+                window.currentSosAudio.pause();
+                window.currentSosAudio.currentTime = 0;
+            }
             if (id === 'groupingModal') {
                 try {
                     sessionStorage.removeItem('rescue_groupingModalOpen');

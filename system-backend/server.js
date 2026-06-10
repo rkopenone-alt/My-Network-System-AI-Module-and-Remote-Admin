@@ -1911,42 +1911,81 @@ app.put('/api/commands/:id/status', async (req, res) => {
             if (payload) {
                 // Case 1: Single rescue request
                 if (payload.rescue_req_id) {
+                    let reqFinalStatus = finalStatus;
+                    let descAppend = '';
+                    let setAssignedNull = false;
+                    let broadcastEvent = 'RESCUE_REQUEST_UPDATE';
+                    if (status === 'declined') {
+                        reqFinalStatus = 'pending';
+                        descAppend = `\n[Declined by Rescuer ${rescuer_phone || 'Unknown'}]`;
+                        setAssignedNull = true;
+                        broadcastEvent = 'NEW_RESCUE_REQUEST';
+                    }
+
                     if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
                         if (compImageUrl) {
-                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, rescuer.id, payload.rescue_req_id]);
+                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [reqFinalStatus, compImageUrl, rescuer.id, payload.rescue_req_id]);
                         } else {
-                            await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, rescuer.id, payload.rescue_req_id]);
+                            await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [reqFinalStatus, rescuer.id, payload.rescue_req_id]);
                         }
                     } else {
-                        if (compImageUrl) {
-                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, payload.rescue_req_id]);
+                        if (setAssignedNull) {
+                            if (compImageUrl) {
+                                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [reqFinalStatus, compImageUrl, descAppend, payload.rescue_req_id]);
+                            } else {
+                                await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [reqFinalStatus, descAppend, payload.rescue_req_id]);
+                            }
                         } else {
-                            await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, payload.rescue_req_id]);
+                            if (compImageUrl) {
+                                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [reqFinalStatus, compImageUrl, payload.rescue_req_id]);
+                            } else {
+                                await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [reqFinalStatus, payload.rescue_req_id]);
+                            }
                         }
                     }
                     const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [payload.rescue_req_id]);
-                    if (reqData) broadcast('RESCUE_REQUEST_UPDATE', reqData);
+                    if (reqData) broadcast(broadcastEvent, reqData);
                 }
                 // Case 2: Grouped rescue requests
                 if (payload.request_ids && Array.isArray(payload.request_ids) && payload.request_ids.length > 0) {
                     const ids = payload.request_ids;
                     const placeholders = ids.map(() => '?').join(',');
+
+                    let reqFinalStatus = finalStatus;
+                    let descAppend = '';
+                    let setAssignedNull = false;
+                    let broadcastEvent = 'RESCUE_REQUEST_UPDATE';
+                    if (status === 'declined') {
+                        reqFinalStatus = 'pending';
+                        descAppend = `\n[Declined by Rescuer ${rescuer_phone || 'Unknown'}]`;
+                        setAssignedNull = true;
+                        broadcastEvent = 'NEW_RESCUE_REQUEST';
+                    }
+
                     if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
                         if (compImageUrl) {
-                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [finalStatus, compImageUrl, rescuer.id, ...ids]);
+                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, compImageUrl, rescuer.id, ...ids]);
                         } else {
-                            await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [finalStatus, rescuer.id, ...ids]);
+                            await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, rescuer.id, ...ids]);
                         }
                     } else {
-                        if (compImageUrl) {
-                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [finalStatus, compImageUrl, ...ids]);
+                        if (setAssignedNull) {
+                            if (compImageUrl) {
+                                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, compImageUrl, descAppend, ...ids]);
+                            } else {
+                                await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, descAppend, ...ids]);
+                            }
                         } else {
-                            await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [finalStatus, ...ids]);
+                            if (compImageUrl) {
+                                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, compImageUrl, ...ids]);
+                            } else {
+                                await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, ...ids]);
+                            }
                         }
                     }
                     for (const id of ids) {
                         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [id]);
-                        if (reqData) broadcast('RESCUE_REQUEST_UPDATE', reqData);
+                        if (reqData) broadcast(broadcastEvent, reqData);
                     }
                 }
             }

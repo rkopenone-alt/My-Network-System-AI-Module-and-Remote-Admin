@@ -1,7 +1,7 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-10
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 11/6/2026, 1:24:59 am
+Generated At: , 11/6/2026, 1:46:46 am
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
@@ -12,7 +12,10 @@ Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Resp
 68,sos,normal,completed,12.9942516,80.1957317,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-06-10 15:13:37,2026-06-10 15:14:39,DESKTOP-KBHB0SB
 69,pregnancy,critical,declined,12.9942648,80.1957415,Critical Emergency Triggered,Unassigned,2026-06-10 15:13:45,2026-06-10 15:14:32,DESKTOP-KBHB0SB
 70,medical,critical,completed,12.9942953,80.1956991,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-10 15:36:35,2026-06-10 15:38:35,DESKTOP-KBHB0SB
-71,pregnancy,critical,declined,12.9943815,80.1957093,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-10 19:54:38,2026-06-10 19:54:58,DESKTOP-KBHB0SB
+71,pregnancy,critical,completed,12.9943815,80.1957093,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-10 19:54:38,2026-06-10 20:13:15,DESKTOP-KBHB0SB
+72,pregnancy,critical,completed,12.9942844,80.1957116,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-10 20:13:32,2026-06-10 20:13:56,DESKTOP-KBHB0SB
+73,sos,normal,completed,12.9942638,80.1957406,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-06-10 20:15:43,2026-06-10 20:16:29,DESKTOP-KBHB0SB
+74,sos,normal,completed,12.9942638,80.1957406,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Sarah Khan (MEM-02),2026-06-10 20:15:48,2026-06-10 20:16:45,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES
@@ -23,7 +26,10 @@ Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At
 48,N/A,919000000002,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9942516,""lng"":80.1957317,""urgency"":""normal"",""rescue_req_id"":67,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}"",""assigned_by"":""AI""}",Normal,completed,2026-06-10 14:50:49,,DESKTOP-KBHB0SB
 49,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9942516,""lng"":80.1957317,""urgency"":""normal"",""rescue_req_id"":68,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}"",""assigned_by"":""AI""}",Normal,completed,2026-06-10 15:13:37,,DESKTOP-KBHB0SB
 50,N/A,919000000001,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9942953,""lng"":80.1956991,""urgency"":""critical"",""rescue_req_id"":70,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,completed,2026-06-10 15:36:35,,DESKTOP-KBHB0SB
-51,N/A,919000000001,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943815,""lng"":80.1957093,""urgency"":""critical"",""rescue_req_id"":71,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,declined,2026-06-10 19:54:38,,DESKTOP-KBHB0SB
+51,N/A,919000000001,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943815,""lng"":80.1957093,""urgency"":""critical"",""rescue_req_id"":71,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,completed,2026-06-10 19:54:38,,DESKTOP-KBHB0SB
+52,N/A,919000000001,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9942844,""lng"":80.1957116,""urgency"":""critical"",""rescue_req_id"":72,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,completed,2026-06-10 20:13:32,,DESKTOP-KBHB0SB
+53,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9942638,""lng"":80.1957406,""urgency"":""normal"",""rescue_req_id"":73,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}"",""assigned_by"":""AI""}",Normal,completed,2026-06-10 20:15:43,,DESKTOP-KBHB0SB
+54,N/A,919000000002,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9942638,""lng"":80.1957406,""urgency"":""normal"",""rescue_req_id"":74,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}"",""assigned_by"":""AI""}",Normal,completed,2026-06-10 20:15:48,,DESKTOP-KBHB0SB
 
 
 SECTION 3: PUBLIC SOS ALERTS

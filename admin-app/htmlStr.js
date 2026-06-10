@@ -3528,6 +3528,8 @@ export const htmlString = `<!DOCTYPE html>
                             return; // Only update UI, avoid full refresh
                         }
                         if (data.type === 'AI_ASSIGNED') {
+        if (window.currentSosAudio) { window.currentSosAudio.pause(); window.currentSosAudio.currentTime = 0; }
+        if (typeof closeModal === 'function') closeModal('sosAlertModal');
                             showAdminToast(\`🤖 AI System: \${data.message}\`, 'success');
                             refreshAllModules(); // Refresh tasks
                             return;
@@ -3535,11 +3537,23 @@ export const htmlString = `<!DOCTYPE html>
 
                         if (updateTypes.includes(data.type)) {
                             if (data.type === 'NEW_RESCUE_REQUEST') {
+        if (window.currentSosAudio) { window.currentSosAudio.pause(); }
+        window.currentSosAudio = new Audio('data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq');
+        window.currentSosAudio.loop = true;
+        window.currentSosAudio.play().catch(e => console.log('Audio error', e));
                                 showAdminToast(\`🆘 New SOS Alert from \${data.data?.sector || 'field'}\`);
                                 if (typeof showSosAlertModal === 'function') showSosAlertModal(data.data);
                             }
-                            if (data.type === 'RESCUE_REQUEST_COMPLETED') showAdminToast(\`✅ Mission complete: \${data.data?.sector || 'request'} marked done\`);
+                            if (data.type === 'RESCUE_REQUEST_ACCEPTED' || data.type === 'RESCUE_REQUEST_DECLINED') {
+        if (window.currentSosAudio) { window.currentSosAudio.pause(); window.currentSosAudio.currentTime = 0; }
+        if (typeof closeModal === 'function') closeModal('sosAlertModal');
+    }
+    if (data.type === 'RESCUE_REQUEST_COMPLETED') showAdminToast(\`✅ Mission complete: \${data.data?.sector || 'request'} marked done\`);
                             if (data.type === 'SOS_ALERT') {
+        if (window.currentSosAudio) { window.currentSosAudio.pause(); }
+        window.currentSosAudio = new Audio('data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq');
+        window.currentSosAudio.loop = true;
+        window.currentSosAudio.play().catch(e => console.log('Audio error', e));
                                 showAdminToast(\`🚨 SOS Alert: \${data.data?.details?.message || 'Incoming alert'}\`);
                                 if (typeof showSosAlertModal === 'function') showSosAlertModal(data.data);
                             }
@@ -4137,6 +4151,9 @@ export const htmlString = `<!DOCTYPE html>
             document.getElementById(id).style.display = 'flex';
         }
         function closeModal(id) {
+        if (id === 'sosAlertModal' && window.currentSosAudio) {
+            window.currentSosAudio.pause(); window.currentSosAudio.currentTime = 0;
+        }
             document.getElementById(id).style.display = 'none';
             if (id === 'groupingModal') {
                 try {
