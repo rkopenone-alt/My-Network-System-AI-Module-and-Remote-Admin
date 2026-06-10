@@ -350,6 +350,7 @@ db.serialize(() => {
     // Default settings
     db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('sos_interval', '15')`);
     db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('sos_interval_unit', 'minutes')`);
+    db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('ai_assignment_buffer_seconds', '15')`);
     db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('sharing_protocol', 'auto')`);
     db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('refresh_interval', '5')`);
     db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('normal_task_grouping_radius', '2')`);
@@ -1243,7 +1244,12 @@ app.post('/api/sync', async (req, res) => {
                     // Insert into rescue_requests to trigger AI auto-assignment
                     const reqDetails = JSON.stringify({ source: 'public_app', isPriority: isPriority, ...sosAlert.details });
                     db.run(`INSERT INTO rescue_requests (device_id, phone, type, lat, lng, details, urgency) VALUES (?, ?, 'sos', ?, ?, ?, ?)`, 
-                        [effectiveDeviceId, phone || (user ? user.phone : null), sosAlert.lat, sosAlert.lng, reqDetails, isPriority ? 'critical' : 'high']);
+                        [effectiveDeviceId, phone || (user ? user.phone : null), sosAlert.lat, sosAlert.lng, reqDetails, isPriority ? 'critical' : 'high'], async function (err2) {
+                            if (!err2) {
+                                const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [this.lastID]);
+                                broadcast('NEW_RESCUE_REQUEST', reqData);
+                            }
+                        });
 
                     // Notify public user
                     const msg = isPriority
@@ -2092,6 +2098,9 @@ app.post('/api/settings', async (req, res) => {
         if (key === 'sos_buffer_minutes') {
             broadcast('BUFFER_TIME_UPDATE', { minutes: parseInt(value) || 15 });
         }
+        if (key === 'ai_interval_val' || key === 'ai_interval_unit' || key === 'ai_enabled') {
+            startAITimer();
+        }
 
         res.json({ message: 'Setting updated' });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -2204,7 +2213,18 @@ async function runAIAssignment() {
         const setting = await get(`SELECT value FROM settings WHERE key = 'ai_enabled'`);
         if (!setting || setting.value !== 'true') return;
 
-        const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE status = 'pending'`);
+        const valSet = await get(`SELECT value FROM settings WHERE key = 'ai_interval_val'`);
+        const unitSet = await get(`SELECT value FROM settings WHERE key = 'ai_interval_unit'`);
+        const val = valSet ? parseInt(valSet.value) || 5 : 5;
+        const unit = unitSet ? unitSet.value : 'Seconds';
+        
+        let bufferSecs = 5;
+        if (unit === 'Seconds') bufferSecs = val;
+        if (unit === 'Minutes') bufferSecs = val * 60;
+        if (unit === 'Hours') bufferSecs = val * 3600;
+
+        // Fetch only pending requests that have existed longer than the buffer duration
+        const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE status = 'pending' AND (strftime('%s', 'now') - strftime('%s', created_at)) >= ?`, [bufferSecs]);
         if (pendingRequests.length === 0) return;
 
         // Fetch AI Managed Users
@@ -2250,8 +2270,13 @@ async function runAIAssignment() {
                 const assignedName = bestUser.name;
                 const assignedPhone = bestUser.phone || bestUser.device_id;
 
-                await run(`UPDATE rescue_requests SET status = 'assigned', assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                // Atomic Check: Ensure it wasn't manually handled during buffer
+                const updateRes = await run(`UPDATE rescue_requests SET status = 'assigned', assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'`,
                     [assignedUserId, req.id]);
+
+                if (updateRes.changes === 0) {
+                    continue; // Skip: Another admin manually handled it while buffer was running!
+                }
 
                 // Mark them as busy for subsequent requests in this loop
                 busyUserIds.add(assignedUserId);

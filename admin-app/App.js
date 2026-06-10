@@ -301,6 +301,7 @@ export default function App() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', padding: 20 }}>
         <View style={{ backgroundColor: '#ffffff', padding: 30, borderRadius: 15, width: '100%', maxWidth: 400, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}>
+          <Image source={require('./assets/official_rescuer_icon.png')} style={{ width: 80, height: 80, alignSelf: 'center', marginBottom: 15 }} resizeMode="contain" />
           <Text style={{ color: '#0f172a', fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' }}>Network Configuration</Text>
           <Text style={{ color: '#64748b', marginBottom: 10 }}>Enter Backend Server IP:</Text>
           <TextInput 
@@ -309,7 +310,9 @@ export default function App() {
             onChangeText={setIpInput}
             placeholder="e.g. 192.168.1.100"
             placeholderTextColor="#94a3b8"
-            keyboardType="numeric"
+            keyboardType="default"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
           <TouchableOpacity 
             style={{ backgroundColor: '#0ea5e9', padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 10 }}
@@ -344,6 +347,7 @@ export default function App() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', padding: 20 }}>
         <View style={{ backgroundColor: '#ffffff', padding: 30, borderRadius: 15, width: '100%', maxWidth: 400, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}>
+          <Image source={require('./assets/official_rescuer_icon.png')} style={{ width: 80, height: 80, alignSelf: 'center', marginBottom: 15 }} resizeMode="contain" />
           <Text style={{ color: '#0f172a', fontSize: 24, fontWeight: 'bold', marginBottom: 5, textAlign: 'center' }}>Admin Login</Text>
           <Text style={{ color: '#64748b', fontSize: 14, marginBottom: 25, textAlign: 'center' }}>AntiGravity Tactical Command</Text>
           

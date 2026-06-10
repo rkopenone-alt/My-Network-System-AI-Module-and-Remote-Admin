@@ -2568,6 +2568,31 @@ export const htmlString = `<!DOCTYPE html>
 
     <!-- MODALS -->
 
+    <!-- SOS Alert Modal -->
+    <div class="modal-overlay" id="sosAlertModal" style="z-index: 10006;">
+        <div class="modal-content" style="max-width: 450px; background: white; border-radius: 16px; padding: 24px; border: 2px solid #ef4444; box-shadow: 0 0 30px rgba(239, 68, 68, 0.4);">
+            <div style="display:flex; align-items:center; gap: 12px; margin-bottom: 16px;">
+                <div style="width: 48px; height: 48px; border-radius: 50%; background: #fee2e2; display:flex; align-items:center; justify-content:center; animation: pulse 1.5s infinite;">
+                    <i data-lucide="alert-octagon" style="color: #ef4444; width: 32px; height: 32px;"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0; font-size: 20px; color: #ef4444; font-weight: 900; text-transform: uppercase;">SOS Alert Triggered</h3>
+                    <div id="sosAlertSector" style="font-size: 13px; color: var(--text-muted); font-weight: 700; margin-top: 4px;">Sector: Unknown</div>
+                </div>
+            </div>
+            <div id="sosAlertDetails" style="font-size: 14px; color: var(--text-main); margin-bottom: 20px; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #ef4444; font-weight: 600;">
+                No details available.
+            </div>
+            <input type="hidden" id="sosAlertReqId" value="">
+            <input type="hidden" id="sosAlertType" value="">
+            <input type="hidden" id="sosAlertUrgency" value="">
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="btn" onclick="closeModal('sosAlertModal')" style="background: rgba(148, 163, 184, 0.1); color: var(--text-muted); border: none; padding: 10px 16px; border-radius: 8px; font-weight: 800; font-size: 14px; flex: 1;">Dismiss</button>
+                <button class="btn" onclick="handleSosAssign()" style="background: var(--accent); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 800; font-size: 14px; flex: 1; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">Assign Team</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Invalid IP Modal -->
     <div class="modal-overlay" id="invalidIpModal" style="z-index: 10005;">
         <div class="modal-content" style="max-width: 450px; background: white; border-radius: 16px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);">
@@ -3509,9 +3534,15 @@ export const htmlString = `<!DOCTYPE html>
                         }
 
                         if (updateTypes.includes(data.type)) {
-                            if (data.type === 'NEW_RESCUE_REQUEST') showAdminToast(\`🆘 New SOS Alert from \${data.data?.sector || 'field'}\`);
+                            if (data.type === 'NEW_RESCUE_REQUEST') {
+                                showAdminToast(\`🆘 New SOS Alert from \${data.data?.sector || 'field'}\`);
+                                if (typeof showSosAlertModal === 'function') showSosAlertModal(data.data);
+                            }
                             if (data.type === 'RESCUE_REQUEST_COMPLETED') showAdminToast(\`✅ Mission complete: \${data.data?.sector || 'request'} marked done\`);
-                            if (data.type === 'SOS_ALERT') showAdminToast(\`🚨 SOS Alert: \${data.data?.details?.message || 'Incoming alert'}\`);
+                            if (data.type === 'SOS_ALERT') {
+                                showAdminToast(\`🚨 SOS Alert: \${data.data?.details?.message || 'Incoming alert'}\`);
+                                if (typeof showSosAlertModal === 'function') showSosAlertModal(data.data);
+                            }
 
                             refreshAllModules();
                         } else if (data.type === 'LIVE_LOCATION_UPDATE') {
@@ -6304,6 +6335,31 @@ export const htmlString = `<!DOCTYPE html>
                 });
             } catch (e) {
                 console.error("Error populating dropdowns", e);
+            }
+        }
+
+        function showSosAlertModal(data) {
+            const modal = document.getElementById('sosAlertModal');
+            document.getElementById('sosAlertReqId').value = data.id || '';
+            document.getElementById('sosAlertType').value = data.type || 'SOS';
+            document.getElementById('sosAlertUrgency').value = data.urgency || 'critical';
+            document.getElementById('sosAlertSector').innerText = \`Sector: \${data.sector || 'Unknown Location'}\`;
+            document.getElementById('sosAlertDetails').innerText = data.details || 'Emergency SOS triggered from public device.';
+            
+            // Bring modal to front
+            modal.classList.add('show');
+            modal.style.display = 'flex'; // Ensure display flex if hidden
+        }
+
+        function handleSosAssign() {
+            const id = document.getElementById('sosAlertReqId').value;
+            const type = document.getElementById('sosAlertType').value;
+            const sector = document.getElementById('sosAlertSector').innerText.replace('Sector: ', '');
+            const urgency = document.getElementById('sosAlertUrgency').value;
+            
+            closeModal('sosAlertModal');
+            if (id) {
+                openAssignModal(id, \`SOS Emergency Request\`, sector, urgency, '🚨');
             }
         }
 

@@ -3,7 +3,7 @@
     "name": "ARDMS Admin",
     "slug": "admin-app",
     "version": "1.0.0",
-    "orientation": "landscape",
+    "orientation": "default",
     "icon": "./assets/official_rescuer_icon.png",
     "userInterfaceStyle": "light",
     "splash": {
