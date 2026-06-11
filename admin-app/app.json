@@ -34,6 +34,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8e3880e8-4734-4691-bc3f-65beb23ed967"
+      }
+    },
+    "owner": "tmrk"
   }
 }

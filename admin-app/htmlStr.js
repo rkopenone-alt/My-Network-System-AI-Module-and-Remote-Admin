@@ -3541,11 +3541,26 @@ export const htmlString = `<!DOCTYPE html>
                         if (data.type === 'AI_ASSIGNED') {
         if (window.currentSosAudio) { window.currentSosAudio.pause(); window.currentSosAudio.currentTime = 0; }
         if (typeof closeModal === 'function') closeModal('sosAlertModal');
-                            showAdminToast(\`🤖 AI System: \${data.message}\`, 'success');
+                            Swal.fire({
+                                icon: 'info',
+                                title: '🤖 AI Task Reassignment',
+                                text: data.message,
+                                timer: 5000,
+                                timerProgressBar: true
+                            });
                             refreshAllModules(); // Refresh tasks
                             return;
                         }
 
+                        if (data.type === 'RESCUE_REQUEST_DECLINED_REASSIGN') {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Rescuer Declined Task',
+                                text: 'A rescuer has declined the task. The AI Engine is now searching for the next nearest available unit...',
+                                timer: 4000,
+                                timerProgressBar: true
+                            });
+                        }
                         if (updateTypes.includes(data.type)) {
                             if (data.type === 'NEW_RESCUE_REQUEST') {
         if (window.currentSosAudio) { window.currentSosAudio.pause(); }

@@ -304,6 +304,7 @@ export default function App() {
     <View style={{ flex: 1 }}>
       {!isCameraActive && <NetworkStatusIndicator isConnected={isConnected} />}
       <WebView
+        mediaPlaybackRequiresUserAction={false}
         ref={webViewRef}
         source={{ html: htmlString, baseUrl: `http://127.0.0.1:${SERVER_PORT}` }}
         style={{ flex: 1 }}

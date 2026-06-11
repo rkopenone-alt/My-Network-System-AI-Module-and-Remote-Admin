@@ -2327,7 +2327,7 @@ async function runAIAssignment() {
                 // Execution: Assign to the nearest eligible rescuer
                 const assignedUserId = bestUser.id;
                 const assignedName = bestUser.name;
-                const assignedPhone = bestUser.phone || bestUser.device_id;
+                const assignedPhone = bestUser.phone || bestUser.device_id || bestUser.id.toString();
 
                 // Atomic Check: Ensure it wasn't manually handled during buffer
                 const updateRes = await run(`UPDATE rescue_requests SET status = 'assigned', assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'`,
