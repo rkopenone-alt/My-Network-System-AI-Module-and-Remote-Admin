@@ -1558,10 +1558,20 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
 
 app.put('/api/rescue-requests/:id/decline', async (req, res) => {
     try {
-        await run(`UPDATE rescue_requests SET status = 'declined', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [req.params.id]);
+        const { rescuer_phone } = req.body;
+        const cleanedPhone = (rescuer_phone || '').replace(/\D/g, '').slice(-10);
+        let rescuer = null;
+        if (cleanedPhone) {
+            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rescuer_phone, rescuer_phone, rescuer_phone, `%${cleanedPhone}`]);
+        } else {
+            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rescuer_phone, rescuer_phone, rescuer_phone]);
+        }
+        const descAppend = `\n[Declined by Rescuer ID: ${rescuer ? rescuer.id : 'Unknown'}]`;
+
+        await run(`UPDATE rescue_requests SET status = 'pending', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, req.params.id]);
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
 
-        broadcast('RESCUE_REQUEST_DECLINED', reqData);
+        broadcast('NEW_RESCUE_REQUEST', reqData);
         await logCommand('RESCUE_REQUEST_DECLINED', 'Commander', `Request ID: ${req.params.id}`, {});
         triggerBackup();
         res.json({ message: 'Request declined' });
@@ -1626,6 +1636,7 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
         }
 
         reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
+        if (reqData) broadcast('RESCUE_REQUEST_UPDATE', reqData);
 
         if (finalStatus === 'completed' && reqData) {
             // Dismiss pending new_task notification for this request ID
@@ -1917,7 +1928,7 @@ app.put('/api/commands/:id/status', async (req, res) => {
                     let broadcastEvent = 'RESCUE_REQUEST_UPDATE';
                     if (status === 'declined') {
                         reqFinalStatus = 'pending';
-                        descAppend = `\n[Declined by Rescuer ${rescuer_phone || 'Unknown'}]`;
+                        descAppend = `\n[Declined by Rescuer ID: ${rescuer ? rescuer.id : 'Unknown'}]`;
                         setAssignedNull = true;
                         broadcastEvent = 'NEW_RESCUE_REQUEST';
                     }
@@ -1957,7 +1968,7 @@ app.put('/api/commands/:id/status', async (req, res) => {
                     let broadcastEvent = 'RESCUE_REQUEST_UPDATE';
                     if (status === 'declined') {
                         reqFinalStatus = 'pending';
-                        descAppend = `\n[Declined by Rescuer ${rescuer_phone || 'Unknown'}]`;
+                        descAppend = `\n[Declined by Rescuer ID: ${rescuer ? rescuer.id : 'Unknown'}]`;
                         setAssignedNull = true;
                         broadcastEvent = 'NEW_RESCUE_REQUEST';
                     }
@@ -2286,6 +2297,9 @@ async function runAIAssignment() {
                 // 1. Skip if rescuer already has an ongoing or incomplete assignment
                 if (busyUserIds.has(user.id)) continue;
 
+                // 1.5. Skip if rescuer has already declined this task
+                if (req.details && req.details.includes(`[Declined by Rescuer ID: ${user.id}]`)) continue;
+
                 // 2. Find location (Prioritize logged-in/available rescuers)
                 const loc = locations.find(l => l.device_id === user.device_id || l.device_id === user.phone);
                 
@@ -2303,6 +2317,10 @@ async function runAIAssignment() {
                 }
             }
 
+            if (!bestUser && req.details && req.details.includes('[Declined by Rescuer ID:')) {
+                // All available AI rescuers declined this task! Alert the Admin Web
+                broadcast('RESCUER_DECLINED_LAST', req);
+            }
             if (bestUser) {
                 // Execution: Assign to the nearest eligible rescuer
                 const assignedUserId = bestUser.id;

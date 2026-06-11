@@ -86,7 +86,7 @@ const indicatorStyles = StyleSheet.create({
 });
 
 export default function App() {
-  const [appState, setAppState] = useState('NETWORK_SETUP');
+  const [appState, setAppState] = useState('MAIN');
   const [ipInput, setIpInput] = useState(SERVER_IP);
   const [hasPermission, setHasPermission] = useState(null);
   const [serverIp, setServerIp] = useState(SERVER_IP);
@@ -288,40 +288,7 @@ export default function App() {
   }
 
 
-  if (appState === 'NETWORK_SETUP') {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', padding: 20 }}>
-        <View style={{ backgroundColor: '#ffffff', padding: 30, borderRadius: 15, width: '100%', maxWidth: 400, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}>
-          <Image source={require('./assets/official_rescuer_icon.png')} style={{ width: 80, height: 80, alignSelf: 'center', marginBottom: 15 }} resizeMode="contain" />
-          <Text style={{ color: '#0f172a', fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' }}>Network Configuration</Text>
-          <Text style={{ color: '#64748b', marginBottom: 10 }}>Enter Backend Server IP:</Text>
-          <TextInput 
-            style={{ backgroundColor: '#f1f5f9', color: '#0f172a', padding: 15, borderRadius: 10, marginBottom: 20, borderWidth: 1, borderColor: '#cbd5e1' }}
-            value={ipInput}
-            onChangeText={setIpInput}
-            placeholder="e.g. 192.168.1.100"
-            placeholderTextColor="#94a3b8"
-            keyboardType="default"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <TouchableOpacity 
-            style={{ backgroundColor: '#0ea5e9', padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 10 }}
-            onPress={async () => {
-              const clean = ipInput.trim();
-              if(clean) {
-                await AsyncStorage.setItem('serverIp', clean);
-                setServerIp(clean);
-                setAppState('MAIN');
-              }
-            }}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Save & Continue</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
+  // NETWORK_SETUP removed
 
   if (!hasPermission) {
     return (
@@ -338,7 +305,7 @@ export default function App() {
       {!isCameraActive && <NetworkStatusIndicator isConnected={isConnected} />}
       <WebView
         ref={webViewRef}
-        source={{ html: htmlString, baseUrl: `http://${serverIp}:${SERVER_PORT}` }}
+        source={{ html: htmlString, baseUrl: `http://127.0.0.1:${SERVER_PORT}` }}
         style={{ flex: 1 }}
         originWhitelist={['*']}
         javaScriptEnabled={true}

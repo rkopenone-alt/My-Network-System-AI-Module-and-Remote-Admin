@@ -3520,8 +3520,19 @@ export const htmlString = `<!DOCTYPE html>
                         const updateTypes = [
                             'NEW_RESCUE_REQUEST', 'RESCUE_REQUEST_ACCEPTED', 'RESCUE_REQUEST_DECLINED',
                             'RESCUE_REQUEST_UPDATE', 'COMMAND_STATUS_UPDATE', 'RESCUE_REQUEST_COMPLETED',
-                            'SOS_ALERT', 'RESCUER_UPDATE', 'NEW_COMMAND', 'AI_STATUS_UPDATE'
+                            'SOS_ALERT', 'RESCUER_UPDATE', 'NEW_COMMAND', 'AI_STATUS_UPDATE', 'RESCUER_DECLINED_LAST'
                         ];
+
+                        if (data.type === 'RESCUER_DECLINED_LAST') {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Task Declined By Rescuer!',
+                                html: \`The assigned rescuer has declined the task, and no other eligible AI-assignable rescuers are available.<br><br><b>Task Details:</b><br>\${data.data?.details || 'N/A'}<br><b>Location:</b> \${data.data?.sector || 'Unknown'}<br><br><b>Please manually assign this task or trigger a manual command!</b>\`,
+                                confirmButtonText: 'Understood'
+                            });
+                            refreshAllModules();
+                            return;
+                        }
 
                         if (data.type === 'AI_STATUS_UPDATE') {
                             if (typeof updateAiUI === 'function') updateAiUI(data.data.enabled);
@@ -6150,7 +6161,7 @@ export const htmlString = `<!DOCTYPE html>
         }
 
         function updateNotifBadges() {
-            const pendingReqs = rescueRequests.filter(r => (r.status || '').toLowerCase() === 'pending');
+            const pendingReqs = rescueRequests.filter(r => (r.status || '').toLowerCase() === 'pending' || (r.status || '').toLowerCase() === 'assigned');
             const sosCount = pendingReqs.filter(r => r.type === 'sos' || r.type === 'medical').length;
             const foodCount = pendingReqs.filter(r => r.type === 'food' || r.type === 'supplies' || r.type === 'delivery' || r.type === 'medical_delivery').length;
             const groupedCount = groupedTasks.filter(g => (g.status || '').toLowerCase() === 'pending').length;
@@ -6189,7 +6200,7 @@ export const htmlString = `<!DOCTYPE html>
             criticalList.innerHTML = '';
             normalList.innerHTML = '';
 
-            const pendingReqs = rescueRequests.filter(r => (r.status || '').toLowerCase() === 'pending');
+            const pendingReqs = rescueRequests.filter(r => (r.status || '').toLowerCase() === 'pending' || (r.status || '').toLowerCase() === 'assigned');
 
             if (pendingReqs.length === 0) {
                 normalList.innerHTML = '<div style="padding:12px; text-align:center; color:var(--text-muted); font-size:12px;">No pending requests</div>';
@@ -6266,6 +6277,9 @@ export const htmlString = `<!DOCTYPE html>
                                 <b>Priority:</b> <span style="color:\${isCritical ? '#e11d48' : 'var(--text-muted)'}; font-weight:900;">\${(req.priority || (isCritical ? 'CRITICAL' : 'NORMAL')).toUpperCase()}</span><br>
                                 <b>Urgency:</b> <span style="color:\${req.urgency === 'critical' ? 'var(--critical)' : 'inherit'}; font-weight:700;">\${req.urgency.toUpperCase()}</span>
                                 \${detailsHtml}
+                                \${req.assigned_to ? \`<div style="margin-top:6px; padding:6px; background:#f0f9ff; border-radius:4px; border-left:3px solid #0ea5e9; font-size:11px;">
+                                    <b>Assigned To:</b> <span style="color:#0369a1; font-weight:800;">\${req.assigned_to}</span> <span style="font-size:9px; background:#bae6fd; padding:1px 3px; border-radius:3px; margin-left:4px;">\${(req.status || 'ASSIGNED').toUpperCase()}</span>
+                                </div>\` : ''}
                                 \${req.image_url ? \`<div style="margin-top:8px;"><img src="\${formatMediaUrl(req.image_url)}" style="width:60px; height:60px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>\` : ''}
                             </div>
                             <div class="actionable-actions">

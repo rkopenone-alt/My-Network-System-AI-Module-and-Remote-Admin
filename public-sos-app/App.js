@@ -387,6 +387,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
             }
             let result = await ImagePicker.launchCameraAsync({
               mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              quality: 0.5,
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
               await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
@@ -409,6 +410,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
             }
             let result = await ImagePicker.launchImageLibraryAsync({
               mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              quality: 0.5,
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
               await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
@@ -838,7 +840,7 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }, 5000);
+      }, 30000);
 
       if (!isMounted.current) return;
 
@@ -1248,6 +1250,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
             }
             let result = await ImagePicker.launchCameraAsync({
               mediaTypes: ['images'],
+              quality: 0.5,
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
               await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
@@ -1269,6 +1272,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
             }
             let result = await ImagePicker.launchImageLibraryAsync({
               mediaTypes: ['images'],
+              quality: 0.5,
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
               await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
@@ -1341,7 +1345,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }, 5000);
+      }, 30000);
 
       if (!isMounted.current) return;
 
@@ -1760,7 +1764,7 @@ export default function App() {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(req.payload)
-                }, 5000);
+                }, 30000);
                 if (!res.ok && res.status !== 429) {
                   stillOffline.push(req);
                 }
