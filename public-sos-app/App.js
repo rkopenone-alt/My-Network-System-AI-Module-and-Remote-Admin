@@ -455,8 +455,8 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
                   try {
                     const resp = await fetch(uri);
                     const blob = await resp.blob();
-                    if (blob.size > 100 * 1024) {
-                      Alert.alert('Audio Too Large', `File is ${Math.round(blob.size / 1024)} KB. Maximum allowed is 100 KB. Please record a shorter clip.`);
+                    if (blob.size > 200 * 1024) {
+                      Alert.alert('Audio Too Large', `File is ${Math.round(blob.size / 1024)} KB. Maximum allowed is 200 KB. Please record a shorter clip.`);
                       return;
                     }
                   } catch (_) { /* skip size check if blob fails */ }
@@ -490,8 +490,8 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
             let result = await DocumentPicker.getDocumentAsync({ type: 'audio/*' });
             if (!result.canceled && result.assets && result.assets.length > 0) {
               const asset = result.assets[0];
-              if (asset.size && asset.size > 100 * 1024) {
-                Alert.alert('Audio Too Large', `File is ${Math.round(asset.size / 1024)} KB. Maximum allowed is 100 KB.`);
+              if (asset.size && asset.size > 200 * 1024) {
+                Alert.alert('Audio Too Large', `File is ${Math.round(asset.size / 1024)} KB. Maximum allowed is 200 KB.`);
                 return;
               }
               
@@ -1249,7 +1249,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
               return;
             }
             let result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ['images'],
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
               quality: 0.5,
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -1271,7 +1271,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
               return;
             }
             let result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ['images'],
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
               quality: 0.5,
             });
             if (!result.canceled && result.assets && result.assets.length > 0) {

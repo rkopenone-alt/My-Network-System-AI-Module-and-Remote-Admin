@@ -1,0 +1,38 @@
+ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-11
+Device Hostname: , DESKTOP-KBHB0SB
+Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
+Generated At: , 11/6/2026, 7:16:07 pm
+
+SECTION 1: RESCUE REQUESTS & TASKS
+Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
+75,sos,critical,completed,13.072349,80.1805414,"Critical Emergency Triggered
+[Declined by Rescuer 919000000001]
+[Declined by Rescuer 919000000001]
+[Declined by Rescuer 919000000001]
+[Declined by Rescuer 919000000001]",Arjun Singh (MEM-01),2026-06-11 05:37:58,2026-06-11 13:01:36,DESKTOP-KBHB0SB
+76,sos,critical,completed,12.9943941,80.1956482,"Critical Emergency Triggered
+[Declined by Rescuer 919000000001]
+[Declined by Rescuer 919000000001]",Arjun Singh (MEM-01),2026-06-11 13:02:21,2026-06-11 13:06:20,DESKTOP-KBHB0SB
+77,medical,critical,completed,12.994386,80.1956493,"Critical Emergency Triggered
+[Declined by Rescuer 919000000001]
+[Declined by Rescuer 919000000001]",Arjun Singh (MEM-01),2026-06-11 13:45:35,2026-06-11 13:46:06,DESKTOP-KBHB0SB
+
+
+SECTION 2: RESCUER COMMAND DISPATCHES
+Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
+55,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":13.072349,""lng"":80.1805414,""urgency"":""critical"",""rescue_req_id"":75,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,completed,2026-06-11 05:38:03,,DESKTOP-KBHB0SB
+56,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":13.072349,""lng"":80.1805414,""urgency"":""critical"",""rescue_req_id"":75,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer 919000000001]"",""assigned_by"":""AI""}",Critical,completed,2026-06-11 05:38:33,,DESKTOP-KBHB0SB
+57,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":13.072349,""lng"":80.1805414,""urgency"":""critical"",""rescue_req_id"":75,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer 919000000001]\n[Declined by Rescuer 919000000001]"",""assigned_by"":""AI""}",Critical,completed,2026-06-11 05:38:38,,DESKTOP-KBHB0SB
+58,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":13.072349,""lng"":80.1805414,""urgency"":""critical"",""rescue_req_id"":75,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer 919000000001]\n[Declined by Rescuer 919000000001]\n[Declined by Rescuer 919000000001]"",""assigned_by"":""AI""}",Critical,completed,2026-06-11 05:38:43,,DESKTOP-KBHB0SB
+59,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":13.072349,""lng"":80.1805414,""urgency"":""critical"",""rescue_req_id"":75,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer 919000000001]\n[Declined by Rescuer 919000000001]\n[Declined by Rescuer 919000000001]\n[Declined by Rescuer 919000000001]"",""assigned_by"":""AI""}",Critical,completed,2026-06-11 05:38:48,,DESKTOP-KBHB0SB
+60,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943941,""lng"":80.1956482,""urgency"":""critical"",""rescue_req_id"":76,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,completed,2026-06-11 13:02:30,,DESKTOP-KBHB0SB
+61,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943941,""lng"":80.1956482,""urgency"":""critical"",""rescue_req_id"":76,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer 919000000001]"",""assigned_by"":""AI""}",Critical,completed,2026-06-11 13:02:35,,DESKTOP-KBHB0SB
+62,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943941,""lng"":80.1956482,""urgency"":""critical"",""rescue_req_id"":76,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer 919000000001]\n[Declined by Rescuer 919000000001]"",""assigned_by"":""AI""}",Critical,completed,2026-06-11 13:02:40,,DESKTOP-KBHB0SB
+63,N/A,919000000001,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.994386,""lng"":80.1956493,""urgency"":""critical"",""rescue_req_id"":77,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,completed,2026-06-11 13:45:43,,DESKTOP-KBHB0SB
+64,N/A,919000000001,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.994386,""lng"":80.1956493,""urgency"":""critical"",""rescue_req_id"":77,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer 919000000001]"",""assigned_by"":""AI""}",Critical,completed,2026-06-11 13:45:48,,DESKTOP-KBHB0SB
+65,N/A,919000000001,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.994386,""lng"":80.1956493,""urgency"":""critical"",""rescue_req_id"":77,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer 919000000001]\n[Declined by Rescuer 919000000001]"",""assigned_by"":""AI""}",Critical,completed,2026-06-11 13:45:53,,DESKTOP-KBHB0SB
+
+
+SECTION 3: PUBLIC SOS ALERTS
+SOS ID,Device ID,Phone,Latitude,Longitude,Details,Status,Priority,Alert Time,Device Node
+NO SOS ALERTS FOR THIS DATE

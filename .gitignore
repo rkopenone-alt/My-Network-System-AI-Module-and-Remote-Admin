@@ -48,3 +48,7 @@ Thumbs.db
 
 # Scratch
 scratch/
+Output_APKs/
+output/
+jdk17/
+jdk17.zip

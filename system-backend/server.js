@@ -1571,7 +1571,7 @@ app.put('/api/rescue-requests/:id/decline', async (req, res) => {
         await run(`UPDATE rescue_requests SET status = 'pending', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, req.params.id]);
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
 
-        broadcast('NEW_RESCUE_REQUEST', reqData);
+        broadcast('RESCUE_REQUEST_DECLINED_REASSIGN', reqData);
         await logCommand('RESCUE_REQUEST_DECLINED', 'Commander', `Request ID: ${req.params.id}`, {});
         triggerBackup();
         res.json({ message: 'Request declined' });
@@ -1588,12 +1588,13 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
         let reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
 
         // Find the rescuer who is accepting or completing the task (robust match on phone/device_id)
-        const cleanedPhone = (rescuer_phone || '').replace(/\D/g, '').slice(-10);
+        const rPhone = rescuer_phone || cmdData.target_phone;
+        const cleanedPhone = (rPhone || '').replace(/\D/g, '').slice(-10);
         let rescuer = null;
         if (cleanedPhone) {
-            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rescuer_phone, rescuer_phone, rescuer_phone, `%${cleanedPhone}`]);
+            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rPhone, rPhone, rPhone, `%${cleanedPhone}`]);
         } else {
-            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rescuer_phone, rescuer_phone, rescuer_phone]);
+            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
         }
 
         if (status === 'completed') {
@@ -1864,12 +1865,13 @@ app.put('/api/commands/:id/status', async (req, res) => {
         let cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
 
         // Find the rescuer who is accepting or completing the task (robust match on phone/device_id)
-        const cleanedPhone = (rescuer_phone || '').replace(/\D/g, '').slice(-10);
+        const rPhone = rescuer_phone || cmdData.target_phone;
+        const cleanedPhone = (rPhone || '').replace(/\D/g, '').slice(-10);
         let rescuer = null;
         if (cleanedPhone) {
-            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rescuer_phone, rescuer_phone, rescuer_phone, `%${cleanedPhone}`]);
+            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rPhone, rPhone, rPhone, `%${cleanedPhone}`]);
         } else {
-            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rescuer_phone, rescuer_phone, rescuer_phone]);
+            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
         }
 
         if (status === 'completed') {
@@ -1930,7 +1932,7 @@ app.put('/api/commands/:id/status', async (req, res) => {
                         reqFinalStatus = 'pending';
                         descAppend = `\n[Declined by Rescuer ID: ${rescuer ? rescuer.id : 'Unknown'}]`;
                         setAssignedNull = true;
-                        broadcastEvent = 'NEW_RESCUE_REQUEST';
+                        broadcastEvent = 'RESCUE_REQUEST_DECLINED_REASSIGN';
                     }
 
                     if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
@@ -1970,7 +1972,7 @@ app.put('/api/commands/:id/status', async (req, res) => {
                         reqFinalStatus = 'pending';
                         descAppend = `\n[Declined by Rescuer ID: ${rescuer ? rescuer.id : 'Unknown'}]`;
                         setAssignedNull = true;
-                        broadcastEvent = 'NEW_RESCUE_REQUEST';
+                        broadcastEvent = 'RESCUE_REQUEST_DECLINED_REASSIGN';
                     }
 
                     if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {

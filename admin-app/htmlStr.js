@@ -3520,7 +3520,7 @@ export const htmlString = `<!DOCTYPE html>
                         const updateTypes = [
                             'NEW_RESCUE_REQUEST', 'RESCUE_REQUEST_ACCEPTED', 'RESCUE_REQUEST_DECLINED',
                             'RESCUE_REQUEST_UPDATE', 'COMMAND_STATUS_UPDATE', 'RESCUE_REQUEST_COMPLETED',
-                            'SOS_ALERT', 'RESCUER_UPDATE', 'NEW_COMMAND', 'AI_STATUS_UPDATE', 'RESCUER_DECLINED_LAST'
+                            'SOS_ALERT', 'RESCUER_UPDATE', 'NEW_COMMAND', 'AI_STATUS_UPDATE', 'RESCUER_DECLINED_LAST', 'RESCUE_REQUEST_DECLINED_REASSIGN'
                         ];
 
                         if (data.type === 'RESCUER_DECLINED_LAST') {
@@ -6375,7 +6375,24 @@ export const htmlString = `<!DOCTYPE html>
             document.getElementById('sosAlertType').value = data.type || 'SOS';
             document.getElementById('sosAlertUrgency').value = data.urgency || 'critical';
             document.getElementById('sosAlertSector').innerText = \`Sector: \${data.sector || 'Unknown Location'}\`;
-            document.getElementById('sosAlertDetails').innerText = data.details || 'Emergency SOS triggered from public device.';
+            
+            let detailsStr = data.details || 'Emergency SOS triggered from public device.';
+            try {
+                const parsed = JSON.parse(data.details);
+                if (parsed && typeof parsed === 'object') {
+                    let parts = [];
+                    if (parsed.comments) parts.push('Comments: ' + parsed.comments);
+                    if (parsed.people) parts.push('People: ' + parsed.people);
+                    if (parsed.food) parts.push('Food: ' + parsed.food);
+                    if (parsed.med) parts.push('Medical: ' + parsed.med);
+                    if (parsed.sanitary) parts.push('Sanitary: ' + parsed.sanitary);
+                    if (parsed.transportMode) parts.push('Transport: ' + parsed.transportMode);
+                    if (parsed.lat && parsed.lng) parts.push('Location: ' + parsed.lat + ', ' + parsed.lng);
+                    if (parts.length > 0) detailsStr = parts.join('\\n');
+                }
+            } catch (e) {}
+            document.getElementById('sosAlertDetails').innerText = detailsStr;
+    
             
             // Bring modal to front
             modal.classList.add('show');
@@ -7042,19 +7059,22 @@ export const htmlString = `<!DOCTYPE html>
         let refreshTimer = null;
         function startAutoRefresh(seconds) {
             if (refreshTimer) clearInterval(refreshTimer);
-            console.log(\`[Admin] Background polling disabled. Relying purely on WebSocket pushes for real-time updates.\`);
-
-            const runAll = () => {
-                fetchUsers();
-                fetchGroups();
-                fetchRescueRequests();
-                fetchDashboardStats();
-                fetchCommands();
-                if (typeof updateTacticalMap === 'function') updateTacticalMap(true);
-            };
-
-            // Run once to initialize
-            runAll();
+            if (seconds && seconds > 0) {
+                refreshTimer = setInterval(() => {
+                    const runAll = () => {
+                        fetchUsers();
+                        fetchGroups();
+                        fetchRescueRequests();
+                        fetchDashboardStats();
+                        fetchCommands();
+                        if (typeof updateTacticalMap === 'function') updateTacticalMap(true);
+                    };
+                    runAll();
+                }, seconds * 1000);
+                console.log(\`[Admin] Background polling enabled: \${seconds} seconds.\`);
+            } else {
+                console.log(\`[Admin] Background polling disabled. Relying purely on WebSocket pushes for real-time updates.\`);
+            }
         }
 
 
