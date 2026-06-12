@@ -1,83 +1,37 @@
-# Implementation Plan - Grouped Mission Coordinate & Routing Fix
+# Comprehensive History & Backend Stabilization Plan
 
-This implementation plan details the diagnosis and solution for the grouped mission (tactical cluster) routing and coordinate plotting bugs in the Rescuer Mobile App.
+The current platform logic incorrectly couples mission assignment history with the transient state of `rescue_requests` and `command_queue`. Because the system relies on overwriting `assigned_user_id` rather than maintaining a strict transactional log, race conditions and Admin closure actions can cause the wrong officer to be displayed as the "Final Completed Rescuer". Additionally, the Web Admin SOS popup does not correctly auto-dismiss when an SOS enters Live Command (e.g. `RESCUE_REQUEST_UPDATE` showing an assigned state), and the Rescuer APK crashes due to unsafe IP initialization during login.
 
-## Root Cause Analysis
-
-We identified two major issues causing grouped missions to navigate to `[0, 0]` with empty perimeter coordinates:
-
-1. **Auto-Refresh Checkbox Race Condition:**
-   - In `preview-web-admin.html`, the background auto-refresh loop (`runAll()`) runs every 5 seconds, calling `fetchRescueRequests()` and subsequently `updateMgmtPage()`.
-   - `updateMgmtPage()` fully rebuilds and re-renders the Triage board columns (Columns 1, 2, and 3) from scratch.
-   - When columns are re-rendered, any checked `.mgmt-select-checkbox` checkboxes get replaced by brand new, unchecked checkboxes in the DOM.
-   - If a commander takes more than a few seconds in `openBulkGroupView()` to name the cluster, choose the team, and review the convex hull map, the background auto-refresh wipes out their checked boxes in the background.
-   - When clicking **"CONFIRM & INITIALIZE GROUP MISSION"**, `confirmBulkGrouping()` queries the checked boxes in the DOM, finds **0** checked items, and posts an empty payload to the backend:
-     `{"name":"test 2","is_group_mission":true,"request_ids":[],"serial_numbers":[],"custom_polygon":...}`
-   - Due to the empty `request_ids` list, the database saves a command with no clustered requests and defaults the group coordinates to `[0, 0]`.
-
-2. **Missing Mission Coordinates in Command Payload:**
-   - In the fallback path of the Rescuer App's accepted mission routing (`startMission`), if a network hiccup or caching timing prevents fetching `/api/users/:id/combined-history` containing the populated `missions` list, the app retrieves the command payload directly from `/api/commands/:id`.
-   - The command payload created by the Web Admin did not include the physical coordinates (`lat`/`lng` and types) of each clustered task inside `command_payload`. It only saved a list of IDs.
-   - When falling back to the raw payload, the app evaluates `payload.missions` as undefined, resulting in an empty convex hull rendering and broken zone navigation.
-
----
+We will rebuild this layer with a professional, production-ready structure.
 
 ## Proposed Changes
 
-### 1. Web Admin Panel
+### 1. Database Schema Extensions (Audit & Lifecycle Tables)
+We will implement dedicated mission lifecycle tracking tables in `server.js` to eliminate ambiguity:
+- **`sos_assignment_history`**: Tracks every route, decline, ignore, and accept event.
+  - Columns: `id`, `rescue_req_id`, `target_rescuer_id`, `action` ('assigned', 'accepted', 'declined', 'ignored', 'completed'), `timestamp`.
+- **`sos_completion_log`**: Strictly tracks the *final* executor of a mission.
+  - Columns: `id`, `rescue_req_id`, `completed_by_rescuer_id`, `completion_time`, `evidence_url`.
+- Update `server.js` to securely write to these tables on every state change.
 
-#### [MODIFY] [preview-web-admin.html](file:///c:/Users/Alienware/Desktop/Rescue%20Backup%2026-04-2026/preview-web-admin.html)
+### 2. History API Refactor
+- Update `/api/rescue-requests` and `/api/users/:id/combined-history` to fetch the **Final Completed Rescuer** from the `sos_completion_log` (or by selecting the last `completed` action from `sos_assignment_history`) instead of relying on the transient `assigned_user_id` in `rescue_requests`.
+- This ensures only the *actual executor* is marked as the completing officer, while declined attempts remain purely in the audit logs.
 
-- **Persistent Selection State:**
-  - Create a persistent selection array `window.bulkSelectedIds` inside `openBulkGroupView()` when the group creation pane is opened.
-  - Modify `confirmBulkGrouping()` to read from `window.bulkSelectedIds` instead of re-querying active checked boxes in the DOM, eliminating the background refresh race condition.
-- **Safety Guards:**
-  - Add strict input validation to `confirmBulkGrouping()`:
-    ```javascript
-    if (!selectedIds || selectedIds.length === 0) {
-        alert("ERROR: No missions selected or selection list was updated in the background. Please close this pane, select the tasks again, and click Group & Assign.");
-        return;
-    }
-    ```
-- **Robust Command Payload Enrichment:**
-  - Enrich the `command_payload` in both `confirmBulkGrouping()` and `confirmTaskGrouping()` to include the full `missions` array with coordinates directly, supporting offline resilience and instant client-side map plotting:
-    ```javascript
-    missions: newGroupEntry.requests.map(r => ({
-        id: r.id,
-        type: r.type,
-        lat: parseFloat(r.lat),
-        lng: parseFloat(r.lng),
-        sector: r.sector,
-        priority: r.priority
-    }))
-    ```
+### 3. Web Admin Popup Logic Fix
+- In `Web ADMIN.html`, update the WebSocket `onmessage` handler for `RESCUE_REQUEST_UPDATE`, `RESCUE_REQUEST_ACCEPTED`, `RESCUE_REQUEST_IN_PROGRESS`, and `RESCUE_REQUEST_COMPLETED`.
+- If a mission's state transitions out of `'pending'`, immediately trigger `closeModal('sosAlertModal')` and push it to the Live Command UI. 
+- Ensure the popup *only* remains active if the status is purely `'pending'`.
 
----
-
-### 2. Mobile Rescuer App (Web Template)
-
-#### [MODIFY] [preview-rescuer.html](file:///c:/Users/Alienware/Desktop/Rescue%20Backup%2026-04-2026/preview-rescuer.html)
-
-- Add robust validation in `startMission()` to handle group coordinates parsed from either `/combined-history` or raw `/api/commands/:id` payload fallbacks.
-- If `groupCoords` contains coordinates but the center coordinate `finalLat`/`finalLng` is `0` or missing, automatically resolve it to the first mission's coordinates in the list to prevent zooming to `[0, 0]`.
-
----
-
-### 3. Production Compilation & Deployment
-
-#### [BUILD] Synchronize Web Template and Compile Android Release APK
-- Run `python generate_html_str.py` to synchronize any updates made in `preview-rescuer.html` into `rescuer-app/htmlStr.js` for React Native.
-- Execute Gradle release compilation in `rescuer-app/android` to build a clean, production-ready release APK.
-- Copy the fresh APK to `C:\Users\Alienware\Desktop\Rescue Backup 26-04-2026\Output_APKs`.
-
----
+### 4. Rescuer App Login Crash Fix
+- In the Rescuer app (`login-rescuer.html` or equivalent), the initialization logic crashes if an IP is entered first before other fields due to null states or premature socket initialization.
+- Implement strict validation and fail-safes during the login bootstrap sequence. Ensure `initWebSocket()` and `fetch()` calls verify input fields gracefully, use `try/catch` with safe await, and display loading/error states instead of crashing.
 
 ## Verification Plan
-
-### Automated & Database Checks
-- Create a test tactical group in the Web Admin dashboard, wait over 10 seconds to confirm the background refresh does not wipe out the selection, and initiate the group.
-- Query the database or fetch the `/api/commands` endpoint to confirm `request_ids` and `missions` are properly populated (not empty).
-
-### Manual Map Plotting Verification
-- Accept the grouped mission in the Rescuer Mobile App.
-- Confirm the map instantly centers on the first mission coordinate and plots a purple dashed convex hull/boundary enclosing all clustered tasks.
+1. **Automated Setup:** Server reboot will dynamically instantiate `sos_assignment_history`.
+2. **Lifecycle Test:** 
+   - Trigger SOS. Officer-2 is assigned. Officer-2 declines.
+   - Officer-1 is assigned. Officer-1 accepts and completes.
+   - Verify History explicitly shows Officer-1 as executor. Officer-2 is only in the audit trail.
+3. **Popup Test:** Verify the Web Admin popup automatically dismisses exactly when Officer-1 accepts.
+4. **Crash Test:** Input IP address first in the Rescuer login screen to ensure no crashes occur.

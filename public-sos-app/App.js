@@ -17,6 +17,19 @@ const { width } = Dimensions.get('window');
 const DEFAULT_SERVER_IP = '';
 let API_URL = `http://${DEFAULT_SERVER_IP}:3001/api`;
 let WS_URL = `ws://${DEFAULT_SERVER_IP}:3001`;
+const B64_SHUTTER = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgIGAfnx9gYSEgHp4fYWJhXx1dn+KjYR3cHaFkI6AcGx5jJaNeGlrf5WZiG9jbomcmX9lYHWUopR0XGF/n6WMaFZnjamjf1tUcZuvnHBQV3+psZBgSl+Rta2AUUhto7yjbERNgLO8k1pAWpO8s4BMQ2ylv6VsQ0x/s7yTWkBak7yzgExDbKW/pWxDTICzvJNaQFqTvLOATENspb+lbENMf7O8k1pAWpO8s4BMQ2ylv6VsQ0x/s7yTWkBak7yzgExDbKW/pWxDTICzvJNaQFqTvLOATENspb+lbENMf7O8k1pAWpO8s4BMQ2ylv6VsQ0x/s7yTWkBak7yzgExDbKW/pWxDTH+zvJNaQFqTvLOATENspb+lbENMgLO8k1pAWpO8s4BMQ2ylv6VsQ0x/s7yTWkBak7yzf0xDbKW/pWxDTH+zvJNaQFqTvLOATENspb+lbENMf7O8k1pAWpO8s39MQ2ylv6VsQ0x/s7yTWkBak7yzgExDbKW/pWxDTH+zvJNaQFqTvLOATENspb+lbENMgLO8k1pAWpO8s4BMQ2ylv6VsQ0x/s7yTWkBak7yzgExDbKW/pWxDTH+zvJNaQFqTvLOATENspb+lbENMf7O8k1pAWpO8s4BMQ2ylv6VsQ0x/s7yTWkBak7yzf0xDbKW/pWxDTH+zvJNaQFqTvLOATENspb+lbENMf7O8k1pAWpO8s4BMQ2ylv6VsQ0x/s7yTWkBak7yzgExDbKW/pWxDTICzvJNaQFqTvLOATENspb+lbENMf7O8k1pAWpO8s4BMQ2ylv6VsQ0x/s7yTWkBak7yzgExDbKW/pWxDTICzvJNaQFqTvLN/TENspb+lbENMf7O8k1pAWpO8s4BMQ2ylv6VsQ0x/s7yTWkBak7yzgExDbKW/pWxDTH+zvJNaQFqTvLN/TENspb+lbENMgLK7k1xDXJK3roBSSm6gtZ9vTlZ/qK+PY1BkjqukgFxWcpipl3NaYH+eo4trXWuKn5qAZmN2kZyQd2Zqf5SWh3Jpc4aTj4Bxb3qJj4h7cnV/iYqDenZ6goeFgHt7foKDgX9+fw==';
+const B64_SUCCESS = 'data:audio/wav;base64,UklGRmQGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUAGAACAgIGBgYB9e3t8gISHh4WAenV1eICHjY2IgHZvb3V/i5OTjH9yaWlxgI+ZmZCAbmNjbX+Tn6CUf2tdXGl/lqWml39nV1ZmgJqrrJt/Y1FQYoCesbKfgF9LSl5/obe4o39cRURbf6W8vKV/WkNDWoClvLylgFpDQ1p/pby8pX9aQ0NagKW8vKWAWkNDWoClvLylgFpDQ1qApby8pYBaQ0NagKW8vKWAWkNDWn+lvLylf1pDQ1p/pby8pYBaQ0NagKW8vKV/WkNDWn+lvLylgFpDQ1qApby8pX9aQ0NagKW8vKWAWkNDWn+lvLylf1pDQ1p/pby8pYBaQ0NagKW8vKV/WkNDWoClvLylgFpDQ1p/pby8pX9aQ0NagKW8vKV/WkNDWoClvLylgFpDQ1qApby8pYBaQ0Naf6W8vKV/WkNDWoClvLylf1pDQ1p/pby8pYBaQ0Naf6W8vKV/WkNDWoClvLylf1pDQ1p/pby8pX9aQ0Naf6W8vKWAWkNDWoClvLylf1pDQ1qApby8pX9aQ0Naf6W8vKWAWkNDWn+lvLylf1pDQ1qApby8pYBaQ0NagKW8vKV/WkNDWoClvLylf1pDQ1p/pby8pYBaQ0Naf6W8vKV/WkNDWoClvLylgFpDQ1p/pby8pYBaQ0Naf6W8vKV/WkNDWoClvLylf1pDQ1qApby8pX9aQ0NagKW8vKV/WkNDWn+lvLylgFpDQ1p/pby8pYBaQ0NagKW8vKWAWkNDWoClvLylf1pDQ1qApby8pX9aQ0NagKW8vKWAWkNDWn+lvLylf1pDQ1qApby8pX9aQ0Naf6W8vKWAWkNDWn+lvLylf1pDQ1qApby8pYBaQ0NagKW8vKV/WkNDWoClvLylf1pDQ1p/pby8pYBaQ0Naf6W8vKWAWkNDWn+lvLylf1pDQ1qApby8pX9aQ0NagKW8vKWAWkNDWoClvLylf1pDQ1qApby8pX9aQ0NagKW8vKV/WkNDWoClvLylf1pDQ1qApby8pYBaQ0Naf6W8vKWAWkNDWn+lvLylgFpDQ1p/pby8pYBaQ0Naf6W8vKWAWkNDWoClvLylf1pDQ1p/pby8pYBaQ0NagKW8vKV/WkNDWoClvLylf1pDQ1qApby8pX9aQ0NagKW8vKV/WkNDWoClvLylgFpDQ1p/pby8pYBaQ0Naf6W8vKWAWkNDWoClvLylf1pDQ1qApby8pX9aQ0NagKW8vKWAWkNDWn+lvLylgFpDQ1p/pby8pYBaQ0Naf6W8vKWAWkNDWoClvLylf1pDQ1qApby8pX9aQ0Naf6W8vKV/WkNDWoClvLylf1pDQ1qApby8pX9aQ0NagKW8vKV/WkNDWoClvLylf1pDQ1p/pby8pYBaQ0Naf6W8vKWAWkNDWn+lvLylgFpDQ1p/pby8pYBaQ0Naf6W8vKV/WkNDWoClvLylgFpDQ1qApby8pX9aQ0NagKW8vKV/WkNDWoClvLylf1pDQ1qApby8pX9aQ0NagKW8vKWAWkNDWn+lvLylgFpDQ1p/pby8pYBaQ0NagKW8vKV/WkNDWoClvLylf1pDQ1qApby8pX9aQ0Naf6W8vKWAWkNDWn+lvLylgFpDQ1p/pLu6o4BcR0hegKG1tKB/YE1OYYCdr66cf2RTVGV/mamomIBoWVppgJajopR/a19gbICSnJyRf29mZnCAjpaWjX9zbGx0gIqQkIl/d3JyeICHioqFgHp4eHt/g4SEgoB+fn5/';
+
+const playFeedbackSound = async (type) => {
+  try {
+    const uri = type === 'shutter' ? B64_SHUTTER : B64_SUCCESS;
+    const { sound } = await Audio.Sound.createAsync({ uri });
+    await sound.playAsync();
+    setTimeout(() => sound.unloadAsync(), 2000);
+  } catch (e) {
+    console.error('Sound error:', e);
+  }
+};
 
 // Helper: fetch with timeout to prevent hanging connections
 const fetchWithTimeout = async (url, options = {}, timeout = 5000) => {
@@ -314,6 +327,40 @@ function LoginScreen({ onLogin, serverIp, onIpChange }) {
 }
 
 // ─── Screen 2: Requirements ───────────────────────────────────────────────────
+const RecordingModal = ({ isRecording, recordSeconds, onStop, onCancel, isProcessing }) => {
+  if (!isRecording && !isProcessing) return null;
+  return (
+    <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 9999, elevation: 9999 }]}>
+      <View style={{ backgroundColor: 'white', width: 300, borderRadius: 24, padding: 30, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, elevation: 10 }}>
+        {isProcessing ? (
+          <>
+            <ActivityIndicator size="large" color="#0ea5e9" />
+            <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '800', color: '#0f172a' }}>Processing Audio...</Text>
+          </>
+        ) : (
+          <>
+            <Animated.Text style={{ fontSize: 50, marginBottom: 15, opacity: recordSeconds % 2 === 0 ? 1 : 0.5 }}>🎙️</Animated.Text>
+            <Text style={{ fontSize: 20, fontWeight: '900', color: '#ef4444', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
+              Recording
+            </Text>
+            <Text style={{ fontSize: 32, fontWeight: '900', color: '#0f172a', marginBottom: 25 }}>
+              00:{recordSeconds.toString().padStart(2, '0')} <Text style={{ fontSize: 16, color: '#64748b' }}>/ 00:10</Text>
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 15, width: '100%' }}>
+              <TouchableOpacity onPress={onCancel} style={{ flex: 1, backgroundColor: '#f1f5f9', paddingVertical: 14, borderRadius: 14, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' }}>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#64748b' }}>CLOSE</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onStop} style={{ flex: 1, backgroundColor: '#ef4444', paddingVertical: 14, borderRadius: 14, alignItems: 'center', shadowColor: '#ef4444', shadowOpacity: 0.4, shadowRadius: 5, elevation: 5 }}>
+        <Text style={{ fontSize: 15, fontWeight: '800', color: 'white' }}>FINISH</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </View>
+    </View>
+  );
+};
+
 function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNext, onBack }) {
   const [transportMode, setTransportMode] = useState('AIR');
   const [needs, setNeeds] = useState([6, 2, 1, 2]);
@@ -322,6 +369,13 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
   const [attachments, setAttachments] = useState({ voice: false, camera: false, note: false });
   const [imageBase64, setImageBase64] = useState(null);
   const [audioBase64, setAudioBase64] = useState(null);
+
+  const [isRecordingUI, setIsRecordingUI] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const [isProcessingAudio, setIsProcessingAudio] = useState(false);
+  const audioRecordingRef = useRef(null);
+  const audioTimerRef = useRef(null);
+
   const cameraPulse = useRef(new Animated.Value(1)).current;
   const micPulse = useRef(new Animated.Value(1)).current;
 
@@ -393,6 +447,7 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
               await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
                 setImageBase64(base64Str);
                 setAttachments(prev => ({ ...prev, camera: true }));
+                playFeedbackSound('shutter');
                 Alert.alert("Success", "Photo captured and attached successfully!");
               });
             }
@@ -429,10 +484,17 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
     );
   };
 
-  const handleMicPress = () => {
+  const handleMicPress = async () => {
+    if (audioBase64) {
+      Alert.alert('Audio Already Attached', 'Remove the current audio first?', [
+        { text: 'Remove', onPress: () => setAudioBase64(null) },
+        { text: 'Keep Current', style: 'cancel' }
+      ]);
+      return;
+    }
     Alert.alert(
-      "Audio Capture",
-      "Choose an option (max 10 sec, 100 KB)",
+      "Audio Source",
+      "Choose to record or pick an audio file",
       [
         { text: "Record Audio", onPress: async () => {
           try {
@@ -440,77 +502,45 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
             if (status !== 'granted') { Alert.alert('Permission Required', 'Microphone access is needed.'); return; }
             await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
             const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-            // Auto-stop after 10 seconds
-            const stopTimer = setTimeout(async () => {
-              try { await recording.stopAndUnloadAsync(); } catch (_) {}
-              Alert.alert('Recording Stopped', 'Maximum 10-second audio clip saved.');
-            }, 10000);
-            Alert.alert("Recording...", "Press Stop when done (max 10 seconds)", [
-              { text: "Stop", onPress: async () => {
-                clearTimeout(stopTimer);
-                try {
-                  await recording.stopAndUnloadAsync();
-                  const uri = recording.getURI();
-                  // Validate size via fetch blob
-                  try {
-                    const resp = await fetch(uri);
-                    const blob = await resp.blob();
-                    if (blob.size > 200 * 1024) {
-                      Alert.alert('Audio Too Large', `File is ${Math.round(blob.size / 1024)} KB. Maximum allowed is 200 KB. Please record a shorter clip.`);
-                      return;
-                    }
-                  } catch (_) { /* skip size check if blob fails */ }
-                  
-                  // Save a copy of the audio to local storage ARDMS_Media folder
-                  try {
-                    const dir = FileSystem.documentDirectory + 'ARDMS_Media/';
-                    const dirInfo = await FileSystem.getInfoAsync(dir);
-                    if (!dirInfo.exists) {
-                      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-                    }
-                    const filename = `audio_${Date.now()}.m4a`;
-                    const fileUri = dir + filename;
-                    await FileSystem.copyAsync({ from: uri, to: fileUri });
-                    console.log(`[Audio Save] Saved locally: ${fileUri}`);
-                  } catch (e) {
-                    console.error('[Audio Save Error]', e);
-                  }
-                  
-                  const base64Str = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-                  setAudioBase64(`data:audio/m4a;base64,${base64Str}`);
-                  setAttachments(prev => ({ ...prev, voice: true }));
-                  Alert.alert('Success', 'Audio recorded (≤10 sec, ≤100 KB) & saved locally!');
-                } catch (e) { Alert.alert('Error', e.message); }
-              }}
-            ]);
-          } catch (e) { Alert.alert("Error", e.message); }
+            audioRecordingRef.current = recording;
+            setIsRecordingUI(true);
+            setRecordSeconds(0);
+            
+            audioTimerRef.current = setInterval(() => {
+              setRecordSeconds(prev => {
+                if (prev >= 9) {
+                  stopRecording(false);
+                  return 10;
+                }
+                return prev + 1;
+              });
+            }, 1000);
+          } catch (e) {
+            console.error(e);
+            Alert.alert('Error', 'Failed to start recording');
+          }
         }},
-        { text: "Upload Audio", onPress: async () => {
+        { text: "Choose Audio File", onPress: async () => {
           try {
             let result = await DocumentPicker.getDocumentAsync({ type: 'audio/*' });
-            if (!result.canceled && result.assets && result.assets.length > 0) {
-              const asset = result.assets[0];
-              if (asset.size && asset.size > 200 * 1024) {
-                Alert.alert('Audio Too Large', `File is ${Math.round(asset.size / 1024)} KB. Maximum allowed is 200 KB.`);
+            if (result.type === 'success' || !result.canceled) {
+              const asset = result.assets ? result.assets[0] : result;
+              if (asset.size > 200 * 1024) {
+                Alert.alert('File Too Large', `Selected file is ${Math.round(asset.size / 1024)} KB. Maximum allowed is 200 KB.`);
                 return;
               }
+              const uri = asset.uri;
               
-              // Save a copy of selected audio locally
               try {
                 const dir = FileSystem.documentDirectory + 'ARDMS_Media/';
                 const dirInfo = await FileSystem.getInfoAsync(dir);
-                if (!dirInfo.exists) {
-                  await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-                }
+                if (!dirInfo.exists) await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
                 const filename = `audio_upload_${Date.now()}_${asset.name}`;
                 const fileUri = dir + filename;
-                await FileSystem.copyAsync({ from: asset.uri, to: fileUri });
-                console.log(`[Audio Save] Saved locally: ${fileUri}`);
-              } catch (e) {
-                console.error('[Audio Save Error]', e);
-              }
+                await FileSystem.copyAsync({ from: uri, to: fileUri });
+              } catch (err) {}
               
-              const base64Str = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+              const base64Str = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
               let ext = asset.name ? asset.name.split('.').pop().toLowerCase() : 'm4a';
               setAudioBase64(`data:audio/${ext};base64,${base64Str}`);
               setAttachments(prev => ({ ...prev, voice: true }));
@@ -845,18 +875,11 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
       if (!isMounted.current) return;
 
       if (res.ok) {
+        const responseData = await res.json();
         showToast('Your info is collected and help is being dispatched.', '✅', 4000);
-        let buf = 15;
-        try {
-          const cached = await AsyncStorage.getItem('sosBufferMinutes');
-          if (cached !== null) {
-            const p = parseInt(cached, 10);
-            buf = isNaN(p) ? 15 : p;
-          }
-        } catch (err) {}
+        let buf = responseData.buffer_minutes !== undefined ? responseData.buffer_minutes : 15;
+        playFeedbackSound('success');
         onTriggerSOS(buf * 60);
-        setImageBase64(null);
-        setAudioBase64(null);
       } else {
         if (res.status === 429) {
           const errData = await res.json();
@@ -881,6 +904,13 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <RecordingModal 
+        isRecording={isRecordingUI} 
+        recordSeconds={recordSeconds} 
+        isProcessing={isProcessingAudio} 
+        onStop={() => stopRecording(false)} 
+        onCancel={() => stopRecording(true)} 
+      />
 
       <View style={s.header}>
         <TouchableOpacity onPress={onBack}><Text style={{ fontSize: 22 }}>←</Text></TouchableOpacity>
@@ -1199,7 +1229,16 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
   const toastAnim = useRef(new Animated.Value(0)).current;
   const sosScale = useRef(new Animated.Value(1)).current;
   const cameraPulse = useRef(new Animated.Value(1)).current;
+  const micPulse = useRef(new Animated.Value(1)).current;
   const [imageBase64, setImageBase64] = useState(null);
+  const [audioBase64, setAudioBase64] = useState(null);
+
+  const [isRecordingUI, setIsRecordingUI] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const [isProcessingAudio, setIsProcessingAudio] = useState(false);
+  const audioRecordingRef = useRef(null);
+  const audioTimerRef = useRef(null);
+
   const isMounted = useRef(true);
   const toastTimerRef = useRef(null);
 
@@ -1212,22 +1251,36 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
   }, []);
 
   useEffect(() => {
-    let anim;
+    let anim1, anim2;
     if (imageBase64) {
-      anim = Animated.loop(
+      anim1 = Animated.loop(
         Animated.sequence([
           Animated.timing(cameraPulse, { toValue: 1.2, duration: 600, useNativeDriver: true }),
           Animated.timing(cameraPulse, { toValue: 1, duration: 600, useNativeDriver: true })
         ])
       );
-      anim.start();
+      anim1.start();
     } else {
       cameraPulse.setValue(1);
     }
+
+    if (audioBase64) {
+      anim2 = Animated.loop(
+        Animated.sequence([
+          Animated.timing(micPulse, { toValue: 1.2, duration: 600, useNativeDriver: true }),
+          Animated.timing(micPulse, { toValue: 1, duration: 600, useNativeDriver: true })
+        ])
+      );
+      anim2.start();
+    } else {
+      micPulse.setValue(1);
+    }
+
     return () => {
-      if (anim) anim.stop();
+      if (anim1) anim1.stop();
+      if (anim2) anim2.stop();
     };
-  }, [imageBase64]);
+  }, [imageBase64, audioBase64]);
 
   const handleCameraPress = () => {
     if (imageBase64) {
@@ -1255,6 +1308,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
             if (!result.canceled && result.assets && result.assets.length > 0) {
               await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
                 setImageBase64(base64Str);
+                playFeedbackSound('shutter');
                 Alert.alert('Success', 'Photo captured and attached!');
               });
             }
@@ -1277,6 +1331,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
             if (!result.canceled && result.assets && result.assets.length > 0) {
               await compressAndAttachImage(result.assets[0].uri, (base64Str) => {
                 setImageBase64(base64Str);
+                playFeedbackSound('shutter');
                 Alert.alert('Success', 'Photo selected and attached!');
               });
             }
@@ -1289,6 +1344,77 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
       ]
     );
   };
+
+  const handleMicPress = async () => {
+    if (audioBase64) {
+      Alert.alert('Audio Already Attached', 'Remove the current audio first?', [
+        { text: 'Remove', onPress: () => setAudioBase64(null) },
+        { text: 'Keep Current', style: 'cancel' }
+      ]);
+      return;
+    }
+    Alert.alert(
+      "Audio Source",
+      "Choose to record or pick an audio file",
+      [
+        { text: "Record Audio", onPress: async () => {
+          try {
+            const { status } = await Audio.requestPermissionsAsync();
+            if (status !== 'granted') { Alert.alert('Permission Required', 'Microphone access is needed.'); return; }
+            await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+            const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+            audioRecordingRef.current = recording;
+            setIsRecordingUI(true);
+            setRecordSeconds(0);
+            
+            audioTimerRef.current = setInterval(() => {
+              setRecordSeconds(prev => {
+                if (prev >= 9) {
+                  stopRecording(false);
+                  return 10;
+                }
+                return prev + 1;
+              });
+            }, 1000);
+          } catch (e) {
+            console.error(e);
+            Alert.alert('Error', 'Failed to start recording');
+          }
+        }},
+        { text: "Choose Audio File", onPress: async () => {
+          try {
+            let result = await DocumentPicker.getDocumentAsync({ type: 'audio/*' });
+            if (result.type === 'success' || !result.canceled) {
+              const asset = result.assets ? result.assets[0] : result;
+              if (asset.size > 200 * 1024) {
+                Alert.alert('File Too Large', `Selected file is ${Math.round(asset.size / 1024)} KB. Maximum allowed is 200 KB.`);
+                return;
+              }
+              const uri = asset.uri;
+              
+              try {
+                const dir = FileSystem.documentDirectory + 'ARDMS_Media/';
+                const dirInfo = await FileSystem.getInfoAsync(dir);
+                if (!dirInfo.exists) await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+                const filename = `audio_upload_${Date.now()}_${asset.name}`;
+                const fileUri = dir + filename;
+                await FileSystem.copyAsync({ from: uri, to: fileUri });
+              } catch (err) {}
+              
+              const base64Str = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+              const ext = asset.name ? asset.name.split('.').pop() : 'm4a';
+              setAudioBase64(`data:audio/${ext};base64,${base64Str}`);
+            }
+          } catch (e) {
+            console.error(e);
+            Alert.alert('Error', 'Failed to pick audio file.');
+          }
+        }},
+        { text: "Cancel", style: "cancel" }
+      ]
+    );
+  };
+
 
   const showToast = (msg, icon = '⏳', duration = 3000) => {
     if (!isMounted.current) return;
@@ -1338,7 +1464,8 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
         urgency: 'critical',
         priority: 'Critical',
         sector: 'Detected via GPS',
-        image_data: imageBase64 || null
+        image_data: imageBase64 || null,
+        audio_data: audioBase64 || null
       };
 
       const res = await fetchWithTimeout(`${API_URL}/rescue-requests`, {
@@ -1350,15 +1477,13 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
       if (!isMounted.current) return;
 
       if (res.ok) {
+        const responseData = await res.json();
         showToast('Your info is collected and help is being dispatched.', '✅', 4000);
-        let buf = 15;
-        try {
-          const cached = await AsyncStorage.getItem('sosBufferMinutes');
-          if (cached !== null) {
-            const p = parseInt(cached, 10);
-            buf = isNaN(p) ? 15 : p;
-          }
-        } catch (err) {}
+        let buf = responseData.buffer_minutes !== undefined ? responseData.buffer_minutes : 15;
+        playFeedbackSound('success');
+        setImageBase64(null);
+        setAudioBase64(null);
+        setAddress('');
         onTriggerSOS(buf * 60);
       } else {
         if (res.status === 429) {
@@ -1444,13 +1569,14 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={[s.mediaBtn, { borderColor: C.border, backgroundColor: '#f8fafc', opacity: micEnabled ? 1 : 0.4 }]} 
+                  style={[s.mediaBtn, { borderColor: C.border, backgroundColor: '#f8fafc', opacity: micEnabled ? 1 : 0.4 }, audioBase64 && s.attachBtnActive]} 
                   disabled={!micEnabled}
                   activeOpacity={0.8}
+                  onPress={() => micEnabled && handleMicPress()}
                 >
-                  <Text style={{ fontSize: 18 }}>{micEnabled ? '🎙️' : '🚫'}</Text>
-                  <Text style={{ fontSize: 7, fontWeight: '900', color: C.light, marginTop: 1, textAlign: 'center' }}>
-                    {micEnabled ? 'AUDIO' : 'DISABLED'}
+                  <Animated.Text style={{ fontSize: 18, transform: [{ scale: audioBase64 ? micPulse : 1 }] }}>{audioBase64 ? '✅' : (micEnabled ? '🎙️' : '🚫')}</Animated.Text>
+                  <Text style={{ fontSize: 7, fontWeight: '900', color: audioBase64 ? C.secondary : (micEnabled ? '#2563eb' : C.light), marginTop: 1, textAlign: 'center' }}>
+                    {audioBase64 ? 'ATTACHED' : (micEnabled ? 'AUDIO' : 'DISABLED')}
                   </Text>
                 </TouchableOpacity>
             </View>
@@ -1861,7 +1987,7 @@ export default function App() {
         return <CriticalSOSScreen user={user} imageEnabled={imageEnabled} micEnabled={micEnabled} isSosLocked={isSosLocked} countdown={sosCountdown} onTriggerSOS={handleStartSosLock} onBack={() => setScreen('selection')} />;
       case 'home': 
         if (!details) return <RequirementsScreen user={user} imageEnabled={imageEnabled} micEnabled={micEnabled} onNext={(d) => { setDetails(d); }} onBack={() => setScreen('selection')} />;
-        return <SOSTriggerScreen user={user} details={details} isSosLocked={isSosLocked} countdown={sosCountdown} onTriggerSOS={handleStartSosLock} onBack={() => setDetails(null)} />;
+        return <SOSTriggerScreen user={user} details={details} isSosLocked={isSosLocked} countdown={sosCountdown} onTriggerSOS={(buf) => { handleStartSosLock(buf); setDetails(null); }} onBack={() => setDetails(null)} />;
       case 'history': 
         return <HistoryScreen user={user} onBack={() => setScreen('selection')} />;
       case 'settings': 

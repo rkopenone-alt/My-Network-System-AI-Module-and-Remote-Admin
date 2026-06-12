@@ -335,8 +335,25 @@ db.serialize(() => {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
     db.run(`ALTER TABLE rescue_requests ADD COLUMN priority TEXT DEFAULT 'normal'`, (err) => { /* ignore */ });
+    db.run(`ALTER TABLE rescue_requests ADD COLUMN name TEXT`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE rescue_requests ADD COLUMN image_url TEXT`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE rescue_requests ADD COLUMN audio_url TEXT`, (err) => { /* ignore */ });
+
+    // Mission Lifecycle & Audit Tables
+    db.run(`CREATE TABLE IF NOT EXISTS sos_assignment_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        rescue_req_id INTEGER,
+        rescuer_id INTEGER,
+        action TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    db.run(`CREATE TABLE IF NOT EXISTS sos_completion_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        rescue_req_id INTEGER,
+        completed_by_rescuer_id INTEGER,
+        evidence_url TEXT,
+        completion_time DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS operation_history (
         id TEXT PRIMARY KEY,
@@ -484,6 +501,24 @@ wss.on('connection', (ws) => {
 });
 
 const broadcast = (type, data, room = null) => socketManager.broadcast(type, data, room);
+
+const broadcastToAdminAndTarget = async (type, data, targetUserIdOrDeviceId = null) => {
+    // 1. Always broadcast to the Admin dashboard room
+    broadcast(type, data, 'admin');
+    
+    // 2. Safely target the specific rescuer if provided
+    if (targetUserIdOrDeviceId) {
+        if (typeof targetUserIdOrDeviceId === 'number' || !isNaN(Number(targetUserIdOrDeviceId))) {
+            const user = await get('SELECT device_id FROM users WHERE id = ?', [Number(targetUserIdOrDeviceId)]);
+            if (user && user.device_id) {
+                socketManager.send(user.device_id, type, data);
+            }
+        } else {
+            // It's already a device ID string
+            socketManager.send(targetUserIdOrDeviceId, type, data);
+        }
+    }
+};
 
 const logCommand = async (action, actor, target, details) => {
     try {
@@ -876,36 +911,23 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
         }
         const personalReqs = await all(personalReqQuery, reqParams);
 
-        // Group & Personal Commands — match by phone OR device_id (both 10-digit normalized)
-        const cleanPhone = (user.phone || '').replace(/\D/g, '').slice(-10);
+        // Group & Personal Commands — match STRICTLY
         const cleanDeviceId = (user.device_id || '').trim();
+        const userPhone = (user.phone || '').trim();
 
-        // Build WHERE clauses for phone/device matching
-        let phoneOrDeviceClauses = [];
         let params = [];
-        if (cleanPhone) {
-            phoneOrDeviceClauses.push(`REPLACE(REPLACE(cq.target_phone, '+', ''), ' ', '') LIKE ?`);
-            params.push(`%${cleanPhone}%`);
-        }
-        if (cleanDeviceId) {
-            phoneOrDeviceClauses.push(`cq.target_phone = ?`);
-            params.push(cleanDeviceId);
-        }
-        
-        // Match commands that might contain the rescue request IDs assigned to this user
-        const userReqs = await all(`SELECT id FROM rescue_requests WHERE assigned_user_id = ?`, [userId]);
-        userReqs.forEach(r => {
-            phoneOrDeviceClauses.push(`cq.command_payload LIKE ?`);
-            params.push(`%"rescue_req_id":${r.id}%`);
-            phoneOrDeviceClauses.push(`cq.command_payload LIKE ?`);
-            params.push(`%"rescue_req_id":"${r.id}"%`);
-        });
-
-        const matchClause = phoneOrDeviceClauses.length > 0 ? `(${phoneOrDeviceClauses.join(' OR ')})` : '1=0';
-
-        let commandQuery = `SELECT 'command' as source, cq.id, cq.command_type as type, 'HQ Order' as sector, cq.status, cq.created_at, cq.updated_at, cq.command_payload, cq.priority, cq.completion_image_url 
-                           FROM command_queue cq
-                           WHERE (${matchClause})`;
+        let commandQuery = `
+            SELECT 'command' as source, cq.id, cq.command_type as type, 'HQ Order' as sector, 
+                   cq.status, cq.created_at, cq.updated_at, cq.command_payload, cq.priority, cq.completion_image_url 
+            FROM command_queue cq
+            LEFT JOIN rescue_requests rr ON cq.command_payload LIKE '%"rescue_req_id":' || rr.id || '%' OR cq.command_payload LIKE '%"rescue_req_id":"' || rr.id || '"%'
+            WHERE (
+                (rr.assigned_user_id IS NOT NULL AND rr.assigned_user_id = ?) 
+                OR cq.target_phone = ?
+                OR (cq.target_phone = ? AND cq.target_phone != '')
+            )
+        `;
+        params.push(userId, cleanDeviceId, userPhone);
 
         if (groupIds.length > 0) {
             commandQuery += ` OR (cq.group_id IN (${groupIds.map(() => '?').join(',')}))`;
@@ -1233,32 +1255,57 @@ app.post('/api/sync', async (req, res) => {
     if (sosAlert) {
         const details = JSON.stringify(sosAlert.details || {});
         const isPriority = sosAlert.isPriority || 0;
-        db.run(`INSERT INTO sos_alerts (device_id, phone, lat, lng, details, is_priority) VALUES (?, ?, ?, ?, ?, ?)`,
-            [effectiveDeviceId, phone || (user ? user.phone : null), sosAlert.lat, sosAlert.lng, details, isPriority], async function (err) {
-                if (!err) {
-                    const alertData = { id: this.lastID, deviceId: effectiveDeviceId, lat: sosAlert.lat, lng: sosAlert.lng, details: sosAlert.details, is_priority: isPriority };
-                    broadcast('SOS_ALERT', alertData);
-                    await logCommand('SOS_RECEIVED', effectiveDeviceId, 'Command Center', alertData);
-                    triggerBackup();
+        
+        // Prevent duplicate SOS entry for the same device_id/phone if there is already an active SOS
+        const activeSosReq = await get(`SELECT id FROM rescue_requests WHERE device_id = ? AND status NOT IN ('completed', 'resolved', 'cancelled', 'finished') AND type = 'sos'`, [effectiveDeviceId]);
+        
+        if (activeSosReq) {
+            // Update existing active SOS instead of duplicating
+            await run(`UPDATE rescue_requests SET lat = ?, lng = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [sosAlert.lat, sosAlert.lng, activeSosReq.id]);
+            
+            // Also update the UI with the latest coords via an update event
+            const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [activeSosReq.id]);
+            broadcastToAdminAndTarget('RESCUE_REQUEST_UPDATE', reqData, reqData.assigned_user_id);
+            
+            // Log update
+            await logCommand('SOS_UPDATED', effectiveDeviceId, 'Command Center', { reqId: activeSosReq.id, lat: sosAlert.lat, lng: sosAlert.lng });
+        } else {
+            db.run(`INSERT INTO sos_alerts (device_id, phone, lat, lng, details, is_priority) VALUES (?, ?, ?, ?, ?, ?)`,
+                [effectiveDeviceId, phone || (user ? user.phone : null), sosAlert.lat, sosAlert.lng, details, isPriority], async function (err) {
+                    if (!err) {
+                        const alertData = { 
+                            id: this.lastID, 
+                            deviceId: effectiveDeviceId, 
+                            phone: phone || (user ? user.phone : null),
+                            name: sosAlert.name || (user ? user.name : 'Citizen'),
+                            lat: sosAlert.lat, 
+                            lng: sosAlert.lng, 
+                            details: sosAlert.details, 
+                            is_priority: isPriority 
+                        };
+                        broadcast('SOS_ALERT', alertData, 'admin');
+                        await logCommand('SOS_RECEIVED', effectiveDeviceId, 'Command Center', alertData);
+                        triggerBackup();
 
-                    // Insert into rescue_requests to trigger AI auto-assignment
-                    const reqDetails = JSON.stringify({ source: 'public_app', isPriority: isPriority, ...sosAlert.details });
-                    db.run(`INSERT INTO rescue_requests (device_id, phone, type, lat, lng, details, urgency) VALUES (?, ?, 'sos', ?, ?, ?, ?)`, 
-                        [effectiveDeviceId, phone || (user ? user.phone : null), sosAlert.lat, sosAlert.lng, reqDetails, isPriority ? 'critical' : 'high'], async function (err2) {
-                            if (!err2) {
-                                const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [this.lastID]);
-                                broadcast('NEW_RESCUE_REQUEST', reqData);
-                            }
-                        });
+                        // Insert into rescue_requests to trigger AI auto-assignment
+                        const reqDetails = JSON.stringify({ source: 'public_app', isPriority: isPriority, ...sosAlert.details });
+                        db.run(`INSERT INTO rescue_requests (device_id, phone, name, type, lat, lng, details, urgency) VALUES (?, ?, ?, 'sos', ?, ?, ?, ?)`, 
+                            [effectiveDeviceId, phone || (user ? user.phone : null), sosAlert.name || (user ? user.name : 'Citizen'), sosAlert.lat, sosAlert.lng, reqDetails, isPriority ? 'critical' : 'high'], async function (err2) {
+                                if (!err2) {
+                                    const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [this.lastID]);
+                                    broadcast('NEW_RESCUE_REQUEST', reqData, 'admin');
+                                }
+                            });
 
-                    // Notify public user
-                    const msg = isPriority
-                        ? 'Your priority SOS request is received. A rescue team has been dispatched to your location.'
-                        : 'Your SOS request is received. Our rescue team will reach you shortly. Please stay calm.';
-                    await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
-                        [effectiveDeviceId, 'sos_ack', msg, 0]);
-                }
-            });
+                        // Notify public user
+                        const msg = isPriority
+                            ? 'Your priority SOS request is received. A rescue team has been dispatched to your location.'
+                            : 'Your SOS request is received. Our rescue team will reach you shortly. Please stay calm.';
+                        await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
+                            [effectiveDeviceId, 'sos_ack', msg, 0]);
+                    }
+                });
+        }
     }
 
     // Return pending commands + notifications
@@ -1297,7 +1344,11 @@ app.post('/api/sync', async (req, res) => {
         if (cPhone && cleanInputPhone && cPhone === cleanInputPhone) return true;
         if (cPhone && cleanDeviceId && cPhone === cleanDeviceId) return true;
         if (c.target_phone && c.target_phone === effectiveDeviceId) return true;
-        if (!c.target_phone && (!c.group_id || userGroupIds.includes(c.group_id))) return true;
+        if (c.target_phone && user && c.target_phone === user.id.toString()) return true; // Fix ID targeting
+        
+        // Only return true if a valid group_id matches. Don't broadcast to all if both target_phone and group_id are null.
+        if (!c.target_phone && c.group_id && userGroupIds.includes(c.group_id)) return true;
+        
         return false;
     });
 
@@ -1345,9 +1396,11 @@ app.get('/api/rescue-requests', async (req, res) => {
     try {
         let query = `
             SELECT rr.*, 
-                   u_assigned.name as assigned_officer_name,
+                   COALESCE(u_completed.name, u_assigned.name) as assigned_officer_name,
                    g_assigned.group_name as assigned_group_name
             FROM rescue_requests rr
+            LEFT JOIN sos_completion_log scl ON rr.id = scl.rescue_req_id
+            LEFT JOIN users u_completed ON scl.completed_by_rescuer_id = u_completed.id
             LEFT JOIN users u_assigned ON rr.assigned_user_id = u_assigned.id
             LEFT JOIN groups g_assigned ON rr.assigned_group_id = g_assigned.id
         `;
@@ -1454,7 +1507,7 @@ app.post('/api/rescue-requests', async (req, res) => {
         const result = await run(`INSERT INTO rescue_requests (device_id, phone, type, lat, lng, details, urgency, priority, sector, image_url, audio_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [device_id, phone, type || 'pregnancy', lat, lng, details, urgency || 'high', priority || 'normal', sector || 'Unknown Zone', imageUrl, audioUrl]);
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [result.lastID]);
-        broadcast('NEW_RESCUE_REQUEST', reqData);
+        broadcast('NEW_RESCUE_REQUEST', reqData, 'admin');
         await logCommand('RESCUE_REQUEST_CREATED', phone || device_id, 'Command Center', reqData);
 
         // Notify the user
@@ -1465,6 +1518,7 @@ app.post('/api/rescue-requests', async (req, res) => {
         runAIAssignment();
 
         triggerBackup();
+        reqData.buffer_minutes = bufferMinutes;
         res.json(reqData);
 
         // Trigger AI auto-assignment
@@ -1530,8 +1584,19 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
             details: reqData.details || ''
         });
 
-        await run(`INSERT INTO command_queue (group_id, target_phone, command_type, command_payload, status, priority) VALUES (?, ?, ?, ?, 'assigned', ?)`,
-            [assigned_group_id || null, assignedPhone || assignedDeviceId || null, commandType, cmdPayload, commandType]);
+        const existingManualCommand = await get(`SELECT * FROM command_queue WHERE json_extract(command_payload, '$.rescue_req_id') = ?`, [reqData.id]);
+        
+        let targetCmdId = null;
+        if (existingManualCommand) {
+            await run(`UPDATE command_queue SET group_id = ?, target_phone = ?, command_payload = ?, status = 'assigned', priority = ?, assigned_by = 'Admin', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                [assigned_group_id || null, assignedPhone || assignedDeviceId || null, cmdPayload, commandType, existingManualCommand.id]);
+            targetCmdId = existingManualCommand.id;
+        } else {
+            await run(`INSERT INTO command_queue (group_id, target_phone, command_type, command_payload, status, priority, assigned_by) VALUES (?, ?, ?, ?, 'assigned', ?, 'Admin')`,
+                [assigned_group_id || null, assignedPhone || assignedDeviceId || null, commandType, cmdPayload, commandType]);
+            const newRow = await get('SELECT last_insert_rowid() as id');
+            targetCmdId = newRow ? newRow.id : null;
+        }
 
         // Notify the original requester
         if (reqData.device_id) {
@@ -1539,10 +1604,13 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
                 [reqData.device_id, 'rescue_dispatched', `Update: ${assignedName} has been assigned to your request. Stay safe!`, 0]);
         }
 
-        broadcast('RESCUE_REQUEST_ACCEPTED', { ...reqData, assignedName, assigned_phone: assignedPhone, priority: commandType });
+        broadcastToAdminAndTarget('RESCUE_REQUEST_UPDATE', { ...reqData, assignedName, assigned_phone: assignedPhone, priority: commandType }, targetUserId || targetDeviceId);
         
         // Fetch the full command object to broadcast to the rescuer
-        const cmdData = await get(`SELECT * FROM command_queue WHERE id = (SELECT last_insert_rowid())`);
+        if (targetCmdId) {
+            const cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [targetCmdId]);
+            broadcast('NEW_COMMAND', cmdData);
+        }
         if (cmdData) {
             broadcast('NEW_COMMAND', cmdData);
         }
@@ -1571,7 +1639,7 @@ app.put('/api/rescue-requests/:id/decline', async (req, res) => {
         await run(`UPDATE rescue_requests SET status = 'pending', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, req.params.id]);
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
 
-        broadcast('RESCUE_REQUEST_DECLINED_REASSIGN', reqData);
+        broadcastToAdminAndTarget('RESCUE_REQUEST_DECLINED_REASSIGN', reqData, reqData.assigned_user_id);
         await logCommand('RESCUE_REQUEST_DECLINED', 'Commander', `Request ID: ${req.params.id}`, {});
         triggerBackup();
         res.json({ message: 'Request declined' });
@@ -1637,7 +1705,7 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
         }
 
         reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
-        if (reqData) broadcast('RESCUE_REQUEST_UPDATE', reqData);
+        if (reqData) broadcastToAdminAndTarget('RESCUE_REQUEST_UPDATE', reqData, reqData.assigned_user_id);
 
         if (finalStatus === 'completed' && reqData) {
             // Dismiss pending new_task notification for this request ID
@@ -1661,13 +1729,13 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
                 await logCommand('ZONE_DISSOLVED', 'System', reqData.sector, {});
             }
 
-            broadcast('RESCUE_REQUEST_COMPLETED', reqData);
+            broadcastToAdminAndTarget('RESCUE_REQUEST_COMPLETED', reqData, reqData.assigned_user_id);
             await logCommand('RESCUE_STATUS_UPDATE', rescuer_phone || 'Rescuer', `Request ID: ${req.params.id}`, { status: 'completed' });
         } else if (finalStatus === 'in_progress' && status === 'completed') {
-            broadcast('RESCUE_REQUEST_IN_PROGRESS', reqData);
+            broadcastToAdminAndTarget('RESCUE_REQUEST_IN_PROGRESS', reqData, reqData.assigned_user_id);
             await logCommand('RESCUE_STATUS_UPDATE', rescuer_phone || 'Rescuer', `Request ID: ${req.params.id}`, { status: 'rescuer_completed_waiting' });
         } else {
-            broadcast('RESCUE_REQUEST_' + finalStatus.toUpperCase(), reqData);
+            broadcastToAdminAndTarget('RESCUE_REQUEST_' + finalStatus.toUpperCase(), reqData, reqData.assigned_user_id);
             await logCommand('RESCUE_STATUS_UPDATE', rescuer_phone || 'Rescuer', `Request ID: ${req.params.id}`, { status: finalStatus });
         }
 
@@ -1686,7 +1754,7 @@ app.put('/api/rescue-requests/:id/location', async (req, res) => {
     try {
         await run(`UPDATE rescue_requests SET lat = ?, lng = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [lat, lng, req.params.id]);
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
-        broadcast('RESCUE_REQUEST_LOCATION_UPDATED', reqData);
+        broadcastToAdminAndTarget('RESCUE_REQUEST_LOCATION_UPDATED', reqData, reqData.assigned_user_id);
         await logCommand('RESCUE_LOCATION_UPDATE', 'Admin', `Request ID: ${req.params.id}`, { lat, lng });
         triggerBackup();
         res.json(reqData);
@@ -1806,12 +1874,12 @@ app.post('/api/commands', async (req, res) => {
             }
             
             // Notify clients to refresh
-            broadcast('RESCUE_REQUESTS_UPDATED', { ids, status: 'assigned', group_id, target_user_id });
+            broadcastToAdminAndTarget('RESCUE_REQUESTS_UPDATED', { ids, status: 'assigned', group_id, target_user_id }, target_user_id);
         } else if (payloadObj && payloadObj.rescue_req_id) {
             const reqId = payloadObj.rescue_req_id;
             await run(`UPDATE rescue_requests SET status = 'assigned', assigned_group_id = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
                 [group_id || null, target_user_id || null, reqId]);
-            broadcast('RESCUE_REQUESTS_UPDATED', { ids: [reqId], status: 'assigned', group_id, target_user_id });
+            broadcastToAdminAndTarget('RESCUE_REQUESTS_UPDATED', { ids: [reqId], status: 'assigned', group_id, target_user_id }, target_user_id);
         }
 
         triggerBackup();
@@ -1956,8 +2024,16 @@ app.put('/api/commands/:id/status', async (req, res) => {
                             }
                         }
                     }
+                    
+                    // AUDIT TRAIL LOGGING
+                    if (rescuer) {
+                        await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, ?)`, [payload.rescue_req_id, rescuer.id, status]);
+                        if (status === 'completed') {
+                            await run(`INSERT INTO sos_completion_log (rescue_req_id, completed_by_rescuer_id, evidence_url) VALUES (?, ?, ?)`, [payload.rescue_req_id, rescuer.id, compImageUrl || null]);
+                        }
+                    }
                     const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [payload.rescue_req_id]);
-                    if (reqData) broadcast(broadcastEvent, reqData);
+                    if (reqData) broadcastToAdminAndTarget(broadcastEvent, reqData, reqData.assigned_user_id);
                 }
                 // Case 2: Grouped rescue requests
                 if (payload.request_ids && Array.isArray(payload.request_ids) && payload.request_ids.length > 0) {
@@ -1998,7 +2074,7 @@ app.put('/api/commands/:id/status', async (req, res) => {
                     }
                     for (const id of ids) {
                         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [id]);
-                        if (reqData) broadcast(broadcastEvent, reqData);
+                        if (reqData) broadcastToAdminAndTarget(broadcastEvent, reqData, reqData.assigned_user_id);
                     }
                 }
             }
@@ -2275,6 +2351,33 @@ async function runAIAssignment() {
         if (unit === 'Minutes') bufferSecs = val * 60;
         if (unit === 'Hours') bufferSecs = val * 3600;
 
+        // ─── TIMEOUT LOGIC (Rescuer Ignored SOS) ──────────────────────────────────
+        const timeoutSeconds = 10; // Configurable timeout for rescuer response
+        const timedOutCommands = await all(`
+            SELECT cq.*, rr.id as req_id, rr.details as req_details
+            FROM command_queue cq
+            JOIN rescue_requests rr ON cq.command_payload LIKE '%"rescue_req_id":' || rr.id || '%' OR cq.command_payload LIKE '%"rescue_req_id":"' || rr.id || '"%'
+            WHERE cq.status = 'assigned' AND cq.assigned_by = 'AI'
+            AND (strftime('%s', 'now') - strftime('%s', cq.updated_at)) >= ?
+            AND rr.status = 'assigned'
+        `, [timeoutSeconds]);
+
+        for (const cmd of timedOutCommands) {
+            const rescuerPhone = cmd.target_phone;
+            const rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ?`, [rescuerPhone, rescuerPhone]);
+            const rescuerId = rescuer ? rescuer.id : 'Unknown';
+            const descAppend = `\n[Ignored by Rescuer ID: ${rescuerId}]`;
+            
+            // Ensure we don't append it repeatedly
+            if (!(cmd.req_details || '').includes(`[Ignored by Rescuer ID: ${rescuerId}]`)) {
+                await run(`UPDATE rescue_requests SET status = 'pending', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, cmd.req_id]);
+                await run(`UPDATE command_queue SET status = 'ignored', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [cmd.id]);
+                broadcastToAdminAndTarget('RESCUE_REQUEST_IGNORED_REASSIGN', { rescue_req_id: cmd.req_id, rescuerId, message: `Rescuer ignored assignment (Timeout). AI is finding next eligible unit.` }, rescuerId);
+                await logCommand('AI_TIMEOUT_REASSIGN', 'System Engine', `Task ${cmd.id} ignored by ${rescuerId}`, { reqId: cmd.req_id });
+            }
+        }
+        // ──────────────────────────────────────────────────────────────────────────
+
         // Fetch only pending requests that have existed longer than the buffer duration
         const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE status = 'pending' AND (strftime('%s', 'now') - strftime('%s', created_at)) >= ?`, [bufferSecs]);
         if (pendingRequests.length === 0) return;
@@ -2287,7 +2390,7 @@ async function runAIAssignment() {
         const locations = await all(`SELECT * FROM rescuer_locations`);
 
         // Check for busy rescuers (those with ongoing or incomplete tasks)
-        const activeTasks = await all(`SELECT assigned_user_id FROM rescue_requests WHERE status NOT IN ('completed', 'declined', 'finished') AND assigned_user_id IS NOT NULL`);
+        const activeTasks = await all(`SELECT assigned_user_id FROM rescue_requests WHERE status NOT IN ('completed', 'declined', 'finished', 'ignored') AND assigned_user_id IS NOT NULL`);
         const busyUserIds = new Set(activeTasks.map(t => t.assigned_user_id));
 
         for (const req of pendingRequests) {
@@ -2299,8 +2402,8 @@ async function runAIAssignment() {
                 // 1. Skip if rescuer already has an ongoing or incomplete assignment
                 if (busyUserIds.has(user.id)) continue;
 
-                // 1.5. Skip if rescuer has already declined this task
-                if (req.details && req.details.includes(`[Declined by Rescuer ID: ${user.id}]`)) continue;
+                // 1.5. Skip if rescuer has already declined or ignored this task
+                if (req.details && (req.details.includes(`[Declined by Rescuer ID: ${user.id}]`) || req.details.includes(`[Ignored by Rescuer ID: ${user.id}]`))) continue;
 
                 // 2. Find location (Prioritize logged-in/available rescuers)
                 const loc = locations.find(l => l.device_id === user.device_id || l.device_id === user.phone);
@@ -2319,9 +2422,9 @@ async function runAIAssignment() {
                 }
             }
 
-            if (!bestUser && req.details && req.details.includes('[Declined by Rescuer ID:')) {
+            if (!bestUser && req.details && (req.details.includes('[Declined by Rescuer ID:') || req.details.includes('[Ignored by Rescuer ID:'))) {
                 // All available AI rescuers declined this task! Alert the Admin Web
-                broadcast('RESCUER_DECLINED_LAST', req);
+                broadcastToAdminAndTarget('RESCUER_DECLINED_LAST', req, req.assigned_user_id);
             }
             if (bestUser) {
                 // Execution: Assign to the nearest eligible rescuer
@@ -2365,8 +2468,25 @@ async function runAIAssignment() {
                     assigned_by: 'AI'
                 });
 
-                await run(`INSERT INTO command_queue (target_phone, command_type, command_payload, status, priority, assigned_by) VALUES (?, ?, ?, 'assigned', ?, 'AI')`,
-                    [assignedPhone, commandType, cmdPayload, commandType]);
+                // ─── DUPLICATE PREVENTION: UPSERT COMMAND QUEUE ───────────────────
+                // Check if there is an existing command for this request using LIKE for robust cross-type matching
+                const existingCommand = await get(`SELECT * FROM command_queue WHERE command_payload LIKE ?`, [`%"rescue_req_id":${req.id}%`]);
+                
+                if (existingCommand) {
+                    await run(`UPDATE command_queue SET target_phone = ?, command_payload = ?, status = 'assigned', priority = ?, assigned_by = 'AI', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                        [assignedPhone, cmdPayload, commandType, existingCommand.id]);
+                    const updatedCmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [existingCommand.id]);
+                    broadcastToAdminAndTarget('NEW_COMMAND', updatedCmdData, bestUser.device_id); // Target specifically
+                } else {
+                    await run(`INSERT INTO command_queue (target_phone, command_type, command_payload, status, priority, assigned_by) VALUES (?, ?, ?, 'assigned', ?, 'AI')`,
+                        [assignedPhone, commandType, cmdPayload, commandType]);
+                    const newCmdId = await get('SELECT last_insert_rowid() as id');
+                    if (newCmdId) {
+                        const newCmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [newCmdId.id]);
+                        broadcastToAdminAndTarget('NEW_COMMAND', newCmdData, bestUser.device_id);
+                    }
+                }
+                // ───────────────────────────────────────────────────────────────
 
                 // Notify public user
                 if (req.device_id) {
@@ -2378,8 +2498,7 @@ async function runAIAssignment() {
                 await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
                     [assignedPhone, 'new_task', `AI Engine assigned a new ${safeTypeStr} task to you. Distance: ${shortestDistance === Infinity ? 'Unknown' : shortestDistance.toFixed(1) + ' km'}.`, 1]);
 
-                broadcast('RESCUE_REQUEST_ACCEPTED', { ...req, assignedName, priority: commandType });
-                broadcast('AI_ASSIGNED', { message: `Task ID #${req.id} auto-assigned by AI to ${assignedName}`, rescue_req_id: req.id, assignedName });
+                broadcastToAdminAndTarget('AI_ASSIGNED', { message: `Task ID #${req.id} auto-assigned by AI to ${assignedName}`, rescue_req_id: req.id, assignedName }, bestUser.device_id);
                 await logCommand('AI_AUTO_ASSIGNED', 'System Engine', `Request ID: ${req.id}`, { assigned_user_id: assignedUserId, distance_km: shortestDistance === Infinity ? 'unknown' : shortestDistance.toFixed(2) });
             }
         }

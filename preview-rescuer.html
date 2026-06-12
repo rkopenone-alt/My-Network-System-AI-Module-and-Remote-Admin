@@ -1397,8 +1397,10 @@
                 this.WS_URL = `ws://${ip}:3001`;
                 this.updateLogos();
 
-                // Reconnect Websocket
-                this.connectWS();
+                // Only reconnect WebSocket dynamically if already logged in
+                if (this.user) {
+                    this.connectWS();
+                }
 
                 // Sync UI Inputs
                 const inpIp = document.getElementById('inpIp');
@@ -1424,8 +1426,10 @@
                         this.WS_URL = `ws://${val}:3001`;
                         this.updateLogos();
                         
-                        // Reconnect WebSocket dynamically
-                        this.connectWS();
+                        // Only reconnect WebSocket dynamically if already logged in
+                        if (this.user) {
+                            this.connectWS();
+                        }
                         
                         // Sync inputs
                         const inpIp = document.getElementById('inpIp');
@@ -2702,6 +2706,7 @@
                 const isTargeted = c.target_phone && (
                     c.target_phone === myPhone ||
                     c.target_phone === myDeviceId ||
+                    c.target_phone === String(this.user?.id) ||
                     (myPhoneClean && tpClean && tpClean === myPhoneClean)
                 );
                 const isGroupTargeted = (c.group_id && myGroups.includes(Number(c.group_id)));
@@ -2765,9 +2770,11 @@
                     </div>
                 `;
                 document.body.appendChild(modal);
+                if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: \'PLAY_SOUND\', sound: \'siren_loop\'}));
             },
 
             async acceptCommandFromModal(id, lat, lng) {
+                if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: \'STOP_SOUND\'}));
                 this.toast('ACCEPTING TASK...', '⏳');
                 try {
                     await fetch(`${this.API}/commands/${id}/status`, {
@@ -2805,6 +2812,7 @@
             },
 
             async declineCommandFromModal(id) {
+                if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: \'STOP_SOUND\'}));
                 this.toast('DECLINING TASK...', '⏳');
                 try {
                     await fetch(`${this.API}/commands/${id}/status`, {

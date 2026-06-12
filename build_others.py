@@ -25,5 +25,5 @@ def build_app(app_name, output_name):
     else:
         print(f"Failed to build {app_name}")
 
-build_app("public-sos-app", "Public_SOS_App_Rescue_AI.apk")
 build_app("rescuer-app", "Rescuer_App_Rescue_AI.apk")
+build_app("admin-app", "Admin_App_Rescue.apk")
