@@ -149,7 +149,9 @@ export default function App() {
   // Periodic health check
   useEffect(() => {
     const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
-    const cleanIp = serverIp ? serverIp.trim() : '';
+    let cleanIp = serverIp ? serverIp.trim() : '';
+    if (cleanIp.startsWith('http://')) cleanIp = cleanIp.replace('http://', '');
+    if (cleanIp.startsWith('https://')) cleanIp = cleanIp.replace('https://', '');
     if (!cleanIp || !ipRegex.test(cleanIp)) {
       setIsConnected(false);
       return;
@@ -209,7 +211,7 @@ export default function App() {
         window.__API_BASE__ = 'http://${serverIp}:${SERVER_PORT}/api';
         window.__WS_URL__ = 'ws://${serverIp}:${SERVER_PORT}';
         localStorage.setItem('manualServerIp', '${serverIp}');
-        window.location.reload();
+        // window.location.reload();
         true;
       `;
       webViewRef.current.injectJavaScript(code);

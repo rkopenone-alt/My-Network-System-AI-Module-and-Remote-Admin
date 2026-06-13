@@ -376,6 +376,40 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
   const audioRecordingRef = useRef(null);
   const audioTimerRef = useRef(null);
 
+  const stopRecording = async (cancel = false) => {
+    setIsProcessingAudio(true);
+    if (audioTimerRef.current) {
+      clearInterval(audioTimerRef.current);
+      audioTimerRef.current = null;
+    }
+    if (audioRecordingRef.current) {
+      try {
+        await audioRecordingRef.current.stopAndUnloadAsync();
+        if (!cancel) {
+          const uri = audioRecordingRef.current.getURI();
+          const base64Str = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+          setAudioBase64(`data:audio/m4a;base64,${base64Str}`);
+          setAttachments(prev => ({ ...prev, voice: true }));
+          Alert.alert('Success', 'Voice note recorded and attached successfully!');
+        } else {
+          setAudioBase64(null);
+          setAttachments(prev => ({ ...prev, voice: false }));
+        }
+      } catch (e) {
+        console.error(e);
+        if (!cancel) Alert.alert('Error', 'Failed to save recording');
+      }
+      audioRecordingRef.current = null;
+    }
+    setIsRecordingUI(false);
+    setIsProcessingAudio(false);
+  };
+
+
+  
+
+  
+
   const cameraPulse = useRef(new Animated.Value(1)).current;
   const micPulse = useRef(new Animated.Value(1)).current;
 
@@ -556,6 +590,13 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.white }}>
       <StatusBar barStyle="dark-content" backgroundColor={C.white} />
+      <RecordingModal 
+        isRecording={isRecordingUI} 
+        recordSeconds={recordSeconds} 
+        isProcessing={isProcessingAudio} 
+        onStop={() => stopRecording(false)} 
+        onCancel={() => stopRecording(true)} 
+      />
 
       {/* Header */}
       <View style={[s.header, { paddingVertical: 12, paddingHorizontal: 16 }]}>
@@ -904,14 +945,6 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
-      <RecordingModal 
-        isRecording={isRecordingUI} 
-        recordSeconds={recordSeconds} 
-        isProcessing={isProcessingAudio} 
-        onStop={() => stopRecording(false)} 
-        onCancel={() => stopRecording(true)} 
-      />
-
       <View style={s.header}>
         <TouchableOpacity onPress={onBack}><Text style={{ fontSize: 22 }}>←</Text></TouchableOpacity>
         <Text style={s.headerTitle}>Final SOS Page</Text>
@@ -1238,6 +1271,40 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
   const [isProcessingAudio, setIsProcessingAudio] = useState(false);
   const audioRecordingRef = useRef(null);
   const audioTimerRef = useRef(null);
+
+  const stopRecording = async (cancel = false) => {
+    setIsProcessingAudio(true);
+    if (audioTimerRef.current) {
+      clearInterval(audioTimerRef.current);
+      audioTimerRef.current = null;
+    }
+    if (audioRecordingRef.current) {
+      try {
+        await audioRecordingRef.current.stopAndUnloadAsync();
+        if (!cancel) {
+          const uri = audioRecordingRef.current.getURI();
+          const base64Str = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+          setAudioBase64(`data:audio/m4a;base64,${base64Str}`);
+          setAttachments(prev => ({ ...prev, voice: true }));
+          Alert.alert('Success', 'Voice note recorded and attached successfully!');
+        } else {
+          setAudioBase64(null);
+          setAttachments(prev => ({ ...prev, voice: false }));
+        }
+      } catch (e) {
+        console.error(e);
+        if (!cancel) Alert.alert('Error', 'Failed to save recording');
+      }
+      audioRecordingRef.current = null;
+    }
+    setIsRecordingUI(false);
+    setIsProcessingAudio(false);
+  };
+
+
+  
+
+  
 
   const isMounted = useRef(true);
   const toastTimerRef = useRef(null);
@@ -1705,7 +1772,9 @@ export default function App() {
   // Periodic health check
   useEffect(() => {
     const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
-    const cleanIp = serverIp ? serverIp.trim() : '';
+    let cleanIp = serverIp ? serverIp.trim() : '';
+    if (cleanIp.startsWith('http://')) cleanIp = cleanIp.replace('http://', '');
+    if (cleanIp.startsWith('https://')) cleanIp = cleanIp.replace('https://', '');
     if (!cleanIp || !ipRegex.test(cleanIp)) {
       setIsConnected(false);
       return;
