@@ -24,15 +24,20 @@ const offlineWrapperScript = `
         window.offlineQueue = [];
         saveQueue();
 
+        let syncedCount = 0;
         for (const item of queueToProcess) {
             try {
                 await originalFetch(item.url, item.options);
                 console.log('[Offline Sync] Synced:', item.url);
+                syncedCount++;
             } catch (e) {
                 console.error('[Offline Sync] Failed to sync, requeueing:', item.url);
                 window.offlineQueue.push(item);
                 saveQueue();
             }
+        }
+        if (syncedCount > 0 && window.ReactNativeWebView) {
+             window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'OFFLINE_SYNCED', count: syncedCount }));
         }
     }
 
@@ -48,6 +53,9 @@ const offlineWrapperScript = `
                 console.warn('[Offline Sync] Network failed. Queuing request:', url);
                 window.offlineQueue.push({ url, options });
                 saveQueue();
+                if (window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'OFFLINE_QUEUED', length: window.offlineQueue.length }));
+                }
                 // Return a mock successful response so the UI doesn't break
                 return new Response(JSON.stringify({ success: true, queued: true }), {
                     status: 200,

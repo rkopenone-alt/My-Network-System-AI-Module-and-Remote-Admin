@@ -565,6 +565,16 @@ export default function App() {
               }
             }
 
+            if (data.type === 'OFFLINE_QUEUED') {
+              Alert.alert('Offline Mode', `Request queued. Total queued: ${data.length}`);
+              return;
+            }
+
+            if (data.type === 'OFFLINE_SYNCED') {
+              Alert.alert('Sync Complete', `Successfully synced ${data.count} tasks to the server.`);
+              return;
+            }
+
             if (data.type === 'DOWNLOAD_PDF' && data.base64) {
               const filename = data.filename || 'Mission_History.pdf';
               const fileUri = FileSystem.documentDirectory + filename;
