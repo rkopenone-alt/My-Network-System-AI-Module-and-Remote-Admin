@@ -1,16 +1,16 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-13
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 13/6/2026, 11:11:22 pm
+Generated At: , 14/6/2026, 2:13:44 am
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
-87,sos,normal,assigned,12.9943866,80.1956476,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Sarah Khan (MEM-02),2026-06-13 17:41:07,2026-06-13 17:41:21,DESKTOP-KBHB0SB
+87,sos,normal,completed,12.9943866,80.1956476,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Sarah Khan (MEM-02),2026-06-13 17:41:07,2026-06-13 19:54:24,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES
 Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
-79,N/A,919000000002,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943866,""lng"":80.1956476,""urgency"":""normal"",""rescue_req_id"":87,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}"",""assigned_by"":""AI""}",Normal,assigned,2026-06-13 17:41:21,,DESKTOP-KBHB0SB
+79,N/A,919000000002,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943866,""lng"":80.1956476,""urgency"":""normal"",""rescue_req_id"":87,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}"",""assigned_by"":""AI""}",Normal,completed,2026-06-13 17:41:21,,DESKTOP-KBHB0SB
 
 
 SECTION 3: PUBLIC SOS ALERTS

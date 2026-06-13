@@ -62,6 +62,21 @@ const setServerIpAddress = (ip) => {
   WS_URL = `ws://${ip}:3001`;
 };
 
+
+const getParsedUrls = (ip) => {
+  let clean = ip ? ip.trim() : '';
+  if (!clean) return { valid: false };
+  let hasProtocol = clean.startsWith('http://') || clean.startsWith('https://');
+  let hasPort = clean.split(':').length > (hasProtocol ? 2 : 1);
+  let httpUrl = clean;
+  if (!hasProtocol) {
+    httpUrl = 'http://' + clean;
+    if (!hasPort) httpUrl += ':3001';
+  }
+  let wsUrl = httpUrl.replace('http://', 'ws://').replace('https://', 'wss://');
+  return { valid: true, httpUrl, wsUrl };
+};
+
 const GlobalState = {
   sosLockedUntil: 0,
   setIsConnected: null,
@@ -237,7 +252,7 @@ function LoginScreen({ onLogin, serverIp, onIpChange }) {
     }
     
     const cleanIp = serverIp.trim();
-    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    const ipRegex = /^.+$/;
     if (!cleanIp || !ipRegex.test(cleanIp)) {
       Alert.alert('Required', 'Please enter a valid Server IP address (e.g. 192.168.1.15)');
       return;
@@ -766,7 +781,7 @@ function ProfileScreen({ user, onLogout, onIpChange }) {
                 style={[s.loginBtn, { width: 80, height: 44, marginTop: 0, padding: 0, justifyContent: 'center', shadowColor: C.primary }]}
                 onPress={async () => {
                   const cleanIp = ipAddress.trim();
-                  const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+                  const ipRegex = /^.+$/;
                   if (!cleanIp || !ipRegex.test(cleanIp)) {
                     Alert.alert("Error", "Please enter a valid IP address (e.g. 192.168.1.15)");
                     return;
@@ -1771,11 +1786,9 @@ export default function App() {
 
   // Periodic health check
   useEffect(() => {
-    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
-    let cleanIp = serverIp ? serverIp.trim() : '';
-    if (cleanIp.startsWith('http://')) cleanIp = cleanIp.replace('http://', '');
-    if (cleanIp.startsWith('https://')) cleanIp = cleanIp.replace('https://', '');
-    if (!cleanIp || !ipRegex.test(cleanIp)) {
+    const ipRegex = /^.+$/;
+    const parsed = getParsedUrls(serverIp);
+    if (!parsed.valid) {
       setIsConnected(false);
       return;
     }
