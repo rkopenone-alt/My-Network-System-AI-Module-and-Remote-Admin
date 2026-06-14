@@ -25,20 +25,6 @@ const SERVER_PORT = '3001';
 // ─────────────────────────────────────────────────────────────────────────────
 
 
-const getParsedUrls = (ip) => {
-  let clean = ip ? ip.trim() : '';
-  if (!clean) return { valid: false };
-  let hasProtocol = clean.startsWith('http://') || clean.startsWith('https://');
-  let hasPort = clean.split(':').length > (hasProtocol ? 2 : 1);
-  let httpUrl = clean;
-  if (!hasProtocol) {
-    httpUrl = 'http://' + clean;
-    if (!hasPort) httpUrl += ':3001';
-  }
-  let wsUrl = httpUrl.replace('http://', 'ws://').replace('https://', 'wss://');
-  return { valid: true, httpUrl, wsUrl };
-};
-
 const GlobalState = {
   setIsConnected: null,
   lastSuccessTime: 0,
@@ -163,19 +149,13 @@ export default function App() {
 
   // Periodic health check
   useEffect(() => {
-    const ipRegex = /^.+$/;
-    const parsed = getParsedUrls(serverIp);
-    if (!parsed.valid) {
-      setIsConnected(false);
-      return;
-    }
     const checkConnection = async () => {
       if (Date.now() - (GlobalState.lastSuccessTime || 0) < 10000) {
         setIsConnected(true);
         return;
       }
       try {
-        const res = await fetchWithTimeout(`${parsed.httpUrl}/api/health`, {}, 3000);
+        const res = await fetchWithTimeout(`http://${serverIp}:${SERVER_PORT}/api/health`, {}, 3000);
         if (res.ok) {
           setIsConnected(true);
         } else {
@@ -386,15 +366,13 @@ export default function App() {
     );
   }
 
-  const cleanBaseIp = (serverIp && serverIp.trim() !== '' && serverIp.trim() !== 'undefined') ? serverIp.trim() : '127.0.0.1';
-
-  return (
+    return (
     <View style={{ flex: 1 }}>
       {!isCameraActive && <NetworkStatusIndicator isConnected={isConnected} />}
       <WebView
         mediaPlaybackRequiresUserAction={false}
         ref={webViewRef}
-        source={{ html: htmlString, baseUrl: getParsedUrls(cleanBaseIp).httpUrl }}
+        source={{ html: htmlString, baseUrl: `http://127.0.0.1:${SERVER_PORT}` }}
         style={{ flex: 1 }}
         originWhitelist={['*']}
         javaScriptEnabled={true}
