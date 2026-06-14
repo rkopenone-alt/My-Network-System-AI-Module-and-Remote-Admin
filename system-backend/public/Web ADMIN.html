@@ -3502,10 +3502,18 @@
             }
         }
         let reconnectDelay = 1000;
+        let heartbeatInterval = null;
         function initWebSocket() {
             const wsUrl = `ws://${SERVER_IP}:3001`;
             console.log(`[Admin] Connecting to WebSocket: ${wsUrl}`);
             try {
+                if (socket) {
+                    socket.onclose = null;
+                    socket.onerror = null;
+                    socket.onmessage = null;
+                    socket.onopen = null;
+                    socket.close();
+                }
                 socket = new WebSocket(wsUrl);
 
                 socket.onopen = () => {
@@ -3514,6 +3522,16 @@
                     socket.send(JSON.stringify({ type: 'REGISTER', deviceId: 'WEB_ADMIN_MASTER', room: 'admin' }));
                     reconnectDelay = 1000; // reset delay on success
                     refreshAllModules(); // auto-sync on reconnect
+                    
+                    if (heartbeatInterval) clearInterval(heartbeatInterval);
+                    heartbeatInterval = setInterval(() => {
+                        if (socket && socket.readyState !== WebSocket.OPEN) {
+                            console.warn("[Admin] Heartbeat detected socket is not OPEN. Badge set to offline.");
+                            updateBadge(false);
+                        } else {
+                            try { socket.send(JSON.stringify({ type: 'PING' })); } catch(e) { updateBadge(false); }
+                        }
+                    }, 2000);
                 };
                 socket.onerror = () => {
                     updateBadge(false);
@@ -3521,6 +3539,7 @@
                 socket.onclose = () => {
                     console.log(`[Admin] WebSocket Closed. Reconnecting in ${reconnectDelay}ms...`);
                     updateBadge(false);
+                    if (heartbeatInterval) clearInterval(heartbeatInterval);
                     setTimeout(initWebSocket, reconnectDelay);
                     reconnectDelay = Math.min(reconnectDelay * 2, 30000); // Exponential backoff max 30s
                 };
@@ -5375,6 +5394,12 @@ function toggleGlobalMute(muted) {
                 } else if (r.assigned_group_id) {
                     assignedTo = `Group ${r.assigned_group_id}`;
                 }
+                
+                let declinedBy = '-';
+                let declinedMatches = (r.details || '').match(/\[Declined by Rescuer ID: (.*?)\]/g);
+                if (declinedMatches) {
+                    declinedBy = declinedMatches.map(m => m.replace(/\[Declined by Rescuer ID: |\]/g, '')).join(', ');
+                }
 
                 const displayId = `REQ-${r.id}`;
                 const formattedReqTime = formatLocalTime(r.created_at);
@@ -5403,6 +5428,7 @@ function toggleGlobalMute(muted) {
                     </td>
                     <td>${r.sector || 'N/A'}</td>
                     <td>${assignedTo}</td>
+                    <td style="color:#ef4444; font-weight:600; font-size:12px;">${declinedBy}</td>
                     <td style="color:var(--text-muted); font-size: 12px;">${formattedReqTime}</td>
                     <td style="color:var(--text-muted); font-size: 12px;">${formattedCmdTime}</td>
                     <td>
@@ -5440,6 +5466,7 @@ function toggleGlobalMute(muted) {
                 <th style="width: 100px;">TYPE</th>
                 <th style="width: 150px;">ZONE / AREA</th>
                 <th style="width: 150px;">ASSIGNED TO</th>
+                  <th style="width: 150px;">DECLINED BY</th>
                 <th style="width: 80px;">REQ</th>
                 <th style="width: 80px;">CMD</th>
                 <th style="width: 100px;">STATUS</th>

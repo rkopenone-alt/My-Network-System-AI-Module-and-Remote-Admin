@@ -1656,13 +1656,13 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
         let reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
 
         // Find the rescuer who is accepting or completing the task (robust match on phone/device_id)
-        const rPhone = rescuer_phone || cmdData.target_phone;
+        const rPhone = rescuer_phone;
         const cleanedPhone = (rPhone || '').replace(/\D/g, '').slice(-10);
         let rescuer = null;
         if (cleanedPhone) {
-            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rPhone, rPhone, rPhone, `%${cleanedPhone}`]);
+            rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rPhone, rPhone, rPhone, `%${cleanedPhone}`]);
         } else {
-            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
+            rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
         }
 
         if (status === 'completed') {
@@ -1685,14 +1685,14 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
             compImageUrl = saveCompletionImage(completion_image);
         }
 
+        const existingCommand = await get(`SELECT * FROM command_queue WHERE command_payload LIKE ? OR command_payload LIKE ?`, [`%"rescue_req_id":${req.params.id}%`, `%"rescue_req_id":"${req.params.id}"%`]);
+
         if (compImageUrl) {
             if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
                 await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, rescuer.id, req.params.id]);
             } else {
                 await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, req.params.id]);
             }
-            await run(`UPDATE command_queue SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE command_payload LIKE ?`, [finalStatus, compImageUrl, `%"rescue_req_id":${req.params.id}%`]);
-            await run(`UPDATE command_queue SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE command_payload LIKE ?`, [finalStatus, compImageUrl, `%"rescue_req_id":"${req.params.id}"%`]);
         } else {
             if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
                 // Ensure the rescue request is explicitly assigned to this rescuer so it doesn't disappear from their history
@@ -1700,8 +1700,41 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
             } else {
                 await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, req.params.id]);
             }
-            await run(`UPDATE command_queue SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE command_payload LIKE ?`, [finalStatus, `%"rescue_req_id":${req.params.id}%`]);
-            await run(`UPDATE command_queue SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE command_payload LIKE ?`, [finalStatus, `%"rescue_req_id":"${req.params.id}"%`]);
+        }
+        
+        if (existingCommand) {
+            if (compImageUrl) {
+                await run(`UPDATE command_queue SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, existingCommand.id]);
+            } else {
+                await run(`UPDATE command_queue SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, existingCommand.id]);
+            }
+        } else if (['accepted', 'in_progress', 'completed'].includes(status)) {
+            // Auto-create command if it didn't exist (e.g., rescuer manually picked it up from public pool)
+            let commandType = reqData.priority || 'critical';
+            if (!reqData.priority || reqData.priority === 'normal') {
+                const lowType = (reqData.type || '').toLowerCase();
+                if (['food', 'delivery', 'supply', 'medical_delivery'].some(t => lowType.includes(t))) {
+                    commandType = 'normal';
+                } else if (reqData.urgency === 'low' || reqData.urgency === 'medium') {
+                    commandType = 'normal';
+                }
+            }
+            const safeTypeStr = (reqData.type || 'Request').toUpperCase();
+            const cmdPayload = JSON.stringify({
+                message: `SELF-ASSIGNED: ${safeTypeStr} at ${reqData.sector || 'Unknown'}`,
+                sector: reqData.sector || 'Unknown',
+                lat: reqData.lat || 0,
+                lng: reqData.lng || 0,
+                urgency: reqData.urgency || 'high',
+                rescue_req_id: reqData.id,
+                requester_name: reqData.name || 'Citizen',
+                requester_phone: reqData.phone || 'Unknown',
+                details: reqData.details || '',
+                assigned_by: 'Self'
+            });
+            const tPhone = rescuer ? (rescuer.phone || rescuer.device_id || rescuer.id) : null;
+            await run(`INSERT INTO command_queue (target_phone, command_type, command_payload, status, priority, assigned_by) VALUES (?, ?, ?, ?, ?, 'Self')`,
+                [tPhone, commandType, cmdPayload, finalStatus, commandType]);
         }
 
         reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
@@ -1933,13 +1966,13 @@ app.put('/api/commands/:id/status', async (req, res) => {
         let cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
 
         // Find the rescuer who is accepting or completing the task (robust match on phone/device_id)
-        const rPhone = rescuer_phone || cmdData.target_phone;
+        const rPhone = rescuer_phone;
         const cleanedPhone = (rPhone || '').replace(/\D/g, '').slice(-10);
         let rescuer = null;
         if (cleanedPhone) {
-            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rPhone, rPhone, rPhone, `%${cleanedPhone}`]);
+            rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rPhone, rPhone, rPhone, `%${cleanedPhone}`]);
         } else {
-            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
+            rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
         }
 
         if (status === 'completed') {
@@ -2379,7 +2412,7 @@ async function runAIAssignment() {
         // ──────────────────────────────────────────────────────────────────────────
 
         // Fetch only pending requests that have existed longer than the buffer duration
-        const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE status = 'pending' AND (strftime('%s', 'now') - strftime('%s', created_at)) >= ?`, [bufferSecs]);
+        const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE status = 'pending' AND (strftime('%s', 'now') - strftime('%s', created_at)) >= ? ORDER BY id ASC`, [bufferSecs]);
         if (pendingRequests.length === 0) return;
 
         // Fetch AI Managed Users

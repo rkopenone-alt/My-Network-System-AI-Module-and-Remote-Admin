@@ -1,0 +1,5 @@
+                    <div class=\"item-label\"><i>🔔</i> Dispatch Alerts</div>\r\n                            <div class=\"item-val\">ACTIVE</div>
+                        <div class="settings-item" id="soundToggleBtn" onclick="window.isMuted = !window.isMuted; this.querySelector('.item-val').innerText = window.isMuted ? 'MUTED' : 'ON'; if(window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({type: window.isMuted ? 'STOP_SOUND' : 'PLAY_SOUND', sound: 'config'})); }">
+                            <div class="item-label"><i>🔊</i> Hardware Sound</div>
+                            <div class="item-val">ON</div>
+                        </div>\r\n                        </d
