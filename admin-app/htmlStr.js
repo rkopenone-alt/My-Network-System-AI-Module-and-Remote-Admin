@@ -2179,6 +2179,23 @@ export const htmlString = `<!DOCTYPE html>
 
             <div style="margin-bottom: 16px;">
                 <h3
+                    style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: #f59e0b; font-size: 16px;">
+                    <i data-lucide="clock" style="width:20px;"></i> Pending SOS Requests
+                </h3>
+                <div class="card table-responsive" style="padding:0; overflow:hidden;">
+                    <table>
+                        <thead>
+                            <!-- Populated by JS -->
+                        </thead>
+                        <tbody id="historyTbodyPending">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <h3
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--critical); font-size: 16px;">
                     <i data-lucide="alert-circle" style="width:20px;"></i> Critical Task History
                 </h3>
@@ -3626,13 +3643,6 @@ export const htmlString = `<!DOCTYPE html>
                             return; // Only update UI, avoid full refresh
                         }
                         if (data.type === 'AI_ASSIGNED') {
-                            Swal.fire({
-                                icon: 'info',
-                                title: 'ðŸ¤– AI Task Reassignment',
-                                text: data.message,
-                                timer: 5000,
-                                timerProgressBar: true
-                            });
                             if (window.currentSosAudio) { window.currentSosAudio.pause(); window.currentSosAudio.currentTime = 0; }
                             closeModal('sosAlertModal');
                             if (data.type === 'RESCUE_REQUEST_UPDATE' && data.data && data.data.status && data.data.status !== 'pending') {
@@ -3659,13 +3669,6 @@ function toggleGlobalMute(muted) {
     }
 }
                         if (data.type === 'RESCUE_REQUEST_DECLINED_REASSIGN') {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Rescuer Declined Task',
-                                text: 'A rescuer has declined the task. The AI Engine is now searching for the next nearest available unit...',
-                                timer: 4000,
-                                timerProgressBar: true
-                            });
                         }
                         if (updateTypes.includes(data.type)) {
                             if (['RESCUE_REQUEST_ACCEPTED', 'RESCUE_REQUEST_COMPLETED', 'RESCUE_REQUEST_IN_PROGRESS'].includes(data.type)) {
@@ -5406,20 +5409,23 @@ function toggleGlobalMute(muted) {
             // POPULATE CRITICAL AND NORMAL HISTORY LOGS FROM rescueRequests
             histCriticalHtml = '';
             histNormalHtml = '';
+            histPendingHtml = '';
             critHistCount = 0;
             normHistCount = 0;
+            pendingHistCount = 0;
 
             rescueRequests.forEach((r) => {
                 const s = (r.status || 'pending').toLowerCase();
-                if (s === 'pending' || s === 'declined') {
+                if (s === 'declined') {
                     return;
                 }
 
                 const isOngoing = ['assigned', 'accepted', 'acknowledged', 'in_progress'].includes(s);
+                const isPending = s === 'pending';
 
                 // Apply historyStatusFilter
-                if (historyStatusFilter === 'ongoing' && !isOngoing) return;
-                if (historyStatusFilter === 'completed' && isOngoing) return;
+                if (historyStatusFilter === 'ongoing' && !isOngoing && !isPending) return;
+                if (historyStatusFilter === 'completed' && (isOngoing || isPending)) return;
 
                 const isCrit = (r.priority || '').toLowerCase() === 'critical' || 
                                (r.urgency || '').toLowerCase() === 'critical' || 
@@ -5506,7 +5512,7 @@ function toggleGlobalMute(muted) {
                     <td style="color:var(--text-muted); font-size: 12px;">\${formattedCmdTime}</td>
                     <td>
                         <span class="tag" style="background:\${r.assigned_by === 'AI' ? '#dcfce7' : '#f1f5f9'}; color:\${r.assigned_by === 'AI' ? '#166534' : '#475569'};">
-                            \${r.assigned_by === 'AI' ? 'ðŸ¤– AI' : 'ðŸ‘¤ Admin'}
+                            \${r.assigned_by === 'AI' ? 'AI' : 'Admin'}
                         </span>
                     </td>
                     <td><span class="tag \${getTagForStatus(r.status)}">\${r.status}</span></td>
@@ -5520,7 +5526,10 @@ function toggleGlobalMute(muted) {
                     </td>
                 </tr>\`;
 
-                if (isCrit) {
+                if (isPending) {
+                    pendingHistCount++;
+                    histPendingHtml += historyRowHtml.replace('{SNO}', String(pendingHistCount).padStart(2, '0'));
+                } else if (isCrit) {
                     critHistCount++;
                     histCriticalHtml += historyRowHtml.replace('{SNO}', String(critHistCount).padStart(2, '0'));
                 } else {
@@ -5576,6 +5585,7 @@ function toggleGlobalMute(muted) {
                 el.style.display = liveGroupedCount > 0 ? 'inline-block' : 'none';
             }
 
+            document.getElementById('historyTbodyPending').innerHTML = histPendingHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No pending requests found</td></tr>';
             document.getElementById('historyTbodyCritical').innerHTML = histCriticalHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No critical history found</td></tr>';
             document.getElementById('historyTbodyNormal').innerHTML = histNormalHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No normal history found</td></tr>';
 

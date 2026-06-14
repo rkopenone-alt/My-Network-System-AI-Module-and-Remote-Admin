@@ -481,7 +481,7 @@ wss.on('connection', (ws) => {
                 console.log(`[GATEWAY] Acknowledgement received for message ${deliveryId} from ${deviceId}`);
             }
 
-            if (type === 'HEARTBEAT') {
+            if (type === 'HEARTBEAT' || type === 'PING') {
                 ws.send(JSON.stringify({ type: 'PONG', timestamp: new Date().toISOString() }));
             }
 
