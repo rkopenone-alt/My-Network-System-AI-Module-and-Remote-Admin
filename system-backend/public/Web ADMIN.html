@@ -1488,9 +1488,6 @@
             <button id="globalAiBtn" onclick="toggleGlobalAI(this.dataset.enabled !== 'true')" data-enabled="false" style="display: flex; align-items: center; justify-content: center; padding: 6px 16px; border-radius: 8px; font-weight: 900; font-size: 14px; border: none; cursor: pointer; transition: 0.3s; background-color: #ef4444; color: white; min-width: 140px;">
                 <i data-lucide="cpu" style="width:18px; margin-right:6px;"></i> AI OFFLINE
             </button>
-            <button id="globalMuteBtn" onclick="toggleGlobalMute(this.dataset.muted === 'true')" data-muted="false" style="display: flex; align-items: center; justify-content: center; padding: 6px 16px; border-radius: 8px; font-weight: 900; font-size: 14px; border: none; cursor: pointer; transition: 0.3s; background-color: #22c55e; color: white; min-width: 140px;">
-                <i data-lucide="volume-2" style="width:18px; margin-right:6px;"></i> SOUND ON
-            </button>
         </div>
 
 
@@ -2026,6 +2023,7 @@
                                         <th>Photo</th>
                                         <th>Member ID</th>
                                         <th>Username</th>
+                                        <th>Mobile Number</th>
                                         <th>Password</th>
                                         <th>Role</th>
                                         <th>AI Status</th>
@@ -2114,7 +2112,7 @@
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: #f59e0b; font-size: 16px;">
                     <i data-lucide="clock" style="width:20px;"></i> Pending SOS Requests
                 </h3>
-                <div class="card table-responsive" style="padding:0; overflow:hidden;">
+                <div class="card table-responsive" style="padding:0; overflow-x:auto;">
                     <table>
                         <thead>
                             <!-- Populated by JS -->
@@ -2160,7 +2158,7 @@
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--accent); font-size: 16px;">
                     <i data-lucide="box" style="width:20px;"></i> Normal Task History
                 </h3>
-                <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card table-responsive" style="padding:0; overflow-x:auto;">
                     <table>
                         <thead>
                             <!-- Populated by JS -->
@@ -2177,7 +2175,7 @@
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--special); font-size: 16px;">
                     <i data-lucide="layers" style="width:20px;"></i> Tactical Group Mission History
                 </h3>
-                <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card table-responsive" style="padding:0; overflow-x:auto;">
                     <table>
                         <thead>
                             <!-- Populated by JS -->
@@ -7320,6 +7318,7 @@ function toggleGlobalMute(muted) {
                     </td>
                     <td style="font-weight:700; color:var(--accent); font-family: monospace;">${m.device_id || m.serial_number || 'N/A'}</td>
                     <td><div style="font-weight:600;">${m.name}</div></td>
+                    <td><div style="font-weight:600; font-family: monospace;">${m.phone || 'N/A'}</div></td>
                     <td><code style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:700; color:#1e293b; border:1px solid #cbd5e1;">${m.password || '123456'}</code></td>
                     <td>
                         <div style="display:flex; align-items:center; gap:6px;">
@@ -9701,18 +9700,6 @@ const CONFIG_SND = 'UklGRmisAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YUSsAAAA
 <script>
 function toggleGlobalMute(muted) {
     window.isMuted = muted;
-    
-    const btn1 = document.getElementById('globalMuteBtn');
-    if (btn1) {
-        btn1.dataset.muted = window.isMuted.toString();
-        if (window.isMuted) {
-            btn1.style.backgroundColor = "#ef4444";
-            btn1.innerHTML = '<i data-lucide="volume-x" style="width:18px; margin-right:6px;"></i> SOUND OFF';
-        } else {
-            btn1.style.backgroundColor = "#22c55e";
-            btn1.innerHTML = '<i data-lucide="volume-2" style="width:18px; margin-right:6px;"></i> SOUND ON';
-        }
-    }
     
     const btn2 = document.getElementById('sidebarMuteBtn');
     if (btn2) {

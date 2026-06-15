@@ -1,21 +1,21 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-15
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 15/6/2026, 6:50:28 pm
+Generated At: , 15/6/2026, 7:56:45 pm
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
 93,medical,critical,completed,12.9943998,80.1956914,"Critical Emergency Triggered
 [Declined by Rescuer ID: 2]",Arjun Singh (MEM-01),2026-06-15 13:08:00,2026-06-15 13:08:59,DESKTOP-KBHB0SB
-94,pregnancy,critical,pending,12.9943888,80.195645,"Critical Emergency Triggered
+94,pregnancy,critical,completed,12.9943888,80.195645,"Critical Emergency Triggered
 [Declined by Rescuer ID: 2]
-[Declined by Rescuer ID: 1]",Unassigned,2026-06-15 13:09:26,2026-06-15 13:09:56,DESKTOP-KBHB0SB
+[Declined by Rescuer ID: 1]",Unassigned,2026-06-15 13:09:26,2026-06-15 14:26:44,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES
 Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
 85,N/A,919000000001,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943998,""lng"":80.1956914,""urgency"":""critical"",""rescue_req_id"":93,""requester_name"":""Citizen"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer ID: 2]"",""assigned_by"":""AI""}",Critical,completed,2026-06-15 13:08:17,,DESKTOP-KBHB0SB
-86,N/A,919000000001,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943888,""lng"":80.195645,""urgency"":""critical"",""rescue_req_id"":94,""requester_name"":""Citizen"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer ID: 2]"",""assigned_by"":""AI""}",Critical,declined,2026-06-15 13:09:37,,DESKTOP-KBHB0SB
+86,N/A,919000000001,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943888,""lng"":80.195645,""urgency"":""critical"",""rescue_req_id"":94,""requester_name"":""Citizen"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer ID: 2]"",""assigned_by"":""AI""}",Critical,completed,2026-06-15 13:09:37,,DESKTOP-KBHB0SB
 
 
 SECTION 3: PUBLIC SOS ALERTS
