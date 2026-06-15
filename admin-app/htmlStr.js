@@ -1612,10 +1612,10 @@ export const htmlString = `<!DOCTYPE html>
                         <label class="input-label">Task Priority</label>
                         <div style="display:flex;gap:8px;margin-bottom:2px;">
                             <button id="btnNormal" onclick="setTaskPriority('normal')" class="btn btn-outline"
-                                style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">ðŸ“‹
+                                style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">
                                 Normal</button>
                             <button id="btnCritical" onclick="setTaskPriority('critical')" class="btn btn-outline"
-                                style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">ðŸš¨
+                                style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">
                                 Critical Response</button>
                         </div>
                     </div>
@@ -1635,16 +1635,16 @@ export const htmlString = `<!DOCTYPE html>
                             <option value="medical">Medical Supply</option>
                             <option value="pregnancy">Pregnancy Evac</option>
                             <option value="rescue">Rescue Operation</option>
-                            <option value="critical">ðŸš¨ Critical Response</option>
+                            <option value="critical"> Critical Response</option>
                         </select>
                     </div>
                     <div class="input-group">
                         <label class="input-label">Assign To</label>
                         <div style="display:flex;gap:8px;margin-bottom:8px;">
                             <button id="btnTargetGroup" onclick="setTargetType('group')" class="btn btn-outline"
-                                style="flex:1;font-size:11px;padding:6px;font-weight:700;">ðŸ‘¥ Group</button>
+                                style="flex:1;font-size:11px;padding:6px;font-weight:700;"> Group</button>
                             <button id="btnTargetIndividual" onclick="setTargetType('individual')"
-                                class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;font-weight:700;">ðŸ‘¤
+                                class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;font-weight:700;">
                                 Individual</button>
                         </div>
 
@@ -1763,11 +1763,11 @@ export const htmlString = `<!DOCTYPE html>
                                 </div>
                                 <div id="tdEvidenceAudioContainer"
                                     style="width:100%; padding:10px; background:#dbeafe; border-radius:6px; overflow:hidden; margin-bottom:8px; display:none; flex-direction:column; align-items:center; justify-content:center; border:1px solid #bfdbfe; gap:8px;">
-                                    <b style="color:#1d4ed8; font-size:10px; text-transform:uppercase; display:flex; align-items:center; gap:4px;">ðŸ”Š REQUEST AUDIO MESSAGE</b>
+                                    <b style="color:#1d4ed8; font-size:10px; text-transform:uppercase; display:flex; align-items:center; gap:4px;"> REQUEST AUDIO MESSAGE</b>
                                     <audio id="tdEvidenceAudioPlayer" controls style="width:100%;">
                                         Your browser does not support the audio element.
                                     </audio>
-                                    <a id="btnDownloadAudio" href="#" target="_blank" style="font-size:10px; font-weight:800; color:#1d4ed8; text-decoration:none;">ðŸ“¥ DOWNLOAD AUDIO FILE</a>
+                                    <a id="btnDownloadAudio" href="#" target="_blank" style="font-size:10px; font-weight:800; color:#1d4ed8; text-decoration:none;"> DOWNLOAD AUDIO FILE</a>
                                 </div>
                                 <div id="tdRequesterComments"
                                     style="font-size: 11px; color: #1e3a8a; font-style: italic; background: white; padding: 8px; border-radius: 4px; border: 1px solid #dbeafe; margin-bottom: 8px;">
@@ -2287,7 +2287,7 @@ export const htmlString = `<!DOCTYPE html>
                             style="padding:15px; border-bottom:1px solid rgba(220, 38, 38, 0.1); background:rgba(220, 38, 38, 0.02); display:flex; justify-content:space-between; align-items:center;">
                             <h4
                                 style="margin:0; font-size:12px; font-weight:800; color:var(--critical); text-transform:uppercase; letter-spacing:1px;">
-                                ðŸ”´ CRITICAL MISSIONS</h4>
+                                 CRITICAL MISSIONS</h4>
                             <span id="mgmtCountCritical" class="tag tag-red">0</span>
                         </div>
                         <div id="mgmtListCritical"
@@ -2302,7 +2302,7 @@ export const htmlString = `<!DOCTYPE html>
                             style="padding:15px; border-bottom:1px solid rgba(37, 99, 235, 0.1); background:rgba(37, 99, 235, 0.02); display:flex; justify-content:space-between; align-items:center;">
                             <h4
                                 style="margin:0; font-size:12px; font-weight:800; color:var(--accent); text-transform:uppercase; letter-spacing:1px;">
-                                ðŸ”µ NORMAL LOGISTICS</h4>
+                                 NORMAL LOGISTICS</h4>
                             <span id="mgmtCountNormal" class="tag tag-purple">0</span>
                         </div>
                         <div id="mgmtListNormal"
@@ -2317,7 +2317,7 @@ export const htmlString = `<!DOCTYPE html>
                             style="padding:15px; border-bottom:1px solid rgba(168, 85, 247, 0.1); background:rgba(168, 85, 247, 0.02); display:flex; justify-content:space-between; align-items:center;">
                             <h4
                                 style="margin:0; font-size:12px; font-weight:800; color:var(--special); text-transform:uppercase; letter-spacing:1px;">
-                                ðŸŸ£ TEMPORARY TACTICAL GROUPED TASK CLUSTER</h4>
+                                 TEMPORARY TACTICAL GROUPED TASK CLUSTER</h4>
                             <span id="mgmtCountGrouped" class="tag tag-purple" style="background:var(--special); color:white;">0</span>
                         </div>
                         <div id="mgmtListGrouped"
@@ -3666,7 +3666,7 @@ function toggleGlobalMute(muted) {
                                 closeModal('sosAlertModal');
                             }
                             if (data.type === 'NEW_RESCUE_REQUEST' || data.type === 'SOS_ALERT') {
-                                showAdminToast(\`ðŸš¨ SOS/Emergency Alert from \${data.data?.sector || 'field'}!\`, 'error');
+                                showAdminToast(\` SOS/Emergency Alert from \${data.data?.sector || 'field'}!\`, 'error');
                                 showSosAlertModal(data.data);
                                 // Play standard HTML5 beep/siren sound and loop it
                                 if (window.currentSosAudio) { window.currentSosAudio.pause(); }
@@ -4213,10 +4213,10 @@ function toggleGlobalMute(muted) {
                         try {
                             const d = typeof r.details === 'string' ? JSON.parse(r.details) : r.details;
                             const items = [];
-                            if (d.food) items.push(\`ðŸž Food: <b>\${d.food}</b>\`);
-                            if (d.med) items.push(\`ðŸ’Š Medicine: <b>\${d.med}</b>\`);
-                            if (d.sanitary) items.push(\`ðŸ§» Sanitary: <b>\${d.sanitary}</b>\`);
-                            if (d.persons) items.push(\`ðŸ‘¥ Persons: <b>\${d.persons}</b>\`);
+                            if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
+                            if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
+                            if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
+                            if (d.persons) items.push(\` Persons: <b>\${d.persons}</b>\`);
 
                             if (items.length > 0) {
                                 itemsHtml = \`<div style="margin-top:6px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px; line-height: 1.5;">
@@ -5060,9 +5060,9 @@ function toggleGlobalMute(muted) {
                 if (req) {
                     let assignedTo = 'Unassigned';
                     if (req.assigned_officer_name) {
-                        assignedTo = \`ðŸ‘¤ \${req.assigned_officer_name}\`;
+                        assignedTo = \` \${req.assigned_officer_name}\`;
                     } else if (req.assigned_group_name) {
-                        assignedTo = \`ðŸ‘¥ \${req.assigned_group_name}\`;
+                        assignedTo = \` \${req.assigned_group_name}\`;
                     } else if (req.assigned_user_id) {
                         assignedTo = \`Rescuer \${req.assigned_user_id}\`;
                     } else if (req.assigned_group_id) {
@@ -5126,7 +5126,7 @@ function toggleGlobalMute(muted) {
                 const locEl = document.getElementById('tdRequesterLoc');
                 if (cmd.requesterLat && cmd.requesterLng) {
                     locEl.innerHTML = \`<button class="btn btn-primary" style="width:100%; padding:10px; font-weight:900; background:#1d4ed8; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="map.flyTo([\${cmd.requesterLat}, \${cmd.requesterLng}], 18); window.open('https://www.google.com/maps/dir/?api=1&destination=\${cmd.requesterLat},\${cmd.requesterLng}', '_blank');">
-                        <span>ðŸ“ NAVIGATE TO LOCATION</span>
+                        <span> NAVIGATE TO LOCATION</span>
                         <small style="font-size:10px; opacity:0.8;">(\${parseFloat(cmd.requesterLat).toFixed(5)}, \${parseFloat(cmd.requesterLng).toFixed(5)})</small>
                     </button>\`;
                 } else {
@@ -5138,9 +5138,9 @@ function toggleGlobalMute(muted) {
                     try {
                         const d = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
                         const items = [];
-                        if (d.food) items.push(\`ðŸž Food: <b>\${d.food}</b>\`);
-                        if (d.med) items.push(\`ðŸ’Š Medicine: <b>\${d.med}</b>\`);
-                        if (d.sanitary) items.push(\`ðŸ§» Sanitary: <b>\${d.sanitary}</b>\`);
+                        if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
+                        if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
+                        if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
                         if (items.length > 0) itemsHtml = items.join(' â€¢ ');
                     } catch (e) { }
                 }
@@ -5337,7 +5337,7 @@ function toggleGlobalMute(muted) {
                             <source src="\${audioUrl}" type="audio/mpeg">
                             Your browser does not support audio.
                         </audio>
-                        <a href="\${audioUrl}" target="_blank" onclick="event.stopPropagation();" style="font-size:10px; font-weight:800; color:var(--primary); text-decoration:none;">ðŸ“¥ Download</a>
+                        <a href="\${audioUrl}" target="_blank" onclick="event.stopPropagation();" style="font-size:10px; font-weight:800; color:var(--primary); text-decoration:none;"> Download</a>
                     </div>\`;
                 }
 
@@ -5366,8 +5366,8 @@ function toggleGlobalMute(muted) {
                     <td>
                         <div style="display:flex; gap:4px;">
                             \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${c.id}')">âœ… Close</button>\` : ''}
-                            \${isReassignable ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\${c.id}')">ðŸ”„ Re-Assign</button>\` : ''}
-                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \${isOngoing ? \`selectTask('\${c.id}')\` : \`openCompletedTaskDetailModal('\${c.id}')\`}">ðŸ‘ï¸ View</button>
+                            \${isReassignable ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\${c.id}')"> Re-Assign</button>\` : ''}
+                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \${isOngoing ? \`selectTask('\${c.id}')\` : \`openCompletedTaskDetailModal('\${c.id}')\`}">ï¸ View</button>
                         </div>
                     </td>
                 </tr>\`;
@@ -5417,8 +5417,13 @@ function toggleGlobalMute(muted) {
                                (r.urgency || '').toLowerCase() === 'critical' || 
                                ['sos', 'medical', 'pregnancy', 'critical', 'rescue'].includes((r.type || '').toLowerCase());
 
+                let publicInfo = '';
+                if (r.name || r.phone) {
+                    publicInfo = \`<div style="margin-bottom:4px; font-size:11px;"><b style="color:var(--text);">\${r.name || 'Unknown'}</b><br><span style="color:var(--accent);">\${r.phone || 'No Phone'}</span></div>\`;
+                }
                 let infoText = r.details || '-';
-                if (infoText.length > 30) infoText = infoText.substring(0, 30) + '...';
+                if (infoText.length > 50) infoText = infoText.substring(0, 50) + '...';
+                infoText = publicInfo + infoText;
 
                 let evidenceThumb = '-';
                 if (r.image_url) {
@@ -5435,7 +5440,7 @@ function toggleGlobalMute(muted) {
                             <source src="\${audioUrl}" type="audio/mpeg">
                             Your browser does not support audio.
                         </audio>
-                        <a href="\${audioUrl}" target="_blank" onclick="event.stopPropagation();" style="font-size:10px; font-weight:800; color:var(--primary); text-decoration:none;">ðŸ“¥ Download</a>
+                        <a href="\${audioUrl}" target="_blank" onclick="event.stopPropagation();" style="font-size:10px; font-weight:800; color:var(--primary); text-decoration:none;"> Download</a>
                     </div>\`;
                 }
 
@@ -5447,9 +5452,9 @@ function toggleGlobalMute(muted) {
 
                 let assignedTo = 'Unassigned';
                 if (r.assigned_officer_name) {
-                    assignedTo = \`ðŸ‘¤ \${r.assigned_officer_name}\`;
+                    assignedTo = \`\${r.assigned_officer_name}\`;
                 } else if (r.assigned_group_name) {
-                    assignedTo = \`ðŸ‘¥ \${r.assigned_group_name}\`;
+                    assignedTo = \`\${r.assigned_group_name}\`;
                 } else if (r.assigned_user_id) {
                     assignedTo = \`Rescuer \${r.assigned_user_id}\`;
                 } else if (r.assigned_group_id) {
@@ -5481,6 +5486,9 @@ function toggleGlobalMute(muted) {
                     actionBtnId = activeCmdForReq.id;
                 }
 
+                let sectorHtml = \`<div style="font-weight:600;">\${r.sector || 'N/A'}</div>\`;
+                if (r.lat && r.lng) sectorHtml += \`<div style="font-size:10px; color:var(--text-muted); margin-top:2px;">\${parseFloat(r.lat).toFixed(5)}, \${parseFloat(r.lng).toFixed(5)}</div>\`;
+
                 let historyRowHtml = \`<tr onclick="\${isOngoing ? \`selectTask('\${displayId}')\` : \`openCompletedTaskDetailModal('\${displayId}')\`}" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                     <td style="font-weight: 800; color: var(--text-muted);">{SNO}</td>
                     <td style="font-weight:700;">\${displayId}</td>
@@ -5491,7 +5499,7 @@ function toggleGlobalMute(muted) {
                     <td>
                         <span class="tag \${getTagForType(r.type)}">\${(r.type || 'N/A').toUpperCase()}</span>
                     </td>
-                    <td>\${r.sector || 'N/A'}</td>
+                    <td>\${sectorHtml}</td>
                     <td>\${assignedTo}</td>
                     <td style="color:#ef4444; font-weight:600; font-size:12px;">\${declinedBy}</td>
                     <td style="color:var(--text-muted); font-size: 12px;">\${formattedReqTime}</td>
@@ -5506,8 +5514,8 @@ function toggleGlobalMute(muted) {
                     <td>
                         <div style="display:flex; gap:4px;">
                             \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${actionBtnId}')">âœ… Close</button>\` : ''}
-                            \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\${actionBtnId}')">ðŸ”„ Re-Assign</button>\` : ''}
-                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \${isOngoing ? \`selectTask('\${displayId}')\` : \`openCompletedTaskDetailModal('\${displayId}')\`}">ðŸ‘ï¸ View</button>
+                            \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\${actionBtnId}')"> Re-Assign</button>\` : ''}
+                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \${isOngoing ? \`selectTask('\${displayId}')\` : \`openCompletedTaskDetailModal('\${displayId}')\`}">ï¸ View</button>
                         </div>
                     </td>
                 </tr>\`;
@@ -5620,8 +5628,8 @@ function toggleGlobalMute(muted) {
                     <td>\${closureThumb}</td>
                     <td style="display:flex; gap:6px;">
                         \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${c.id}')">âœ… CLOSE</button>\` : ''}
-                        \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\${c.id}')">ðŸ”„ RE-ASSIGN</button>\` : ''}
-                        <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \${isOngoing ? \`selectTask('\${c.id}')\` : \`openCompletedTaskDetailModal('\${c.id}')\`}">ðŸ‘ï¸ VIEW</button>
+                        \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\${c.id}')"> RE-ASSIGN</button>\` : ''}
+                        <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \${isOngoing ? \`selectTask('\${c.id}')\` : \`openCompletedTaskDetailModal('\${c.id}')\`}">ï¸ VIEW</button>
                     </td>
                 </tr>
             \`;
@@ -5652,12 +5660,12 @@ function toggleGlobalMute(muted) {
                             <b>Assigned:</b> \${m.team} <br>
                             <b>Target:</b> \${m.zone} <br>
                             <b>Status:</b> <span class="tag \${getTagForStatus(m.status)}" style="font-size:9px; padding:1px 4px;">\${m.status}</span>
-                            \${m.requesterName ? \`<br><span style="display:inline-block; margin-top:4px; color:var(--primary); font-weight:700;">ðŸ‘¤ Requester: \${m.requesterName}</span>\` : ''}
+                            \${m.requesterName ? \`<br><span style="display:inline-block; margin-top:4px; color:var(--primary); font-weight:700;"> Requester: \${m.requesterName}</span>\` : ''}
                         </div>
                         <div style="display:flex; gap:8px;">
-                            <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #eab308; border-color: #eab308; color: white;" onclick="openReassignModal('\${m.id}')">ðŸ”„ RE ASSIGN TASK</button>
+                            <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #eab308; border-color: #eab308; color: white;" onclick="openReassignModal('\${m.id}')"> RE ASSIGN TASK</button>
                             <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${m.id}')">âœ… CLOSE</button>
-                            <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="selectTask('\${m.id}')">ðŸ‘ï¸ VIEW</button>
+                            <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="selectTask('\${m.id}')">ï¸ VIEW</button>
                         </div>
                     </div>
                 \`).join('');
@@ -5696,7 +5704,7 @@ function toggleGlobalMute(muted) {
                 banner.style.display = 'block';
                 btn.style.background = '#ef4444';
                 btn.style.borderColor = '#ef4444';
-                btn.innerHTML = '<i data-lucide="alert-triangle" style="width:16px;"></i> ðŸš¨ Dispatch Critical Alert';
+                btn.innerHTML = '<i data-lucide="alert-triangle" style="width:16px;"></i>  Dispatch Critical Alert';
                 titleEl.style.color = '#ef4444';
                 btnCritical.style.background = '#ef4444';
                 btnCritical.style.color = '#fff';
@@ -5875,7 +5883,7 @@ function toggleGlobalMute(muted) {
                         groupTask.requests.forEach(r => {
                             if (!r.lat) return;
                             const m = L.marker([r.lat, r.lng], {
-                                icon: L.divIcon({ className: 'custom-sos-icon', html: '<div style="font-size:16px;">ðŸš¨</div>', iconSize: [20, 20], iconAnchor: [10, 10] })
+                                icon: L.divIcon({ className: 'custom-sos-icon', html: '<div style="font-size:16px;"></div>', iconSize: [20, 20], iconAnchor: [10, 10] })
                             }).addTo(window.reassignMapInstance);
                             window.reassignMapLayers.push(m);
                         });
@@ -5912,7 +5920,7 @@ function toggleGlobalMute(muted) {
                 } else if (cmd.requesterLat && cmd.requesterLng) {
                     coords = [[parseFloat(cmd.requesterLat), parseFloat(cmd.requesterLng)]];
                     const m = L.marker(coords[0], {
-                        icon: L.divIcon({ className: 'custom-sos-icon', html: '<div style="font-size:16px;">ðŸš¨</div>', iconSize: [20, 20], iconAnchor: [10, 10] })
+                        icon: L.divIcon({ className: 'custom-sos-icon', html: '<div style="font-size:16px;"></div>', iconSize: [20, 20], iconAnchor: [10, 10] })
                     }).addTo(window.reassignMapInstance);
                     window.reassignMapLayers.push(m);
                 }
@@ -6012,45 +6020,71 @@ function toggleGlobalMute(muted) {
             const startY = currentActiveOp ? 48 : 35;
 
             // Filter data based on current view if needed, or export all
-            const tableData = cmds.map((c, index) => {
-                const isCritical = ['sos', 'rescue', 'emergency'].includes(c.type.toLowerCase());
-                const priority = isCritical ? 'CRITICAL' : 'NORMAL';
+            const tableData = rescueRequests.map((r, index) => {
+                let assignedTo = 'Unassigned';
+                if (r.assigned_officer_name) {
+                    assignedTo = \`\${r.assigned_officer_name}\\n(ID: \${r.assigned_user_id || 'N/A'})\`;
+                } else if (r.assigned_group_name) {
+                    assignedTo = \`\${r.assigned_group_name}\\n(Group: \${r.assigned_group_id})\`;
+                } else if (r.assigned_user_id) {
+                    assignedTo = \`Rescuer ID: \${r.assigned_user_id}\`;
+                } else if (r.assigned_group_id) {
+                    assignedTo = \`Group ID: \${r.assigned_group_id}\`;
+                }
 
-                let taskDesc = c.desc;
-                if (c.requesterName) {
-                    taskDesc += \`\\n[Requester: \${c.requesterName}]\`;
+                let declinedBy = '-';
+                let declinedMatches = (r.details || '').match(/\\[Declined by Rescuer ID: (.*?)\\]/g);
+                if (declinedMatches) {
+                    declinedBy = declinedMatches.map(m => {
+                        const idStr = m.replace(/\\[Declined by Rescuer ID: |\\]/g, '');
+                        const u = (window.currentUsers || []).find(x => x.id.toString() === idStr);
+                        return u ? \`\${u.name}\\n(ID: \${idStr})\` : \`ID: \${idStr}\`;
+                    }).join(', ');
+                }
+
+                const formattedReqTime = r.created_at ? new Date(r.created_at).toLocaleString() : '-';
+                const formattedCmdTime = r.updated_at ? new Date(r.updated_at).toLocaleString() : formattedReqTime;
+
+                let publicDetails = '-';
+                if (r.phone || r.name) {
+                    publicDetails = \`Name: \${r.name || 'Public'}\\nContact: \${r.phone || 'N/A'}\`;
+                }
+
+                let locDetails = r.sector || '-';
+                if (r.lat && r.lng) {
+                    locDetails += \`\\n(\${parseFloat(r.lat).toFixed(4)}, \${parseFloat(r.lng).toFixed(4)})\`;
                 }
 
                 return [
                     String(index + 1).padStart(2, '0'),
-                    c.id,
-                    taskDesc,
-                    priority,
-                    c.type.toUpperCase(),
-                    c.zone.replace(/<[^>]*>/g, '').replace(/\\s+/g, ' ').trim(),
-                    c.team,
-                    c.reqTime || '-',
-                    c.status.toUpperCase()
+                    \`REQ-\${r.id}\`,
+                    (r.type || 'Request').toUpperCase(),
+                    publicDetails,
+                    locDetails,
+                    assignedTo,
+                    declinedBy,
+                    \`\${formattedReqTime}\\n-> \${formattedCmdTime}\`,
+                    (r.status || 'Pending').toUpperCase()
                 ];
             });
 
             doc.autoTable({
                 startY: startY,
-                head: [['S.#', 'ID', 'TASK / DESCRIPTION', 'PRIORITY', 'TYPE', 'ZONE / AREA', 'TEAM', 'REQ TIME', 'STATUS']],
+                head: [['S.#', 'ID', 'TYPE', 'PUBLIC INFO', 'LOCATION', 'ASSIGNED TO', 'DECLINED BY', 'TIME (REQ -> CMD)', 'STATUS']],
                 body: tableData,
                 theme: 'grid',
-                styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
-                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold', halign: 'center' },
+                styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold', halign: 'center' },
                 columnStyles: {
-                    0: { cellWidth: 10, halign: 'center' },
-                    1: { cellWidth: 18 },
-                    2: { cellWidth: 55 },
-                    3: { cellWidth: 20, fontStyle: 'bold' },
-                    4: { cellWidth: 18 },
-                    5: { cellWidth: 40 },
-                    6: { cellWidth: 35 },
-                    7: { cellWidth: 20, halign: 'center' },
-                    8: { cellWidth: 20, halign: 'center' }
+                    0: { cellWidth: 8, halign: 'center' },
+                    1: { cellWidth: 16 },
+                    2: { cellWidth: 22, fontStyle: 'bold' },
+                    3: { cellWidth: 38 },
+                    4: { cellWidth: 42 },
+                    5: { cellWidth: 34 },
+                    6: { cellWidth: 34 },
+                    7: { cellWidth: 38, halign: 'center' },
+                    8: { cellWidth: 24, halign: 'center' }
                 },
                 alternateRowStyles: { fillColor: [248, 250, 252] },
                 margin: { top: 35, left: 14, right: 14 },
@@ -6084,7 +6118,7 @@ function toggleGlobalMute(muted) {
                 teamId = teamEl.value;
             } else {
                 let indivEl = document.getElementById('cmdIndividual');
-                team = 'ðŸ‘¤ ' + indivEl.options[indivEl.selectedIndex].text;
+                team = ' ' + indivEl.options[indivEl.selectedIndex].text;
                 rescuerPhone = indivEl.value;
                 if (!rescuerPhone) { alert('Please select a rescuer'); return; }
             }
@@ -6177,7 +6211,7 @@ function toggleGlobalMute(muted) {
                 <div style="background:#fff;width:480px;max-width:94vw;border-radius:16px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.5);animation:slideUp 0.3s ease;">
                     <!-- Red header bar -->
                     <div style="background:#ef4444;padding:20px 24px;display:flex;align-items:center;gap:14px;">
-                        <span style="font-size:36px;">ðŸš¨</span>
+                        <span style="font-size:36px;"></span>
                         <div>
                             <div style="color:#fff;font-size:18px;font-weight:900;letter-spacing:0.5px;">CRITICAL RESPONSE DISPATCH</div>
                             <div style="color:rgba(255,255,255,0.8);font-size:13px;font-weight:600;">HIGH PRIORITY â€” REQUIRES IMMEDIATE ACTION</div>
@@ -6192,11 +6226,11 @@ function toggleGlobalMute(muted) {
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
                             <div style="background:#f8fafc;border-radius:8px;padding:12px;">
                                 <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px;">ASSIGNED TO</div>
-                                <div style="font-size:14px;font-weight:700;color:#1e293b;">ðŸ‘¥ \${params.team}</div>
+                                <div style="font-size:14px;font-weight:700;color:#1e293b;"> \${params.team}</div>
                             </div>
                             <div style="background:#f8fafc;border-radius:8px;padding:12px;">
                                 <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px;">TARGET ZONE</div>
-                                <div style="font-size:14px;font-weight:700;color:#1e293b;">ðŸ“ \${params.areaName}</div>
+                                <div style="font-size:14px;font-weight:700;color:#1e293b;"> \${params.areaName}</div>
                             </div>
                         </div>
                         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:20px;font-size:12px;color:#92400e;">
@@ -6204,7 +6238,7 @@ function toggleGlobalMute(muted) {
                         </div>
                         <div style="display:flex;gap:12px;">
                             <button onclick="document.getElementById('criticalApprovalOverlay').remove();" style="flex:1;padding:14px;background:#f1f5f9;border:2px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:800;color:#64748b;cursor:pointer;">âœ— Cancel</button>
-                            <button onclick="confirmCriticalDispatch(\${JSON.stringify(params).replace(/"/g, '&quot;')})" style="flex:1;padding:14px;background:#ef4444;border:none;border-radius:10px;font-size:15px;font-weight:900;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(239,68,68,0.4);">ðŸš¨ CONFIRM DISPATCH</button>
+                            <button onclick="confirmCriticalDispatch(\${JSON.stringify(params).replace(/"/g, '&quot;')})" style="flex:1;padding:14px;background:#ef4444;border:none;border-radius:10px;font-size:15px;font-weight:900;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(239,68,68,0.4);"> CONFIRM DISPATCH</button>
                         </div>
                     </div>
                 </div>
@@ -6219,7 +6253,7 @@ function toggleGlobalMute(muted) {
             let t = \`\${String(d.getHours()).padStart(2, '0')}:\${String(d.getMinutes()).padStart(2, '0')}\`;
             const localId = \`CMD-\${100 + cmds.length + 1}\`;
 
-            cmds.unshift({ id: localId, desc: 'ðŸš¨ ' + params.desc, type: 'critical', zone: params.zoneHtml, team: params.team, time: t, status: 'Critical', layerData: null });
+            cmds.unshift({ id: localId, desc: ' ' + params.desc, type: 'critical', zone: params.zoneHtml, team: params.team, time: t, status: 'Critical', layerData: null });
             renderCmds();
 
             document.getElementById('cmdDetails').value = '';
@@ -6241,7 +6275,7 @@ function toggleGlobalMute(muted) {
                 })
             }).then(() => refreshAllModules()).catch(e => console.warn('Critical dispatch persist failed:', e));
 
-            showAdminToast('ðŸš¨ Critical Response dispatched! Rescuers have been alerted.');
+            showAdminToast(' Critical Response dispatched! Rescuers have been alerted.');
         }
 
         // â”€â”€â”€ Admin Toast Notification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -6348,20 +6382,20 @@ function toggleGlobalMute(muted) {
                 if (req.type === 'medical') {
                     color = 'var(--critical)';
                     bg = '#fee2e2';
-                    typeLabel = 'ðŸ¥ Medical Rescue';
+                    typeLabel = ' Medical Rescue';
                 } else if (req.type === 'pregnancy') {
                     color = 'var(--special)';
                     bg = '#f3e8ff';
-                    typeLabel = 'ðŸ¤° Pregnancy Rescue';
+                    typeLabel = ' Pregnancy Rescue';
                 } else if (req.type === 'food' || req.type === 'delivery' || req.type === 'medical_delivery') {
                     color = 'var(--pending)';
                     bg = '#fffbeb';
-                    typeLabel = req.type === 'food' ? 'ðŸ“¦ Food Delivery' : 'ðŸ’Š Medical Supply';
+                    typeLabel = req.type === 'food' ? ' Food Delivery' : ' Medical Supply';
                     isCritical = false;
                 } else if (req.type === 'sos') {
                     color = 'var(--critical)';
                     bg = 'rgba(239,68,68,0.05)';
-                    typeLabel = 'ðŸš¨ SOS Alert Response';
+                    typeLabel = ' SOS Alert Response';
                     isCritical = true;
                 }
 
@@ -6371,9 +6405,9 @@ function toggleGlobalMute(muted) {
                     try {
                         const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
                         const items = [];
-                        if (d.food) items.push(\`ðŸž Food: <b>\${d.food}</b>\`);
-                        if (d.med) items.push(\`ðŸ’Š Medicine: <b>\${d.med}</b>\`);
-                        if (d.sanitary) items.push(\`ðŸ§» Sanitary: <b>\${d.sanitary}</b>\`);
+                        if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
+                        if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
+                        if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
 
                         if (items.length > 0) {
                             detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
@@ -6550,7 +6584,7 @@ function toggleGlobalMute(muted) {
             
             closeModal('sosAlertModal');
             if (id) {
-                openAssignModal(id, \`SOS Emergency Request\`, sector, urgency, 'ðŸš¨');
+                openAssignModal(id, \`SOS Emergency Request\`, sector, urgency, '');
             }
         }
 
@@ -6598,7 +6632,7 @@ function toggleGlobalMute(muted) {
                     assignMarker = L.marker([req.lat, req.lng], {
                         icon: L.divIcon({
                             className: 'custom-sos-icon',
-                            html: '<div style="font-size:24px;">ðŸš¨</div>',
+                            html: '<div style="font-size:24px;"></div>',
                             iconSize: [30, 30],
                             iconAnchor: [15, 15]
                         })
@@ -6833,9 +6867,9 @@ function toggleGlobalMute(muted) {
 
                     let assignedTo = 'Unassigned';
                     if (c.assigned_officer_name) {
-                        assignedTo = \`ðŸ‘¤ \${c.assigned_officer_name}\`;
+                        assignedTo = \` \${c.assigned_officer_name}\`;
                     } else if (c.assigned_group_name) {
-                        assignedTo = \`ðŸ‘¥ \${c.assigned_group_name}\`;
+                        assignedTo = \` \${c.assigned_group_name}\`;
                     } else if (c.target_phone) {
                         assignedTo = c.target_phone;
                     } else if (c.group_id) {
@@ -6891,7 +6925,7 @@ function toggleGlobalMute(muted) {
                             name: payload.name || 'Tactical Cluster',
                             requests: (payload.request_ids || []).map(id => rescueRequests.find(r => r.id.toString() === id.toString())).filter(r => !!r),
                             status: (c.status || 'pending').charAt(0).toUpperCase() + (c.status || 'pending').slice(1),
-                            team: c.assigned_officer_name ? \`ðŸ‘¤ \${c.assigned_officer_name}\` : (c.assigned_group_name ? \`ðŸ‘¥ \${c.assigned_group_name}\` : 'Pending'),
+                            team: c.assigned_officer_name ? \` \${c.assigned_officer_name}\` : (c.assigned_group_name ? \` \${c.assigned_group_name}\` : 'Pending'),
                             priority: c.priority || 'normal',
                             custom_polygon: payload.custom_polygon || null
                         });
@@ -7851,9 +7885,9 @@ function toggleGlobalMute(muted) {
                 if (req) {
                     let assignedTo = 'Unassigned';
                     if (req.assigned_officer_name) {
-                        assignedTo = \`ðŸ‘¤ \${req.assigned_officer_name}\`;
+                        assignedTo = \` \${req.assigned_officer_name}\`;
                     } else if (req.assigned_group_name) {
-                        assignedTo = \`ðŸ‘¥ \${req.assigned_group_name}\`;
+                        assignedTo = \` \${req.assigned_group_name}\`;
                     } else if (req.assigned_user_id) {
                         assignedTo = \`Rescuer \${req.assigned_user_id}\`;
                     } else if (req.assigned_group_id) {
@@ -7942,7 +7976,7 @@ function toggleGlobalMute(muted) {
                                 <source src="\${audioUrl}" type="audio/wav">
                                 Your browser does not support audio.
                             </audio>
-                            <a href="\${audioUrl}" class="btn btn-outline" target="_blank" style="padding:6px 12px; text-decoration:none; font-weight:800; font-size:11px;">ðŸ“¥ Download</a>
+                            <a href="\${audioUrl}" class="btn btn-outline" target="_blank" style="padding:6px 12px; text-decoration:none; font-weight:800; font-size:11px;"> Download</a>
                         </div>
                     </div>\`;
             }
@@ -7954,16 +7988,16 @@ function toggleGlobalMute(muted) {
                     const d = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
                     const items = [];
                     // Old format
-                    if (d.food) items.push(\`ðŸž Food: <b>\${d.food}</b>\`);
-                    if (d.med) items.push(\`ðŸ’Š Medicine: <b>\${d.med}</b>\`);
-                    if (d.sanitary) items.push(\`ðŸ§» Sanitary: <b>\${d.sanitary}</b>\`);
+                    if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
+                    if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
+                    if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
                     
                     // New format array parsing
                     if (d.needs && Array.isArray(d.needs)) {
                         const labels = ['Food Rations', 'Medical Tablets', 'Asthma Kit', 'Sanitary Kit'];
                         d.needs.forEach((qty, idx) => {
                             if (qty > 0 && labels[idx]) {
-                                items.push(\`ðŸ“¦ \${labels[idx]}: <b>\${qty}</b>\`);
+                                items.push(\` \${labels[idx]}: <b>\${qty}</b>\`);
                             }
                         });
                     }
@@ -8000,16 +8034,16 @@ function toggleGlobalMute(muted) {
                             try {
                                 const md = typeof m.details === 'string' ? JSON.parse(m.details) : m.details;
                                 const mdList = [];
-                                if (md.food) mdList.push(\`ðŸž \${md.food}\`);
-                                if (md.med) mdList.push(\`ðŸ’Š \${md.med}\`);
-                                if (md.sanitary) mdList.push(\`ðŸ§» \${md.sanitary}\`);
+                                if (md.food) mdList.push(\` \${md.food}\`);
+                                if (md.med) mdList.push(\` \${md.med}\`);
+                                if (md.sanitary) mdList.push(\` \${md.sanitary}\`);
                                 if (mdList.length > 0) mItems = \` - <small style="color:var(--primary); font-weight:700;">Requires: \${mdList.join(', ')}</small>\`;
                             } catch(e){}
                         }
                         groupMissionsHtml += \`
                             <div style="background:white; border:1px solid #e2e8f0; padding:10px 14px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:var(--shadow-sm);">
-                                <span style="font-size:12px; font-weight:800; color:#1e293b;">ðŸ“Œ \${m.type.toUpperCase()}\${mItems}</span>
-                                <span style="font-size:11px; font-weight:700; color:var(--text-muted);">ðŸ“ \${m.sector}</span>
+                                <span style="font-size:12px; font-weight:800; color:#1e293b;"> \${m.type.toUpperCase()}\${mItems}</span>
+                                <span style="font-size:11px; font-weight:700; color:var(--text-muted);"> \${m.sector}</span>
                             </div>\`;
                     });
                     groupMissionsHtml += \`</div></div>\`;
@@ -8040,7 +8074,7 @@ function toggleGlobalMute(muted) {
                     </div>
                     <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px;">
                         <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Deployment Sector</span>
-                        <span style="font-size:14px; font-weight:800; color:#1e293b; display:block; margin-top:2px;">ðŸ“ \${cmd.zone}</span>
+                        <span style="font-size:14px; font-weight:800; color:#1e293b; display:block; margin-top:2px;"> \${cmd.zone}</span>
                     </div>
                 </div>
 
@@ -8048,8 +8082,8 @@ function toggleGlobalMute(muted) {
                     <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Task Description</span>
                     <p style="margin:0; font-size:15px; font-weight:700; color:#1e293b;">\${cmd.desc}</p>
                     <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); margin-top:12px; padding-top:12px; font-size:12px; font-weight:700; flex-wrap:wrap; gap:8px;">
-                        <span>ðŸ›’ Support Items: <span style="color:var(--primary);">\${itemsHtml}</span></span>
-                        \${cmd.requesterPhone ? \`<span>ðŸ“ž Contact: <span style="color:var(--accent);">\${cmd.requesterPhone}</span></span>\` : ''}
+                        <span> Support Items: <span style="color:var(--primary);">\${itemsHtml}</span></span>
+                        \${cmd.requesterPhone ? \`<span> Contact: <span style="color:var(--accent);">\${cmd.requesterPhone}</span></span>\` : ''}
                     </div>
                     \${extraDetailsHtml}
                 </div>
@@ -8141,20 +8175,20 @@ function toggleGlobalMute(muted) {
                         if (req.type === 'medical') {
                             color = 'var(--critical)';
                             bg = '#fee2e2';
-                            typeLabel = 'ðŸ¥ Medical Rescue';
+                            typeLabel = ' Medical Rescue';
                         } else if (req.type === 'pregnancy') {
                             color = 'var(--special)';
                             bg = '#f3e8ff';
-                            typeLabel = 'ðŸ¤° Pregnancy Rescue';
+                            typeLabel = ' Pregnancy Rescue';
                         } else if (req.type === 'food' || req.type === 'delivery' || req.type === 'medical_delivery') {
                             color = 'var(--pending)';
                             bg = '#fffbeb';
-                            typeLabel = req.type === 'food' ? 'ðŸ“¦ Food Delivery' : 'ðŸ’Š Medical Supply';
+                            typeLabel = req.type === 'food' ? ' Food Delivery' : ' Medical Supply';
                             isCritical = false;
                         } else if (req.type === 'sos') {
                             color = 'var(--critical)';
                             bg = 'rgba(239,68,68,0.05)';
-                            typeLabel = 'ðŸš¨ SOS Alert Response';
+                            typeLabel = ' SOS Alert Response';
                             isCritical = true;
                         }
 
@@ -8163,10 +8197,10 @@ function toggleGlobalMute(muted) {
                             try {
                                 const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
                                 const items = [];
-                                if (d.food) items.push(\`ðŸž Food: <b>\${d.food}</b>\`);
-                                if (d.med) items.push(\`ðŸ’Š Medicine: <b>\${d.med}</b>\`);
-                                if (d.sanitary) items.push(\`ðŸ§» Sanitary: <b>\${d.sanitary}</b>\`);
-                                if (d.comments) items.push(\`ðŸ’¬ <i>"\${d.comments}"</i>\`);
+                                if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
+                                if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
+                                if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
+                                if (d.comments) items.push(\` <i>"\${d.comments}"</i>\`);
 
                                 if (items.length > 0) {
                                     detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
@@ -8174,7 +8208,7 @@ function toggleGlobalMute(muted) {
                                 </div>\`;
                                 }
                             } catch (e) {
-                                detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">ðŸ’¬ <i>"\${req.details}"</i></div>\`;
+                                detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;"> <i>"\${req.details}"</i></div>\`;
                             }
                         }
 
@@ -8264,7 +8298,7 @@ function toggleGlobalMute(muted) {
                 const marker = L.marker([req.lat, req.lng], {
                     icon: L.divIcon({
                         className: 'custom-sos-icon',
-                        html: '<div style="font-size:16px;">ðŸš¨</div>',
+                        html: '<div style="font-size:16px;"></div>',
                         iconSize: [20, 20],
                         iconAnchor: [10, 10]
                     })
@@ -8459,20 +8493,20 @@ function toggleGlobalMute(muted) {
                     if (req.type === 'medical') {
                         color = 'var(--critical)';
                         bg = '#fee2e2';
-                        typeLabel = 'ðŸ¥ Medical Rescue';
+                        typeLabel = ' Medical Rescue';
                     } else if (req.type === 'pregnancy') {
                         color = 'var(--special)';
                         bg = '#f3e8ff';
-                        typeLabel = 'ðŸ¤° Pregnancy Rescue';
+                        typeLabel = ' Pregnancy Rescue';
                     } else if (req.type === 'food' || req.type === 'delivery' || req.type === 'medical_delivery') {
                         color = 'var(--pending)';
                         bg = '#fffbeb';
-                        typeLabel = req.type === 'food' ? 'ðŸ“¦ Food Delivery' : 'ðŸ’Š Medical Supply';
+                        typeLabel = req.type === 'food' ? ' Food Delivery' : ' Medical Supply';
                         isCritical = false;
                     } else if (req.type === 'sos') {
                         color = 'var(--critical)';
                         bg = 'rgba(239,68,68,0.05)';
-                        typeLabel = 'ðŸš¨ SOS Alert Response';
+                        typeLabel = ' SOS Alert Response';
                         isCritical = true;
                     }
 
@@ -8482,9 +8516,9 @@ function toggleGlobalMute(muted) {
                         try {
                             const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
                             const items = [];
-                            if (d.food) items.push(\`ðŸž Food: <b>\${d.food}</b>\`);
-                            if (d.med) items.push(\`ðŸ’Š Medicine: <b>\${d.med}</b>\`);
-                            if (d.sanitary) items.push(\`ðŸ§» Sanitary: <b>\${d.sanitary}</b>\`);
+                            if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
+                            if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
+                            if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
 
                             if (items.length > 0) {
                                 detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
@@ -9328,8 +9362,8 @@ function toggleGlobalMute(muted) {
                         </div>
                         <div style="display:flex; gap:10px;">
                              <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="closeModal('activeGroupsModal'); closeTaskByAdmin('\${g.id}')">âœ… CLOSE</button>
-                             <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #eab308; border-color: #eab308; color: white;" onclick="closeModal('activeGroupsModal'); openReassignModal('\${g.id}')">ðŸ”„ RE-ASSIGN</button>
-                             <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="closeModal('activeGroupsModal'); selectTask('\${g.id}')">ðŸ‘ï¸ VIEW</button>
+                             <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #eab308; border-color: #eab308; color: white;" onclick="closeModal('activeGroupsModal'); openReassignModal('\${g.id}')"> RE-ASSIGN</button>
+                             <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="closeModal('activeGroupsModal'); selectTask('\${g.id}')">ï¸ VIEW</button>
                         </div>
                     </div>
                 \`).join('');
