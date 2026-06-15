@@ -328,7 +328,7 @@ export default function App() {
         const bgStatus = await Location.requestBackgroundPermissionsAsync();
         if (bgStatus.status === 'granted') {
           await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-            accuracy: Location.Accuracy.High,
+            accuracy: Location.Accuracy.BestForNavigation,
             timeInterval: 5000,
             distanceInterval: 1,
             foregroundService: {
@@ -340,24 +340,32 @@ export default function App() {
         }
 
         try {
-          const initialLoc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-          if (webViewRef.current) {
-            const payload = JSON.stringify({
-              type: 'GPS_UPDATE',
-              lat: initialLoc.coords.latitude,
-              lng: initialLoc.coords.longitude
-            });
-            webViewRef.current.injectJavaScript(`window.postMessage(${payload}, '*'); true;`);
+          const initialLoc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
+          const age = Date.now() - initialLoc.timestamp;
+          if (age < 30000 && initialLoc.coords.accuracy <= 20) {
+            if (webViewRef.current) {
+              const payload = JSON.stringify({
+                type: 'GPS_UPDATE',
+                lat: initialLoc.coords.latitude,
+                lng: initialLoc.coords.longitude
+              });
+              webViewRef.current.injectJavaScript(`window.postMessage(${payload}, '*'); true;`);
+            }
           }
         } catch (e) {}
 
         locationSubscription = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.High,
+            accuracy: Location.Accuracy.BestForNavigation,
             timeInterval: 2000,
             distanceInterval: 1,
           },
           (loc) => {
+            const age = Date.now() - loc.timestamp;
+            if (age > 30000) return; // Reject stale cached location
+            
+            if (loc.coords.accuracy > 15) return; // Accuracy threshold filter
+
             if (webViewRef.current) {
               const payload = JSON.stringify({
                 type: 'GPS_UPDATE',

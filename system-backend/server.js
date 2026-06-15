@@ -1406,7 +1406,7 @@ app.get('/api/rescue-requests', async (req, res) => {
         `;
         let params = [];
         if (status === 'active') {
-            query += ` WHERE rr.status != 'completed' AND rr.status != 'declined'`;
+            query += ` WHERE rr.status IN ('pending', 'accepted', 'partially_declined', 'in_progress', 'assigned')`;
         } else if (status) {
             query += ` WHERE rr.status = ?`;
             params.push(status);
@@ -1636,7 +1636,7 @@ app.put('/api/rescue-requests/:id/decline', async (req, res) => {
         }
         const descAppend = `\n[Declined by Rescuer ID: ${rescuer ? rescuer.id : 'Unknown'}]`;
 
-        await run(`UPDATE rescue_requests SET status = 'pending', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, req.params.id]);
+        await run(`UPDATE rescue_requests SET status = 'partially_declined', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, req.params.id]);
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
 
         broadcastToAdminAndTarget('RESCUE_REQUEST_DECLINED_REASSIGN', reqData, reqData.assigned_user_id);
@@ -2412,7 +2412,7 @@ async function runAIAssignment() {
         // ──────────────────────────────────────────────────────────────────────────
 
         // Fetch only pending requests that have existed longer than the buffer duration
-        const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE status = 'pending' AND (strftime('%s', 'now') - strftime('%s', created_at)) >= ? ORDER BY id ASC`, [bufferSecs]);
+        const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE (status = 'pending' OR status = 'partially_declined') AND (strftime('%s', 'now') - strftime('%s', created_at)) >= ? ORDER BY id ASC`, [bufferSecs]);
         if (pendingRequests.length === 0) return;
 
         // Fetch AI Managed Users
@@ -2458,6 +2458,8 @@ async function runAIAssignment() {
             if (!bestUser && req.details && (req.details.includes('[Declined by Rescuer ID:') || req.details.includes('[Ignored by Rescuer ID:'))) {
                 // All available AI rescuers declined this task! Alert the Admin Web
                 broadcastToAdminAndTarget('RESCUER_DECLINED_LAST', req, req.assigned_user_id);
+                // Move out of Live Command by setting to reassign_pending
+                await run(`UPDATE rescue_requests SET status = 'reassign_pending' WHERE id = ?`, [req.id]);
             }
             if (bestUser) {
                 // Execution: Assign to the nearest eligible rescuer
@@ -2466,7 +2468,7 @@ async function runAIAssignment() {
                 const assignedPhone = bestUser.phone || bestUser.device_id || bestUser.id.toString();
 
                 // Atomic Check: Ensure it wasn't manually handled during buffer
-                const updateRes = await run(`UPDATE rescue_requests SET status = 'assigned', assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'`,
+                const updateRes = await run(`UPDATE rescue_requests SET status = 'assigned', assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND (status = 'pending' OR status = 'partially_declined')`,
                     [assignedUserId, req.id]);
 
                 if (updateRes.changes === 0) {

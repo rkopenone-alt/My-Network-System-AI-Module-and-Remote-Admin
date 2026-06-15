@@ -1556,9 +1556,6 @@ export const htmlString = `<!DOCTYPE html>
             <button id="globalAiBtn" onclick="toggleGlobalAI(this.dataset.enabled !== 'true')" data-enabled="false" style="display: flex; align-items: center; justify-content: center; padding: 6px 16px; border-radius: 8px; font-weight: 900; font-size: 14px; border: none; cursor: pointer; transition: 0.3s; background-color: #ef4444; color: white; min-width: 140px;">
                 <i data-lucide="cpu" style="width:18px; margin-right:6px;"></i> AI OFFLINE
             </button>
-            <button id="globalMuteBtn" onclick="toggleGlobalMute(this.dataset.muted === 'true')" data-muted="false" style="display: flex; align-items: center; justify-content: center; padding: 6px 16px; border-radius: 8px; font-weight: 900; font-size: 14px; border: none; cursor: pointer; transition: 0.3s; background-color: #22c55e; color: white; min-width: 140px;">
-                <i data-lucide="volume-2" style="width:18px; margin-right:6px;"></i> SOUND ON
-            </button>
         </div>
 
 
@@ -2094,6 +2091,7 @@ export const htmlString = `<!DOCTYPE html>
                                         <th>Photo</th>
                                         <th>Member ID</th>
                                         <th>Username</th>
+                                        <th>Mobile Number</th>
                                         <th>Password</th>
                                         <th>Role</th>
                                         <th>AI Status</th>
@@ -2182,7 +2180,7 @@ export const htmlString = `<!DOCTYPE html>
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: #f59e0b; font-size: 16px;">
                     <i data-lucide="clock" style="width:20px;"></i> Pending SOS Requests
                 </h3>
-                <div class="card table-responsive" style="padding:0; overflow:hidden;">
+                <div class="card table-responsive" style="padding:0; overflow-x:auto;">
                     <table>
                         <thead>
                             <!-- Populated by JS -->
@@ -2199,7 +2197,7 @@ export const htmlString = `<!DOCTYPE html>
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--critical); font-size: 16px;">
                     <i data-lucide="alert-circle" style="width:20px;"></i> Critical Task History
                 </h3>
-                <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card" style="padding:0; overflow-x:auto;">
                     <table>
                         <thead>
                             <tr>
@@ -2228,7 +2226,7 @@ export const htmlString = `<!DOCTYPE html>
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--accent); font-size: 16px;">
                     <i data-lucide="box" style="width:20px;"></i> Normal Task History
                 </h3>
-                <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card" style="padding:0; overflow-x:auto;">
                     <table>
                         <thead>
                             <!-- Populated by JS -->
@@ -2245,7 +2243,7 @@ export const htmlString = `<!DOCTYPE html>
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--special); font-size: 16px;">
                     <i data-lucide="layers" style="width:20px;"></i> Tactical Group Mission History
                 </h3>
-                <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card" style="padding:0; overflow-x:auto;">
                     <table>
                         <thead>
                             <!-- Populated by JS -->
@@ -3655,18 +3653,6 @@ export const htmlString = `<!DOCTYPE html>
 
 function toggleGlobalMute(muted) {
     window.isMuted = muted;
-    const btn = document.getElementById('globalMuteBtn');
-    if (btn) {
-        btn.dataset.muted = window.isMuted.toString();
-        if (window.isMuted) {
-            btn.style.backgroundColor = "#ef4444"; // red
-            btn.innerHTML = '<i data-lucide="volume-x" style="width:18px; margin-right:6px;"></i> SOUND OFF';
-        } else {
-            btn.style.backgroundColor = "#22c55e"; // green
-            btn.innerHTML = '<i data-lucide="volume-2" style="width:18px; margin-right:6px;"></i> SOUND ON';
-        }
-        if (window.lucide) window.lucide.createIcons();
-    }
 }
                         if (data.type === 'RESCUE_REQUEST_DECLINED_REASSIGN') {
                         }
@@ -7377,13 +7363,6 @@ function toggleGlobalMute(muted) {
 
             tbody.innerHTML = members.map((m, index) => {
                 const groupTags = m.groups && m.groups.length > 0
-                    ? m.groups.map(g => \`<span class="tag tag-blue" style="font-size:10px; padding:2px 6px; background:#eff6ff; color:#2563eb; border:1px solid #dbeafe;">\${g.group_name}</span>\`).join('')
-                    : \`<span class="tag tag-gray" style="font-size:10px; padding:2px 6px;">Unassigned</span>\`;
-
-                return \`
-                <tr>
-                    <td style="font-weight: 800; color: var(--text-muted);">\${String(index + 1).padStart(2, '0')}</td>
-                    <td>
                         <img src="\${m.photo_url || 'official_rescuer_icon.png'}" 
                              style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid var(--border);" />
                     </td>
@@ -9770,38 +9749,6 @@ const CONFIG_SND = 'UklGRmisAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YUSsAAAA
 <script>
 function toggleGlobalMute(muted) {
     window.isMuted = muted;
-    
-    const btn1 = document.getElementById('globalMuteBtn');
-    if (btn1) {
-        btn1.dataset.muted = window.isMuted.toString();
-        if (window.isMuted) {
-            btn1.style.backgroundColor = "#ef4444";
-            btn1.innerHTML = '<i data-lucide="volume-x" style="width:18px; margin-right:6px;"></i> SOUND OFF';
-        } else {
-            btn1.style.backgroundColor = "#22c55e";
-            btn1.innerHTML = '<i data-lucide="volume-2" style="width:18px; margin-right:6px;"></i> SOUND ON';
-        }
-    }
-    
-    const btn2 = document.getElementById('sidebarMuteBtn');
-    if (btn2) {
-        btn2.dataset.muted = window.isMuted.toString();
-        const iconSpan = btn2.querySelector('i');
-        const textSpan = btn2.querySelector('#sidebarMuteText');
-        if (window.isMuted) {
-            btn2.style.backgroundColor = "#ef4444";
-            btn2.style.boxShadow = "0 4px 6px -1px rgba(239, 68, 68, 0.3)";
-            if(iconSpan) iconSpan.setAttribute('data-lucide', 'volume-x');
-            if(textSpan) textSpan.innerText = 'System Audio: OFF';
-        } else {
-            btn2.style.backgroundColor = "#22c55e";
-            btn2.style.boxShadow = "0 4px 6px -1px rgba(34, 197, 94, 0.3)";
-            if(iconSpan) iconSpan.setAttribute('data-lucide', 'volume-2');
-            if(textSpan) textSpan.innerText = 'System Audio: ON';
-        }
-    }
-
-    if (window.lucide) window.lucide.createIcons();
 }
 </script>
 
