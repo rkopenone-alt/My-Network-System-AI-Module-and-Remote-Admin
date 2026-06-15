@@ -5470,16 +5470,17 @@ function toggleGlobalMute(muted) {
             const tableHeader = `<tr>
                 <th style="width: 50px;">S.NO</th>
                 <th style="width: 90px;">ID</th>
-                <th style="width: 200px;">TASK / DESCRIPTION</th>
-                <th style="width: 150px;">INFORMATION</th>
+                <th style="width: 150px;">TASK</th>
+                <th style="width: 200px;">INFORMATION</th>
                 <th style="width: 80px;">IMAGE</th>
                 <th style="width: 150px;">AUDIO</th>
                 <th style="width: 100px;">TYPE</th>
                 <th style="width: 150px;">ZONE / AREA</th>
                 <th style="width: 150px;">ASSIGNED TO</th>
-                  <th style="width: 150px;">DECLINED BY</th>
-                <th style="width: 80px;">REQ</th>
-                <th style="width: 80px;">CMD</th>
+                <th style="width: 150px;">DECLINED BY</th>
+                <th style="width: 80px;">REQ TIME</th>
+                <th style="width: 80px;">CMD TIME</th>
+                <th style="width: 100px;">ASSIGNED BY</th>
                 <th style="width: 100px;">STATUS</th>
                 <th style="width: 100px;">CLOSURE REPORT</th>
                 <th style="width: 160px;">ACTION</th>
@@ -5955,44 +5956,70 @@ function toggleGlobalMute(muted) {
             const startY = currentActiveOp ? 48 : 35;
 
             // Filter data based on current view if needed, or export all
-            const tableData = cmds.map((c, index) => {
-                const isCritical = ['sos', 'rescue', 'emergency'].includes(c.type.toLowerCase());
-                const priority = isCritical ? 'CRITICAL' : 'NORMAL';
+            const tableData = rescueRequests.map((r, index) => {
+                let assignedTo = 'Unassigned';
+                if (r.assigned_officer_name) {
+                    assignedTo = `${r.assigned_officer_name}`;
+                } else if (r.assigned_group_name) {
+                    assignedTo = `${r.assigned_group_name}`;
+                } else if (r.assigned_user_id) {
+                    assignedTo = `Rescuer ${r.assigned_user_id}`;
+                } else if (r.assigned_group_id) {
+                    assignedTo = `Group ${r.assigned_group_id}`;
+                }
 
-                let taskDesc = c.desc;
-                if (c.requesterName) {
-                    taskDesc += `\n[Requester: ${c.requesterName}]`;
+                let declinedBy = '-';
+                let declinedMatches = (r.details || '').match(/\[Declined by Rescuer ID: (.*?)\]/g);
+                if (declinedMatches) {
+                    declinedBy = declinedMatches.map(m => {
+                        const idStr = m.replace(/\[Declined by Rescuer ID: |\]/g, '');
+                        const u = (window.currentUsers || []).find(x => x.id.toString() === idStr);
+                        return u ? (u.name || `Rescuer ${idStr}`) : `Rescuer ${idStr}`;
+                    }).join(', ');
+                }
+
+                const formattedReqTime = r.created_at ? new Date(r.created_at).toLocaleString() : '-';
+                const formattedCmdTime = r.updated_at ? new Date(r.updated_at).toLocaleString() : formattedReqTime;
+
+                let publicDetails = '-';
+                if (r.phone || r.name) {
+                    publicDetails = `Name: ${r.name || 'Unknown'}\nPhone: ${r.phone || 'Unknown'}`;
+                }
+
+                let locDetails = r.sector || '-';
+                if (r.lat && r.lng) {
+                    locDetails += `\n(${r.lat.toFixed(4)}, ${r.lng.toFixed(4)})`;
                 }
 
                 return [
                     String(index + 1).padStart(2, '0'),
-                    c.id,
-                    taskDesc,
-                    priority,
-                    c.type.toUpperCase(),
-                    c.zone.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim(),
-                    c.team,
-                    c.reqTime || '-',
-                    c.status.toUpperCase()
+                    `REQ-${r.id}`,
+                    (r.type || 'Request').toUpperCase(),
+                    publicDetails,
+                    locDetails,
+                    assignedTo,
+                    declinedBy,
+                    `${formattedReqTime}\n-> ${formattedCmdTime}`,
+                    (r.status || 'Pending').toUpperCase()
                 ];
             });
 
             doc.autoTable({
                 startY: startY,
-                head: [['S.#', 'ID', 'TASK / DESCRIPTION', 'PRIORITY', 'TYPE', 'ZONE / AREA', 'TEAM', 'REQ TIME', 'STATUS']],
+                head: [['S.#', 'ID', 'TYPE', 'PUBLIC INFO', 'LOCATION', 'ASSIGNED TO', 'DECLINED BY', 'TIME (REQ -> CMD)', 'STATUS']],
                 body: tableData,
                 theme: 'grid',
-                styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
-                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold', halign: 'center' },
+                styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold', halign: 'center' },
                 columnStyles: {
-                    0: { cellWidth: 10, halign: 'center' },
-                    1: { cellWidth: 18 },
-                    2: { cellWidth: 55 },
-                    3: { cellWidth: 20, fontStyle: 'bold' },
-                    4: { cellWidth: 18 },
-                    5: { cellWidth: 40 },
-                    6: { cellWidth: 35 },
-                    7: { cellWidth: 20, halign: 'center' },
+                    0: { cellWidth: 8, halign: 'center' },
+                    1: { cellWidth: 15 },
+                    2: { cellWidth: 15, fontStyle: 'bold' },
+                    3: { cellWidth: 35 },
+                    4: { cellWidth: 35 },
+                    5: { cellWidth: 30 },
+                    6: { cellWidth: 30 },
+                    7: { cellWidth: 30, halign: 'center' },
                     8: { cellWidth: 20, halign: 'center' }
                 },
                 alternateRowStyles: { fillColor: [248, 250, 252] },
