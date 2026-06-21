@@ -446,6 +446,27 @@ export default function App() {
             
             if (data.type === 'PLAY_SOUND') {
               playFeedbackSound(data.sound);
+              if (data.sound === 'siren_loop') {
+                Notifications.scheduleNotificationAsync({
+                  content: {
+                    title: "🚨 URGENT: SOS TASK ASSIGNED!",
+                    body: "A critical rescue mission requires your immediate attention.",
+                    sound: true,
+                    priority: Notifications.AndroidNotificationPriority.MAX,
+                  },
+                  trigger: null,
+                });
+              } else {
+                Notifications.scheduleNotificationAsync({
+                  content: {
+                    title: "🔔 System Update",
+                    body: "New information received.",
+                    sound: true,
+                    priority: Notifications.AndroidNotificationPriority.HIGH,
+                  },
+                  trigger: null,
+                });
+              }
               return;
             }
             if (data.type === 'STOP_SOUND') {

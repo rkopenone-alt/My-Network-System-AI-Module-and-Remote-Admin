@@ -903,10 +903,17 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
         const groupIds = groups.map(g => g.group_id);
 
         // Personal & Group Rescue Requests (include active and resolved tasks)
-        let personalReqQuery = `SELECT 'request' as source, id, type, sector, status, lat, lng, created_at, updated_at, image_url, audio_url, completion_image_url, details, priority FROM rescue_requests WHERE (assigned_user_id = ?)`;
-        let reqParams = [userId];
+        let personalReqQuery = `
+            SELECT DISTINCT 'request' as source, rr.id, rr.type, rr.sector, rr.status, rr.lat, rr.lng, 
+                   rr.created_at, rr.updated_at, rr.image_url, rr.audio_url, rr.completion_image_url, 
+                   rr.details, rr.priority, rr.name, rr.phone 
+            FROM rescue_requests rr
+            LEFT JOIN sos_assignment_history sah ON rr.id = sah.rescue_req_id
+            WHERE (rr.assigned_user_id = ? OR sah.rescuer_id = ?)
+        `;
+        let reqParams = [userId, userId];
         if (groupIds.length > 0) {
-            personalReqQuery += ` OR (assigned_group_id IN (${groupIds.map(() => '?').join(',')}))`;
+            personalReqQuery += ` OR (rr.assigned_group_id IN (${groupIds.map(() => '?').join(',')}))`;
             reqParams = reqParams.concat(groupIds);
         }
         const personalReqs = await all(personalReqQuery, reqParams);
@@ -920,14 +927,13 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
             SELECT 'command' as source, cq.id, cq.command_type as type, 'HQ Order' as sector, 
                    cq.status, cq.created_at, cq.updated_at, cq.command_payload, cq.priority, cq.completion_image_url 
             FROM command_queue cq
-            LEFT JOIN rescue_requests rr ON cq.command_payload LIKE '%"rescue_req_id":' || rr.id || '%' OR cq.command_payload LIKE '%"rescue_req_id":"' || rr.id || '"%'
             WHERE (
-                (rr.assigned_user_id IS NOT NULL AND rr.assigned_user_id = ?) 
-                OR cq.target_phone = ?
+                cq.target_phone = ?
                 OR (cq.target_phone = ? AND cq.target_phone != '')
+                OR cq.target_phone = ?
             )
         `;
-        params.push(userId, cleanDeviceId, userPhone);
+        params.push(userPhone, cleanDeviceId, userId.toString());
 
         if (groupIds.length > 0) {
             commandQuery += ` OR (cq.group_id IN (${groupIds.map(() => '?').join(',')}))`;
@@ -1391,6 +1397,43 @@ app.get('/api/rescuers', async (req, res) => {
 });
 
 // ─── Rescue Requests ────────────────────────────────────────────────────────────
+app.get('/api/rescue-requests/my-history', async (req, res) => {
+    const { phone, device_id } = req.query;
+    try {
+        if (!phone && !device_id) return res.json([]);
+        
+        let query = `
+            SELECT rr.*, 
+                   COALESCE(u_completed.name, u_assigned.name) as assigned_officer_name,
+                   g_assigned.group_name as assigned_group_name
+            FROM rescue_requests rr
+            LEFT JOIN sos_completion_log scl ON rr.id = scl.rescue_req_id
+            LEFT JOIN users u_completed ON scl.completed_by_rescuer_id = u_completed.id
+            LEFT JOIN users u_assigned ON rr.assigned_user_id = u_assigned.id
+            LEFT JOIN groups g_assigned ON rr.assigned_group_id = g_assigned.id
+            WHERE 1=1
+        `;
+        let params = [];
+        
+        let conditions = [];
+        if (phone) {
+            conditions.push(`rr.phone = ?`);
+            params.push(phone);
+        }
+        if (device_id) {
+            conditions.push(`rr.device_id = ?`);
+            params.push(device_id);
+        }
+        
+        if (conditions.length > 0) {
+            query += ` AND (${conditions.join(' OR ')})`;
+        }
+        
+        query += ` ORDER BY COALESCE(rr.updated_at, rr.created_at) DESC`;
+        res.json(await all(query, params));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/rescue-requests', async (req, res) => {
     const { status } = req.query;
     try {
@@ -1506,6 +1549,7 @@ app.post('/api/rescue-requests', async (req, res) => {
 
         const result = await run(`INSERT INTO rescue_requests (device_id, phone, type, lat, lng, details, urgency, priority, sector, image_url, audio_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [device_id, phone, type || 'pregnancy', lat, lng, details, urgency || 'high', priority || 'normal', sector || 'Unknown Zone', imageUrl, audioUrl]);
+        await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'requested')`, [result.lastID]);
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [result.lastID]);
         broadcast('NEW_RESCUE_REQUEST', reqData, 'admin');
         await logCommand('RESCUE_REQUEST_CREATED', phone || device_id, 'Command Center', reqData);
@@ -1611,9 +1655,6 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
             const cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [targetCmdId]);
             broadcast('NEW_COMMAND', cmdData);
         }
-        if (cmdData) {
-            broadcast('NEW_COMMAND', cmdData);
-        }
 
         await logCommand('RESCUE_REQUEST_ACCEPTED', 'Commander', `Request ID: ${req.params.id}`, { assigned_user_id, assigned_group_id, commandType });
         triggerBackup();
@@ -1637,6 +1678,10 @@ app.put('/api/rescue-requests/:id/decline', async (req, res) => {
         const descAppend = `\n[Declined by Rescuer ID: ${rescuer ? rescuer.id : 'Unknown'}]`;
 
         await run(`UPDATE rescue_requests SET status = 'partially_declined', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, req.params.id]);
+        if (rescuer) {
+            await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'declined')`, [req.params.id, rescuer.id]);
+        }
+        await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [req.params.id]);
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
 
         broadcastToAdminAndTarget('RESCUE_REQUEST_DECLINED_REASSIGN', reqData, reqData.assigned_user_id);
@@ -1700,6 +1745,18 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
             } else {
                 await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, req.params.id]);
             }
+        }
+        
+        // AUDIT TRAIL LOGGING
+        const rescuerIdToLog = rescuer ? rescuer.id : (reqData ? reqData.assigned_user_id : null);
+        if (rescuerIdToLog) {
+            await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, ?)`, [req.params.id, rescuerIdToLog, status]);
+            if (status === 'completed') {
+                await run(`INSERT OR IGNORE INTO sos_completion_log (rescue_req_id, completed_by_rescuer_id, evidence_url) VALUES (?, ?, ?)`, [req.params.id, rescuerIdToLog, compImageUrl || null]);
+            }
+        }
+        if (status === 'declined') {
+            await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [req.params.id]);
         }
         
         if (existingCommand) {
@@ -1779,6 +1836,21 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
         triggerBackup();
         res.json(reqData);
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/rescue-requests/:id/timeline', async (req, res) => {
+    try {
+        const timeline = await all(`
+            SELECT h.*, u.name as rescuer_name, u.serial_number as rescuer_serial
+            FROM sos_assignment_history h
+            LEFT JOIN users u ON h.rescuer_id = u.id
+            WHERE h.rescue_req_id = ?
+            ORDER BY h.created_at ASC, h.id ASC
+        `, [req.params.id]);
+        res.json(timeline);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.put('/api/rescue-requests/:id/location', async (req, res) => {
@@ -1900,6 +1972,12 @@ app.post('/api/commands', async (req, res) => {
             await run(`UPDATE rescue_requests SET status = 'assigned', assigned_group_id = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, 
                 [group_id || null, target_user_id || null, ...ids]);
             
+            if (target_user_id) {
+                for (const reqId of ids) {
+                    await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'assigned')`, [reqId, target_user_id]);
+                }
+            }
+
             // Cancel any previous individual commands for these requests to prevent duplicates
             for (const reqId of ids) {
                 await run(`UPDATE command_queue SET status = 'cancelled' WHERE command_payload LIKE ? AND status NOT IN ('completed', 'cancelled', 'declined')`, [`%"rescue_req_id":${reqId}%`]);
@@ -1912,6 +1990,11 @@ app.post('/api/commands', async (req, res) => {
             const reqId = payloadObj.rescue_req_id;
             await run(`UPDATE rescue_requests SET status = 'assigned', assigned_group_id = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
                 [group_id || null, target_user_id || null, reqId]);
+            if (target_user_id) {
+                await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'assigned')`, [reqId, target_user_id]);
+            }
+            // Cancel any previous individual/group commands for this request to prevent duplicates
+            await run(`UPDATE command_queue SET status = 'cancelled' WHERE id != ? AND (command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled', 'declined')`, [cmd.id, `%"rescue_req_id":${reqId}%`, `%"rescue_req_id":"${reqId}"%`]);
             broadcastToAdminAndTarget('RESCUE_REQUESTS_UPDATED', { ids: [reqId], status: 'assigned', group_id, target_user_id }, target_user_id);
         }
 
@@ -2065,6 +2148,9 @@ app.put('/api/commands/:id/status', async (req, res) => {
                             await run(`INSERT INTO sos_completion_log (rescue_req_id, completed_by_rescuer_id, evidence_url) VALUES (?, ?, ?)`, [payload.rescue_req_id, rescuer.id, compImageUrl || null]);
                         }
                     }
+                    if (status === 'declined') {
+                        await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [payload.rescue_req_id]);
+                    }
                     const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [payload.rescue_req_id]);
                     if (reqData) broadcastToAdminAndTarget(broadcastEvent, reqData, reqData.assigned_user_id);
                 }
@@ -2103,6 +2189,19 @@ app.put('/api/commands/:id/status', async (req, res) => {
                             } else {
                                 await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, ...ids]);
                             }
+                        }
+                    }
+                    if (rescuer) {
+                        for (const id of ids) {
+                            await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, ?)`, [id, rescuer.id, status]);
+                            if (status === 'completed') {
+                                await run(`INSERT OR IGNORE INTO sos_completion_log (rescue_req_id, completed_by_rescuer_id, evidence_url) VALUES (?, ?, ?)`, [id, rescuer.id, compImageUrl || null]);
+                            }
+                        }
+                    }
+                    if (status === 'declined') {
+                        for (const id of ids) {
+                            await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [id]);
                         }
                     }
                     for (const id of ids) {
@@ -2168,6 +2267,44 @@ app.put('/api/commands/:id/reassign', async (req, res) => {
             payload.custom_polygon = req.body.custom_polygon;
             await run(`UPDATE command_queue SET command_payload = ? WHERE id = ?`, [JSON.stringify(payload), req.params.id]);
             cmdData.command_payload = JSON.stringify(payload);
+        }
+
+        // TACTICAL SYNC: If this command is linked to rescue_requests, update them and log timeline events
+        if (payload) {
+            let reqIds = [];
+            if (payload.rescue_req_id) {
+                reqIds.push(payload.rescue_req_id);
+            }
+            if (payload.request_ids && Array.isArray(payload.request_ids)) {
+                reqIds = reqIds.concat(payload.request_ids);
+            }
+
+            if (reqIds.length > 0) {
+                const placeholders = reqIds.map(() => '?').join(',');
+                let targetUserId = target_user_id;
+                if (!targetUserId && effectivePhone) {
+                    const u = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ?`, [effectivePhone, effectivePhone]);
+                    if (u) targetUserId = u.id;
+                }
+
+                // Log the return to pending since the previous rescuer declined/ignored/was reassigned from it
+                for (const reqId of reqIds) {
+                    await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [reqId]);
+                }
+
+                // Update requests
+                await run(`UPDATE rescue_requests SET status = 'assigned', assigned_group_id = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`,
+                    [effectiveGroupId || null, targetUserId || null, ...reqIds]);
+
+                // Write new assignment to history
+                if (targetUserId) {
+                    for (const reqId of reqIds) {
+                        await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'assigned')`, [reqId, targetUserId]);
+                    }
+                }
+                
+                broadcastToAdminAndTarget('RESCUE_REQUESTS_UPDATED', { ids: reqIds, status: 'assigned', group_id: effectiveGroupId, target_user_id: targetUserId }, targetUserId);
+            }
         }
 
         // Notify new target
@@ -2405,6 +2542,8 @@ async function runAIAssignment() {
             if (!(cmd.req_details || '').includes(`[Ignored by Rescuer ID: ${rescuerId}]`)) {
                 await run(`UPDATE rescue_requests SET status = 'pending', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, cmd.req_id]);
                 await run(`UPDATE command_queue SET status = 'ignored', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [cmd.id]);
+                await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'ignored')`, [cmd.req_id, rescuer ? rescuer.id : null]);
+                await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [cmd.req_id]);
                 broadcastToAdminAndTarget('RESCUE_REQUEST_IGNORED_REASSIGN', { rescue_req_id: cmd.req_id, rescuerId, message: `Rescuer ignored assignment (Timeout). AI is finding next eligible unit.` }, rescuerId);
                 await logCommand('AI_TIMEOUT_REASSIGN', 'System Engine', `Task ${cmd.id} ignored by ${rescuerId}`, { reqId: cmd.req_id });
             }
@@ -2475,6 +2614,8 @@ async function runAIAssignment() {
                     continue; // Skip: Another admin manually handled it while buffer was running!
                 }
 
+                await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'assigned')`, [req.id, assignedUserId]);
+
                 // Mark them as busy for subsequent requests in this loop
                 busyUserIds.add(assignedUserId);
 
@@ -2505,11 +2646,13 @@ async function runAIAssignment() {
 
                 // ─── DUPLICATE PREVENTION: UPSERT COMMAND QUEUE ───────────────────
                 // Check if there is an existing command for this request using LIKE for robust cross-type matching
-                const existingCommand = await get(`SELECT * FROM command_queue WHERE command_payload LIKE ?`, [`%"rescue_req_id":${req.id}%`]);
+                const existingCommand = await get(`SELECT * FROM command_queue WHERE command_payload LIKE ? OR command_payload LIKE ?`, [`%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`]);
                 
                 if (existingCommand) {
                     await run(`UPDATE command_queue SET target_phone = ?, command_payload = ?, status = 'assigned', priority = ?, assigned_by = 'AI', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
                         [assignedPhone, cmdPayload, commandType, existingCommand.id]);
+                    // Cancel any other active commands for the same request to prevent duplicates
+                    await run(`UPDATE command_queue SET status = 'cancelled' WHERE id != ? AND (command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled', 'declined')`, [existingCommand.id, `%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`]);
                     const updatedCmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [existingCommand.id]);
                     broadcastToAdminAndTarget('NEW_COMMAND', updatedCmdData, bestUser.device_id); // Target specifically
                 } else {
@@ -2517,6 +2660,8 @@ async function runAIAssignment() {
                         [assignedPhone, commandType, cmdPayload, commandType]);
                     const newCmdId = await get('SELECT last_insert_rowid() as id');
                     if (newCmdId) {
+                        // Cancel any other active commands for the same request to prevent duplicates
+                        await run(`UPDATE command_queue SET status = 'cancelled' WHERE id != ? AND (command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled', 'declined')`, [newCmdId.id, `%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`]);
                         const newCmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [newCmdId.id]);
                         broadcastToAdminAndTarget('NEW_COMMAND', newCmdData, bestUser.device_id);
                     }

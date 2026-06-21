@@ -1360,6 +1360,16 @@
             logout() {
                 localStorage.removeItem('rescue_user_v3');
                 localStorage.removeItem('rescuer_token');
+                
+                // Clear all history cache entries
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('cache_')) {
+                        localStorage.removeItem(key);
+                    }
+                }
+                this.allHistory = []; // Reset local memory
+                
                 try {
                     window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOGOUT' }));
                 } catch(e) {}
@@ -1639,22 +1649,36 @@
                     historyData.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
 
                     // Filter: Show all active statuses (assigned = awaiting acceptance, accepted/ongoing = in progress)
-                    const activeData = historyData.filter(t => t.status && !['completed', 'resolved', 'inactive', 'declined', 'cancelled'].includes(t.status.toLowerCase()));
+                    const activeData = historyData.filter(t => t.status && !['completed', 'resolved', 'inactive', 'declined', 'cancelled', 'ignored'].includes(t.status.toLowerCase()));
 
-                    // Deduplicate identical tasks (Requests vs Commands)
-                    const reqIdsInCmds = new Set();
-                    activeData.forEach(t => {
+                    // Deduplicate identical tasks (Requests vs Commands, and duplicate Commands)
+                    const seenRescueReqIds = new Set();
+                    const dedupedData = [];
+
+                    for (const t of activeData) {
+                        let linkedReqIds = [];
                         if (t.source === 'command' && t.command_payload) {
                             try {
                                 const p = typeof t.command_payload === 'string' ? JSON.parse(t.command_payload) : t.command_payload;
-                                if (p.rescue_req_id) reqIdsInCmds.add(String(p.rescue_req_id));
+                                if (p.rescue_req_id) linkedReqIds.push(String(p.rescue_req_id));
                                 if (p.request_ids && Array.isArray(p.request_ids)) {
-                                    p.request_ids.forEach(id => reqIdsInCmds.add(String(id)));
+                                    p.request_ids.forEach(id => linkedReqIds.push(String(id)));
                                 }
                             } catch (e) {}
+                        } else if (t.source === 'request') {
+                            linkedReqIds.push(String(t.id));
                         }
-                    });
-                    const dedupedData = activeData.filter(t => !(t.source === 'request' && reqIdsInCmds.has(String(t.id))));
+
+                        if (linkedReqIds.length === 0) {
+                            dedupedData.push(t);
+                        } else {
+                            const hasAlreadySeen = linkedReqIds.some(id => seenRescueReqIds.has(id));
+                            if (!hasAlreadySeen) {
+                                dedupedData.push(t);
+                                linkedReqIds.forEach(id => seenRescueReqIds.add(id));
+                            }
+                        }
+                    }
 
                     // Check if there is an active mission that we should resume visually
                     const ongoingTask = dedupedData.find(t => t.status === 'accepted' || t.status === 'ongoing' || t.status === 'in_progress');
@@ -1773,11 +1797,11 @@
                         badgeHtml = `<span class="notif-badge" style="background:var(--warning); color:white;">ONGOING - ${t.type.toUpperCase()}</span>`;
                     } else if (isAssigned) {
                         btnHtml = `<button class="btn-action" style="background:#0ea5e9; color:white;" onclick="core.accept('${t.id}', '${t.type}', '${encodeURIComponent(t.sector||'')}', ${t.lat||0}, ${t.lng||0}, '${t.source||'request'}')">✅ ACCEPT</button>
-                                   <button class="btn-action" style="background:#64748b; color:white;" onclick="core.declineTask('${t.id}', event)">❌ IGNORE</button>`;
+                                   <button class="btn-action" style="background:#64748b; color:white;" onclick="core.declineTask('${t.id}', '${t.source}', event)">❌ IGNORE</button>`;
                         badgeHtml = `<span class="notif-badge" style="background:#3b82f6; color:white; animation: pulse 1.5s infinite;">📋 ASSIGNED - AWAITING ACCEPTANCE</span>`;
                     } else {
                         btnHtml = `<button class="btn-action" style="background:#0ea5e9; color:white;" onclick="core.accept('${t.id}', '${t.type}', '${encodeURIComponent(t.sector||'')}', ${t.lat||0}, ${t.lng||0}, '${t.source||'request'}')">ACCEPT</button>
-                                   <button class="btn-action" style="background:#64748b; color:white;" onclick="core.declineTask('${t.id}', event)">IGNORE</button>`;
+                                   <button class="btn-action" style="background:#64748b; color:white;" onclick="core.declineTask('${t.id}', '${t.source}', event)">IGNORE</button>`;
                         badgeHtml = `<span class="notif-badge badge-${t.type}">${t.type}</span>`;
                     }
 
@@ -1823,6 +1847,16 @@
                         } catch (e) { }
                     }
 
+                    const citizenName = t.name || t.requester_name;
+                    const citizenPhone = t.phone || t.requester_phone;
+                    let contactHtml = '';
+                    if (citizenName || citizenPhone) {
+                        contactHtml = `<div style="font-size:11px; margin-bottom:8px; color:var(--text-muted); font-weight:700;">
+                            👤 <b>Citizen:</b> ${citizenName || 'Anonymous'} 
+                            ${citizenPhone ? ` | 📞 ${citizenPhone}` : ''}
+                        </div>`;
+                    }
+
                     card.innerHTML = `
                         <div class="notif-top">
                             ${badgeHtml}
@@ -1830,6 +1864,7 @@
                         </div>
                         <h4 class="notif-title">${t.type.toUpperCase()} ${isCrit ? 'EMERGENCY' : 'DISPATCH'}</h4>
                         <p class="notif-loc">📍 ${t.sector || 'Coordinate Point'}</p>
+                        ${contactHtml}
                         ${commentHtml}
                         ${evidenceHtml}
                         <div class="notif-btns">
@@ -2281,8 +2316,32 @@
                 }
             },
 
-            declineTask(id, event) {
-                this.toast('Task Ignored', 'ℹ️');
+            async declineTask(id, source, event) {
+                if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'STOP_SOUND'}));
+                this.toast('Declining Task...', '⏳');
+                try {
+                    const rescuerPhone = this.user ? this.user.phone : null;
+                    const cleanId = String(id).replace('CMD-', '').replace('REQ-', '');
+                    
+                    if (source === 'command' || String(id).startsWith('CMD-')) {
+                        await fetch(`${this.API}/commands/${cleanId}/status`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: 'declined', rescuer_phone: rescuerPhone })
+                        });
+                    } else {
+                        await fetch(`${this.API}/rescue-requests/${cleanId}/decline`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ rescuer_phone: rescuerPhone })
+                        });
+                    }
+                    this.toast('Task Declined', '❌');
+                    this.refresh();
+                } catch (e) {
+                    console.error("Decline task failed", e);
+                    this.toast('Failed to decline task', '❌');
+                }
                 if (event && event.target) {
                     const card = event.target.closest('.notif-card');
                     if (card) card.remove();
@@ -2352,20 +2411,34 @@
                 try {
                     rawHistory.sort((a, b) => new Date(b.updated_at || b.created_at || b.time) - new Date(a.updated_at || a.created_at || a.time));
                     
-                    // Deduplicate identical tasks (Requests vs Commands) from history
-                    const reqIdsInCmds = new Set();
-                    rawHistory.forEach(t => {
+                    // Deduplicate identical tasks (Requests vs Commands, and duplicate Commands) from history
+                    const seenRescueReqIds = new Set();
+                    const dedupedHistory = [];
+
+                    for (const t of rawHistory) {
+                        let linkedReqIds = [];
                         if (t.source === 'command' && t.command_payload) {
                             try {
                                 const p = typeof t.command_payload === 'string' ? JSON.parse(t.command_payload) : t.command_payload;
-                                if (p.rescue_req_id) reqIdsInCmds.add(String(p.rescue_req_id));
+                                if (p.rescue_req_id) linkedReqIds.push(String(p.rescue_req_id));
                                 if (p.request_ids && Array.isArray(p.request_ids)) {
-                                    p.request_ids.forEach(id => reqIdsInCmds.add(String(id)));
+                                    p.request_ids.forEach(id => linkedReqIds.push(String(id)));
                                 }
                             } catch (e) {}
+                        } else if (t.source === 'request') {
+                            linkedReqIds.push(String(t.id));
                         }
-                    });
-                    const dedupedHistory = rawHistory.filter(t => !(t.source === 'request' && reqIdsInCmds.has(String(t.id))));
+
+                        if (linkedReqIds.length === 0) {
+                            dedupedHistory.push(t);
+                        } else {
+                            const hasAlreadySeen = linkedReqIds.some(id => seenRescueReqIds.has(id));
+                            if (!hasAlreadySeen) {
+                                dedupedHistory.push(t);
+                                linkedReqIds.forEach(id => seenRescueReqIds.add(id));
+                            }
+                        }
+                    }
                     this.allHistory = dedupedHistory;
                     this.renderHistory(this.allHistory);
                 } catch (err) {

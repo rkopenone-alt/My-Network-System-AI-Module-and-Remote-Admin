@@ -28,7 +28,7 @@ else:
     print(f"[*] Detected Local LAN IP: {local_ip}")
 
 # Files to update
-workspace_dir = r"c:\Users\Alienware\Desktop\Rescue Backup 26-04-2026"
+workspace_dir = os.path.dirname(os.path.abspath(__file__))
 preview_rescuer = os.path.join(workspace_dir, "preview-rescuer.html")
 preview_mobile = os.path.join(workspace_dir, "preview-mobile-app.html")
 preview_admin = os.path.join(workspace_dir, "preview-web-admin.html")

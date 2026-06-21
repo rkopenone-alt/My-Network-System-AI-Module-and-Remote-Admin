@@ -5942,21 +5942,24 @@ function toggleGlobalMute(muted) {
         }
 
         async function confirmReassignment() {
+            const btn = document.querySelector('#reassignTaskModal .btn-primary');
+            if (btn) { btn.disabled = true; btn.innerText = 'Re-Assigning...'; }
             const personId = document.getElementById('reassignPersonSelect').value;
             const groupId = document.getElementById('reassignGroupSelect').value;
 
             if (!personId && !groupId) {
+                if (btn) { btn.disabled = false; btn.innerText = 'Re Assign Task'; }
                 alert("Please select either a Person or a Group");
                 return;
             }
 
-            const targetName = personId ? document.querySelector(\`#reassignPersonSelect option[value="\${personId}"]\`).textContent :
-                document.querySelector(\`#reassignGroupSelect option[value="\${groupId}"]\`).textContent;
+            const targetName = personId ? document.querySelector(`#reassignPersonSelect option[value="${personId}"]`).textContent :
+                document.querySelector(`#reassignGroupSelect option[value="${groupId}"]`).textContent;
 
             try {
                 // Use numeric ID for the API
                 const dbId = reassigningCmdId.replace('CMD-', '');
-                const response = await fetch(\`\${API_BASE}/commands/\${dbId}/reassign\`, {
+                const response = await fetch(`${API_BASE}/commands/${dbId}/reassign`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -5967,11 +5970,17 @@ function toggleGlobalMute(muted) {
                 });
 
                 if (response.ok) {
+                    if (btn) { btn.disabled = false; btn.innerText = 'Re Assign Task'; }
                     closeModal('reassignTaskModal');
-                    showAdminToast(\`Task \${reassigningCmdId} reassigned to \${targetName}\`);
+                    showAdminToast(`Task ${reassigningCmdId} reassigned to ${targetName}`);
                     refreshAllModules();
+                } else {
+                    if (btn) { btn.disabled = false; btn.innerText = 'Re Assign Task'; }
+                    const err = await response.json();
+                    showAdminToast("Error: " + (err.error || 'Failed to reassign'));
                 }
             } catch (e) {
+                if (btn) { btn.disabled = false; btn.innerText = 'Re Assign Task'; }
                 console.error("Reassign failed", e);
                 showAdminToast("Re-assignment failed. Please try again.");
             }
@@ -5992,24 +6001,24 @@ function toggleGlobalMute(muted) {
             if (currentActiveOp) {
                 doc.setFontSize(14);
                 doc.setTextColor(37, 99, 235); // var(--accent)
-                doc.text(\`Active Operation: \${currentActiveOp.name}\`, 14, 26);
+                doc.text(`Active Operation: ${currentActiveOp.name}`, 14, 26);
 
                 doc.setFontSize(10);
                 doc.setTextColor(71, 85, 105);
-                doc.text(\`Initiated: \${currentActiveOp.date} | ID: \${currentActiveOp.id}\`, 14, 32);
+                doc.text(`Initiated: ${currentActiveOp.date} | ID: ${currentActiveOp.id}`, 14, 32);
 
                 if (currentActiveOp.zoneData) {
                     const zoneStr = currentActiveOp.zoneData.type === 'radius'
-                        ? \`Center: \${currentActiveOp.zoneData.latlng.lat.toFixed(4)}, \${currentActiveOp.zoneData.latlng.lng.toFixed(4)} (Radius: \${(currentActiveOp.zoneData.radius / 1000).toFixed(2)}km)\`
-                        : \`Boundaries Defined Area\`;
-                    doc.text(\`Main Zone: \${zoneStr}\`, 14, 37);
+                        ? `Center: ${currentActiveOp.zoneData.latlng.lat.toFixed(4)}, ${currentActiveOp.zoneData.latlng.lng.toFixed(4)} (Radius: ${(currentActiveOp.zoneData.radius / 1000).toFixed(2)}km)`
+                        : `Boundaries Defined Area`;
+                    doc.text(`Main Zone: ${zoneStr}`, 14, 37);
                 }
             }
 
             doc.setFontSize(9);
             doc.setTextColor(100, 116, 139); // var(--text-muted)
             const dateStr = new Date().toLocaleString();
-            doc.text(\`Report Exported: \${dateStr}\`, 14, currentActiveOp ? 43 : 28);
+            doc.text(`Report Exported: ${dateStr}`, 14, currentActiveOp ? 43 : 28);
 
             const startY = currentActiveOp ? 48 : 35;
 
@@ -6020,7 +6029,7 @@ function toggleGlobalMute(muted) {
 
                 let taskDesc = c.desc;
                 if (c.requesterName) {
-                    taskDesc += \`\\n[Requester: \${c.requesterName}]\`;
+                    taskDesc += `\n[Requester: ${c.requesterName}]`;
                 }
 
                 return [
@@ -6029,7 +6038,7 @@ function toggleGlobalMute(muted) {
                     taskDesc,
                     priority,
                     c.type.toUpperCase(),
-                    c.zone.replace(/<[^>]*>/g, '').replace(/\\s+/g, ' ').trim(),
+                    c.zone.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim(),
                     c.team,
                     c.reqTime || '-',
                     c.status.toUpperCase()
@@ -6068,7 +6077,7 @@ function toggleGlobalMute(muted) {
             });
 
             // Save PDF
-            doc.save(\`Rescue_Action_History_\${new Date().getTime()}.pdf\`);
+            doc.save(`Rescue_Action_History_${new Date().getTime()}.pdf`);
             showAdminToast("PDF Report generated and downloading...");
         }
 
@@ -6094,7 +6103,7 @@ function toggleGlobalMute(muted) {
             let coordsEl = document.getElementById('cmdCoords');
             let coords = coordsEl.value || '';
             let reqId = coordsEl.dataset.reqId || null;
-            let zoneHtml = coords ? \`<b>\${areaName}</b><br><small style="color:var(--text-muted);font-size:11px;">\${coords}</small>\` : \`<b>\${areaName}</b>\`;
+            let zoneHtml = coords ? `<b>${areaName}</b><br><small style="color:var(--text-muted);font-size:11px;">${coords}</small>` : `<b>${areaName}</b>`;
             let desc = document.getElementById('cmdDetails').value;
 
             if (!desc) { alert('Please enter command details'); return; }
@@ -6117,8 +6126,8 @@ function toggleGlobalMute(muted) {
 
                 // Convert to persistent zone for delivery tasks
                 if (['food', 'delivery', 'medical_delivery'].includes(type) || currentTaskPriority === 'normal') {
-                    const zoneName = \`Command Zone: \${areaName}\`;
-                    fetch(\`\${API_BASE}/zones\`, {
+                    const zoneName = `Command Zone: ${areaName}`;
+                    fetch(`${API_BASE}/zones`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -6137,8 +6146,8 @@ function toggleGlobalMute(muted) {
             }
 
             let d = new Date();
-            let t = \`\${String(d.getHours()).padStart(2, '0')}:\${String(d.getMinutes()).padStart(2, '0')}\`;
-            const localId = \`CMD-TEMP-\${Date.now()}\`;
+            let t = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            const localId = `CMD-TEMP-${Date.now()}`;
             cmds.unshift({ id: localId, desc: desc, type: type, priority: currentTaskPriority, zone: zoneHtml, team: team, time: t, status: 'Ongoing', layerData: cmdLayerData });
             renderCmds();
 
@@ -6147,7 +6156,7 @@ function toggleGlobalMute(muted) {
             switchCmdTab('live', document.querySelector('.cmd-tab:nth-child(1)'));
 
             // Persist command to backend
-            fetch(\`\${API_BASE}/commands\`, {
+            fetch(`${API_BASE}/commands`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -6175,7 +6184,7 @@ function toggleGlobalMute(muted) {
             overlay.id = 'criticalApprovalOverlay';
             overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.25s ease;';
 
-            overlay.innerHTML = \`
+            overlay.innerHTML = `
                 <div style="background:#fff;width:480px;max-width:94vw;border-radius:16px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.5);animation:slideUp 0.3s ease;">
                     <!-- Red header bar -->
                     <div style="background:#ef4444;padding:20px 24px;display:flex;align-items:center;gap:14px;">
@@ -6189,16 +6198,16 @@ function toggleGlobalMute(muted) {
                     <div style="padding:24px;">
                         <div style="background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin-bottom:20px;">
                             <div style="font-size:11px;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Mission Brief</div>
-                            <div style="font-size:15px;color:#1e293b;font-weight:500;line-height:1.6;">\${params.desc}</div>
+                            <div style="font-size:15px;color:#1e293b;font-weight:500;line-height:1.6;">${params.desc}</div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
                             <div style="background:#f8fafc;border-radius:8px;padding:12px;">
                                 <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px;">ASSIGNED TO</div>
-                                <div style="font-size:14px;font-weight:700;color:#1e293b;">👥 \${params.team}</div>
+                                <div style="font-size:14px;font-weight:700;color:#1e293b;">👥 ${params.team}</div>
                             </div>
                             <div style="background:#f8fafc;border-radius:8px;padding:12px;">
                                 <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px;">TARGET ZONE</div>
-                                <div style="font-size:14px;font-weight:700;color:#1e293b;">📍 \${params.areaName}</div>
+                                <div style="font-size:14px;font-weight:700;color:#1e293b;">📍 ${params.areaName}</div>
                             </div>
                         </div>
                         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:20px;font-size:12px;color:#92400e;">
@@ -6206,11 +6215,11 @@ function toggleGlobalMute(muted) {
                         </div>
                         <div style="display:flex;gap:12px;">
                             <button onclick="document.getElementById('criticalApprovalOverlay').remove();" style="flex:1;padding:14px;background:#f1f5f9;border:2px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:800;color:#64748b;cursor:pointer;">✗ Cancel</button>
-                            <button onclick="confirmCriticalDispatch(\${JSON.stringify(params).replace(/"/g, '&quot;')})" style="flex:1;padding:14px;background:#ef4444;border:none;border-radius:10px;font-size:15px;font-weight:900;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(239,68,68,0.4);">🚨 CONFIRM DISPATCH</button>
+                            <button onclick="confirmCriticalDispatch(${JSON.stringify(params).replace(/"/g, '&quot;')})" style="flex:1;padding:14px;background:#ef4444;border:none;border-radius:10px;font-size:15px;font-weight:900;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(239,68,68,0.4);">🚨 CONFIRM DISPATCH</button>
                         </div>
                     </div>
                 </div>
-            \`;
+            `;
             document.body.appendChild(overlay);
         }
 
@@ -6218,8 +6227,8 @@ function toggleGlobalMute(muted) {
             document.getElementById('criticalApprovalOverlay').remove();
 
             let d = new Date();
-            let t = \`\${String(d.getHours()).padStart(2, '0')}:\${String(d.getMinutes()).padStart(2, '0')}\`;
-            const localId = \`CMD-\${100 + cmds.length + 1}\`;
+            let t = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            const localId = `CMD-${100 + cmds.length + 1}`;
 
             cmds.unshift({ id: localId, desc: '🚨 ' + params.desc, type: 'critical', zone: params.zoneHtml, team: params.team, time: t, status: 'Critical', layerData: null });
             renderCmds();
@@ -6230,7 +6239,7 @@ function toggleGlobalMute(muted) {
             switchCmdTab('live', document.querySelector('.cmd-tab:nth-child(1)'));
 
             // Persist to backend
-            fetch(\`\${API_BASE}/commands\`, {
+            fetch(`${API_BASE}/commands`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -6252,7 +6261,7 @@ function toggleGlobalMute(muted) {
         async function fetchRescueRequests() {
             try {
                 // Fetch all requests to ensure Notification Log has full visibility
-                const res = await fetch(\`\${API_BASE}/rescue-requests\`);
+                const res = await fetch(`${API_BASE}/rescue-requests`);
                 const data = await res.json();
 
                 // Sort by recency
@@ -6373,14 +6382,14 @@ function toggleGlobalMute(muted) {
                     try {
                         const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
                         const items = [];
-                        if (d.food) items.push(\`🍞 Food: <b>\${d.food}</b>\`);
-                        if (d.med) items.push(\`💊 Medicine: <b>\${d.med}</b>\`);
-                        if (d.sanitary) items.push(\`🧻 Sanitary: <b>\${d.sanitary}</b>\`);
+                        if (d.food) items.push(`🍞 Food: <b>${d.food}</b>`);
+                        if (d.med) items.push(`💊 Medicine: <b>${d.med}</b>`);
+                        if (d.sanitary) items.push(`🧻 Sanitary: <b>${d.sanitary}</b>`);
 
                         if (items.length > 0) {
-                            detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
-                                \${items.join(' • ')}
-                            </div>\`;
+                            detailsHtml = `<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
+                                ${items.join(' • ')}
+                            </div>`;
                         }
                     } catch (e) { }
                 }
@@ -6392,36 +6401,36 @@ function toggleGlobalMute(muted) {
                 const assignBtnLabel = !isCritical ? 'Assign as Normal Task' : 'Accept & Assign';
 
                 // Escape single quotes and newlines for safe inclusion in onclick attributes
-                const esc = (s) => (s || '').toString().replace(/'/g, "\\\\'").replace(/\\n/g, " ").replace(/\\r/g, "");
+                const esc = (s) => (s || '').toString().replace(/'/g, "\\'").replace(/\n/g, " ").replace(/\r/g, "");
                 const safeSector = esc(req.sector);
                 const safeType = esc(typeLabel);
 
-                const html = \`
-                    <div class="notif-item actionable-item" style="align-items: flex-start; border-left: 3px solid \${color}; cursor:pointer; margin-bottom:8px;" 
-                         onclick="openAssignModal('\${req.id}', '\${safeType}', '\${safeSector}', '\${req.urgency}', '\${num}')">
-                        <div class="notif-icon" style="background:\${bg}; color:\${color}; font-weight:900; font-size:12px;">\${num}</div>
+                const html = `
+                    <div class="notif-item actionable-item" style="align-items: flex-start; border-left: 3px solid ${color}; cursor:pointer; margin-bottom:8px;" 
+                         onclick="openAssignModal('${req.id}', '${safeType}', '${safeSector}', '${req.urgency}', '${num}')">
+                        <div class="notif-icon" style="background:${bg}; color:${color}; font-weight:900; font-size:12px;">${num}</div>
                         <div class="notif-content">
-                            <div class="notif-title" style="color:\${color}; font-weight:800; display:flex; justify-content:space-between; align-items:center;">
-                                <span>\${typeLabel}</span>
-                                <span style="font-size:9px; background:\${bg}; padding:2px 4px; border-radius:3px;">\${!isCritical ? 'NORMAL' : 'CRITICAL'}</span>
+                            <div class="notif-title" style="color:${color}; font-weight:800; display:flex; justify-content:space-between; align-items:center;">
+                                <span>${typeLabel}</span>
+                                <span style="font-size:9px; background:${bg}; padding:2px 4px; border-radius:3px;">${!isCritical ? 'NORMAL' : 'CRITICAL'}</span>
                             </div>
                             <div class="notif-count text-sm text-muted" style="margin-bottom:6px;">
-                                <b>Person:</b> <span style="color:var(--text-main); font-weight:700;">\${nickName}</span><br>
-                                <b>Sector:</b> \${req.sector || 'Unspecified'}<br>
-                                <b>Priority:</b> <span style="color:\${isCritical ? '#e11d48' : 'var(--text-muted)'}; font-weight:900;">\${(req.priority || (isCritical ? 'CRITICAL' : 'NORMAL')).toUpperCase()}</span><br>
-                                <b>Urgency:</b> <span style="color:\${req.urgency === 'critical' ? 'var(--critical)' : 'inherit'}; font-weight:700;">\${req.urgency.toUpperCase()}</span>
-                                \${detailsHtml}
-                                \${req.image_url ? \`<div style="margin-top:8px;"><img src="\${formatMediaUrl(req.image_url)}" style="width:60px; height:60px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>\` : ''}
+                                <b>Person:</b> <span style="color:var(--text-main); font-weight:700;">${nickName}</span><br>
+                                <b>Sector:</b> ${req.sector || 'Unspecified'}<br>
+                                <b>Priority:</b> <span style="color:${isCritical ? '#e11d48' : 'var(--text-muted)'}; font-weight:900;">${(req.priority || (isCritical ? 'CRITICAL' : 'NORMAL')).toUpperCase()}</span><br>
+                                <b>Urgency:</b> <span style="color:${req.urgency === 'critical' ? 'var(--critical)' : 'inherit'}; font-weight:700;">${req.urgency.toUpperCase()}</span>
+                                ${detailsHtml}
+                                ${req.image_url ? `<div style="margin-top:8px;"><img src="${formatMediaUrl(req.image_url)}" style="width:60px; height:60px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>` : ''}
                             </div>
                             <div class="actionable-actions">
-                                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="openAssignModal('\${req.id}', '\${safeType}', '\${safeSector}', '\${req.urgency}', '\${num}')">\${assignBtnLabel}</button>
-                                <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px; color: var(--accent); border-color: var(--accent);" onclick="event.stopPropagation(); openReplyModal('\${req.device_id || req.phone}', '\${nickName}')">Reply</button>
-                                <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px;" onclick="event.stopPropagation(); declineRescueRequest('\${req.id}')">Decline</button>
-                                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeRescueRequest('\${req.id}')">✅ Close</button>
+                                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="openAssignModal('${req.id}', '${safeType}', '${safeSector}', '${req.urgency}', '${num}')">${assignBtnLabel}</button>
+                                <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px; color: var(--accent); border-color: var(--accent);" onclick="event.stopPropagation(); openReplyModal('${req.device_id || req.phone}', '${nickName}')">Reply</button>
+                                <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px;" onclick="event.stopPropagation(); declineRescueRequest('${req.id}')">Decline</button>
+                                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeRescueRequest('${req.id}')">✅ Close</button>
                             </div>
                         </div>
                     </div>
-                \`;
+                `;
 
                 if (isCritical) {
                     criticalList.innerHTML += html;
@@ -6438,19 +6447,19 @@ function toggleGlobalMute(muted) {
                 const activeGroups = groupedTasks.filter(g => g.status && !['closed', 'completed', 'inactive'].includes(g.status.toLowerCase()));
                 if (activeGroups.length > 0) {
                     groupedSection.style.display = 'block';
-                    groupedList.innerHTML = activeGroups.map((group, idx) => \`
+                    groupedList.innerHTML = activeGroups.map((group, idx) => `
                         <div class="notif-item actionable-item" style="border-left: 3px solid var(--special); margin-bottom:8px; cursor:pointer;" onclick="switchPage('notif-mgmt')">
-                            <div class="notif-icon" style="background:#f5f3ff; color:var(--special); font-weight:900; font-size:12px;">\${String(idx + 1).padStart(2, '0')}</div>
+                            <div class="notif-icon" style="background:#f5f3ff; color:var(--special); font-weight:900; font-size:12px;">${String(idx + 1).padStart(2, '0')}</div>
                             <div class="notif-content">
-                                <div class="notif-title" style="color:var(--special); font-weight:800;">\${group.name}</div>
+                                <div class="notif-title" style="color:var(--special); font-weight:800;">${group.name}</div>
                                 <div class="notif-count text-sm text-muted">
-                                    <b>Tasks:</b> \${group.requests.length} Clusters<br>
+                                    <b>Tasks:</b> ${group.requests.length} Clusters<br>
                                     <b>Sector:</b> Multi-Sector Area<br>
-                                    <span style="font-size:10px; font-weight:700; color:\${group.status === 'Assigned' ? 'var(--completed)' : 'var(--text-muted)'};">\${group.status.toUpperCase()}</span>
+                                    <span style="font-size:10px; font-weight:700; color:${group.status === 'Assigned' ? 'var(--completed)' : 'var(--text-muted)'};">${group.status.toUpperCase()}</span>
                                 </div>
                             </div>
                         </div>
-                    \`).join('');
+                    `).join('');
                 } else {
                     groupedSection.style.display = 'none';
                 }
@@ -6468,8 +6477,8 @@ function toggleGlobalMute(muted) {
         async function populateAssignDropdowns() {
             try {
                 const [usersRes, groupsRes] = await Promise.all([
-                    fetch(\`\${API_BASE}/users\`),
-                    fetch(\`\${API_BASE}/groups\`)
+                    fetch(`${API_BASE}/users`),
+                    fetch(`${API_BASE}/groups`)
                 ]);
                 const users = await usersRes.json();
                 const groups = await groupsRes.json();
@@ -6477,13 +6486,13 @@ function toggleGlobalMute(muted) {
                 let userOptions = '<option value="">-- Select Person --</option>';
                 users.forEach(u => {
                     if (u.role !== 'public') {
-                        userOptions += \`<option value="\${u.id}">\${u.name} (\${u.role})</option>\`;
+                        userOptions += `<option value="${u.id}">${u.name} (${u.role})</option>`;
                     }
                 });
 
                 let groupOptions = '<option value="">-- Select Group --</option>';
                 groups.forEach(g => {
-                    groupOptions += \`<option value="\${g.id}">\${g.name || g.group_name} (\${g.zone || 'Global'})</option>\`;
+                    groupOptions += `<option value="${g.id}">${g.name || g.group_name} (${g.zone || 'Global'})</option>`;
                 });
 
                 ['assignPersonSelect', 'reassignPersonSelect', 'groupingPersonSelect', 'cmdIndividual'].forEach(id => {
@@ -6508,30 +6517,30 @@ function toggleGlobalMute(muted) {
             document.getElementById('sosAlertReqId').value = data.id || '';
             document.getElementById('sosAlertType').value = data.type || 'SOS';
             document.getElementById('sosAlertUrgency').value = data.urgency || 'critical';
-            document.getElementById('sosAlertSector').innerText = \`Sector: \${data.sector || 'Unknown Location'}\`;
+            document.getElementById('sosAlertSector').innerText = `Sector: ${data.sector || 'Unknown Location'}`;
             
             let detailsStr = data.details || 'Emergency SOS triggered from public device.';
             try {
                 const parsed = JSON.parse(data.details);
                 if (parsed && typeof parsed === 'object') {
                     let parts = [];
-                    if (data.name) parts.push(\`Name: \${data.name}\`);
-                    if (data.phone) parts.push(\`Phone: \${data.phone}\`);
-                    if (parsed.comments) parts.push(\`Comments: \${parsed.comments}\`);
-                    if (parsed.people) parts.push(\`People: \${parsed.people}\`);
-                    if (parsed.food) parts.push(\`Food: \${parsed.food}\`);
-                    if (parsed.med) parts.push(\`Medical: \${parsed.med}\`);
-                    if (parsed.sanitary) parts.push(\`Sanitary: \${parsed.sanitary}\`);
-                    if (parsed.transportMode) parts.push(\`Transport: \${parsed.transportMode}\`);
-                    if (data.lat && data.lng) parts.push(\`Location: \${data.lat}, \${data.lng}\`);
-                    else if (parsed.lat && parsed.lng) parts.push(\`Location: \${parsed.lat}, \${parsed.lng}\`);
-                    if (parts.length > 0) detailsStr = parts.join('\\n');
+                    if (data.name) parts.push(`Name: ${data.name}`);
+                    if (data.phone) parts.push(`Phone: ${data.phone}`);
+                    if (parsed.comments) parts.push(`Comments: ${parsed.comments}`);
+                    if (parsed.people) parts.push(`People: ${parsed.people}`);
+                    if (parsed.food) parts.push(`Food: ${parsed.food}`);
+                    if (parsed.med) parts.push(`Medical: ${parsed.med}`);
+                    if (parsed.sanitary) parts.push(`Sanitary: ${parsed.sanitary}`);
+                    if (parsed.transportMode) parts.push(`Transport: ${parsed.transportMode}`);
+                    if (data.lat && data.lng) parts.push(`Location: ${data.lat}, ${data.lng}`);
+                    else if (parsed.lat && parsed.lng) parts.push(`Location: ${parsed.lat}, ${parsed.lng}`);
+                    if (parts.length > 0) detailsStr = parts.join('\n');
                 } else if (data.name || data.phone) {
-                    detailsStr = \`Name: \${data.name || 'Unknown'}\\nPhone: \${data.phone || 'Unknown'}\\nDetails: \${detailsStr}\`;
+                    detailsStr = `Name: ${data.name || 'Unknown'}\nPhone: ${data.phone || 'Unknown'}\nDetails: ${detailsStr}`;
                 }
             } catch (e) {
                 if (data.name || data.phone) {
-                    detailsStr = \`Name: \${data.name || 'Unknown'}\\nPhone: \${data.phone || 'Unknown'}\\nDetails: \${detailsStr}\`;
+                    detailsStr = `Name: ${data.name || 'Unknown'}\nPhone: ${data.phone || 'Unknown'}\nDetails: ${detailsStr}`;
                 }
             }
             document.getElementById('sosAlertDetails').innerText = detailsStr;
@@ -6552,14 +6561,14 @@ function toggleGlobalMute(muted) {
             
             closeModal('sosAlertModal');
             if (id) {
-                openAssignModal(id, \`SOS Emergency Request\`, sector, urgency, '🚨');
+                openAssignModal(id, `SOS Emergency Request`, sector, urgency, '🚨');
             }
         }
 
         function openAssignModal(id, title, sector, urgency, num = '00') {
             document.getElementById('assignReqId').value = id;
-            document.getElementById('assignReqTitle').innerHTML = \`<span style="background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; color: var(--text-muted); margin-right: 6px;">\${num}</span> \${title}\`;
-            document.getElementById('assignReqDetails').innerText = \`\${sector}, urgency \${urgency}\`;
+            document.getElementById('assignReqTitle').innerHTML = `<span style="background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; color: var(--text-muted); margin-right: 6px;">${num}</span> ${title}`;
+            document.getElementById('assignReqDetails').innerText = `${sector}, urgency ${urgency}`;
 
             // Dynamic Title based on request type
             const modalTitle = document.querySelector('#assignModal .modal-title');
@@ -6625,11 +6634,14 @@ function toggleGlobalMute(muted) {
         }
 
         async function dispatchAssignment() {
+            const btn = document.querySelector('#assignModal .btn-primary');
+            if (btn) { btn.disabled = true; btn.innerText = 'Dispatching...'; }
             const rawId = document.getElementById('assignReqId').value;
             const personId = document.getElementById('assignPersonSelect').value;
             const groupId = document.getElementById('assignGroupSelect').value;
 
             if (!personId && !groupId) {
+                if (btn) { btn.disabled = false; btn.innerText = 'Dispatch'; }
                 alert("Please select either a Person or a Group");
                 return;
             }
@@ -6637,7 +6649,7 @@ function toggleGlobalMute(muted) {
             try {
                 if (rawId.startsWith('CMD_REF:')) {
                     const cmdId = rawId.split(':')[1];
-                    const res = await fetch(\`\${API_BASE}/commands/\${cmdId}/reassign\`, {
+                    const res = await fetch(`${API_BASE}/commands/${cmdId}/reassign`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -6652,7 +6664,7 @@ function toggleGlobalMute(muted) {
                     showAdminToast('Task successfully reassigned!');
                 } else {
                     const priority = document.querySelector('#assignModal .modal-title').innerText.toLowerCase().includes('normal') ? 'normal' : 'critical';
-                    const res = await fetch(\`\${API_BASE}/rescue-requests/\${rawId}/accept\`, {
+                    const res = await fetch(`${API_BASE}/rescue-requests/${rawId}/accept`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -6666,9 +6678,11 @@ function toggleGlobalMute(muted) {
                         throw new Error(err.error || 'Failed to assign task');
                     }
                 }
+                if (btn) { btn.disabled = false; btn.innerText = 'Dispatch'; }
                 closeModal('assignModal');
                 refreshAllModules();
             } catch (e) {
+                if (btn) { btn.disabled = false; btn.innerText = 'Dispatch'; }
                 console.error("Error dispatching assignment", e);
                 showAdminToast("Error: " + e.message);
             }

@@ -1,0 +1,21 @@
+ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-21
+Device Hostname: , DESKTOP-KBHB0SB
+Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
+Generated At: , 21/6/2026, 7:05:29 pm
+
+SECTION 1: RESCUE REQUESTS & TASKS
+Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
+95,supplies,normal,reassign_pending,12.9943846,80.1956448,"{""transportMode"":""BOAT"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":""Hi I need help"",""attachments"":{""voice"":true,""camera"":true,""note"":false}}
+[Declined by Rescuer ID: 2]
+[Ignored by Rescuer ID: 1]
+[Declined by Rescuer ID: 1]",Unassigned,2026-06-21 13:26:39,2026-06-21 13:35:25,DESKTOP-KBHB0SB
+
+
+SECTION 2: RESCUER COMMAND DISPATCHES
+Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
+87,N/A,919000000001,"{""message"":""AI ASSIGNED: SUPPLIES at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943846,""lng"":80.1956448,""urgency"":""normal"",""rescue_req_id"":95,""requester_name"":""Citizen"",""requester_phone"":""918000000002"",""details"":""{\""transportMode\"":\""BOAT\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""Hi I need help\"",\""attachments\"":{\""voice\"":true,\""camera\"":true,\""note\"":false}}\n[Declined by Rescuer ID: 2]"",""assigned_by"":""AI""}",Normal,declined,2026-06-21 13:26:58,,DESKTOP-KBHB0SB
+
+
+SECTION 3: PUBLIC SOS ALERTS
+SOS ID,Device ID,Phone,Latitude,Longitude,Details,Status,Priority,Alert Time,Device Node
+NO SOS ALERTS FOR THIS DATE

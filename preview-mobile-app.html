@@ -1965,6 +1965,16 @@
             logout() {
                 localStorage.removeItem('citizen_token');
                 localStorage.removeItem('citizen_user');
+                
+                // Clear all history cache entries
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('cached_my_history_')) {
+                        localStorage.removeItem(key);
+                    }
+                }
+                this.rawData.myHistory = []; // Reset local memory
+                
                 if (this.socket) {
                     try {
                         this.socket.onclose = null;
@@ -2197,11 +2207,11 @@
 
             async fetchMyHistory() {
                 try {
-                    const res = await fetch(`${this.API}/rescue-requests?phone=${this.user.phone}`);
+                    const phoneParams = `phone=${encodeURIComponent(this.user.phone)}&device_id=${encodeURIComponent(this.user.serial_number)}`;
+                    const res = await fetch(`${this.API}/rescue-requests/my-history?${phoneParams}`);
                     if (res.ok) {
                         const data = await res.json();
-                        data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                        this.rawData.myHistory = data.filter(r => r.phone === this.user.phone || r.device_id === this.user.serial_number);
+                        this.rawData.myHistory = data;
                         localStorage.setItem(`cached_my_history_${this.user.phone}`, JSON.stringify(this.rawData.myHistory));
                         this.renderStatusUI();
                         

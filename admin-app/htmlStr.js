@@ -1623,7 +1623,7 @@ export const htmlString = `<!DOCTYPE html>
                     <!-- Critical warning banner (hidden by default) -->
                     <div id="criticalWarningBanner"
                         style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#b91c1c;line-height:1.5;">
-                        âš ï¸ <strong>HIGH PRIORITY ALERT:</strong> This will trigger an urgent approval popup on the
+                        ⚠️ <strong>HIGH PRIORITY ALERT:</strong> This will trigger an urgent approval popup on the
                         rescuer's device requiring immediate Accept or Decline response.
                     </div>
 
@@ -1785,11 +1785,11 @@ export const htmlString = `<!DOCTYPE html>
                             style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
                             <button class="btn btn-primary btn-block"
                                 style="background:#ef4444; border-color:#ef4444; padding:10px; font-weight:700; font-size:12px;"
-                                onclick="const id = document.getElementById('tdId').innerText.split(' â€¢ ')[0]; closeTaskByAdmin(id);">
+                                onclick="const id = document.getElementById('tdId').innerText.split(' • ')[0]; closeTaskByAdmin(id);">
                                 <i data-lucide="check-circle" style="width:14px; margin-right:4px;"></i> CLOSE MISSION
                             </button>
                             <button class="btn btn-primary btn-block"
-                                onclick="const id = document.getElementById('tdId').innerText.split(' â€¢ ')[0]; openReassignModal(id);"
+                                onclick="const id = document.getElementById('tdId').innerText.split(' • ')[0]; openReassignModal(id);"
                                 style="background:#eab308; border-color:#eab308; color:white; font-weight:700;">
                                 <i data-lucide="refresh-cw" style="width:14px; margin-right:4px;"></i> RE-ASSIGN TASK
                             </button>
@@ -2197,7 +2197,7 @@ export const htmlString = `<!DOCTYPE html>
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--critical); font-size: 16px;">
                     <i data-lucide="alert-circle" style="width:20px;"></i> Critical Task History
                 </h3>
-                <div class="card" style="padding:0; overflow-x:auto;">
+                <div class="card" style="padding:0; overflow:hidden;">
                     <table>
                         <thead>
                             <tr>
@@ -2226,7 +2226,7 @@ export const htmlString = `<!DOCTYPE html>
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--accent); font-size: 16px;">
                     <i data-lucide="box" style="width:20px;"></i> Normal Task History
                 </h3>
-                <div class="card" style="padding:0; overflow-x:auto;">
+                <div class="card table-responsive" style="padding:0; overflow-x:auto;">
                     <table>
                         <thead>
                             <!-- Populated by JS -->
@@ -2243,7 +2243,7 @@ export const htmlString = `<!DOCTYPE html>
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--special); font-size: 16px;">
                     <i data-lucide="layers" style="width:20px;"></i> Tactical Group Mission History
                 </h3>
-                <div class="card" style="padding:0; overflow-x:auto;">
+                <div class="card table-responsive" style="padding:0; overflow-x:auto;">
                     <table>
                         <thead>
                             <!-- Populated by JS -->
@@ -3566,7 +3566,6 @@ export const htmlString = `<!DOCTYPE html>
             const text3 = document.getElementById('headerConnectionText');
             const color = connected ? '#10b981' : '#ef4444';
             const text = connected ? 'CONNECTED' : 'DISCONNECTED';
-            if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'WS_STATUS', connected: connected })); }
             const html = \`<span style="width:6px; height:6px; background:\${color}; border-radius:50%; display:inline-block;"></span> \${text}\`;
             if (badge1) {
                 badge1.innerHTML = html;
@@ -3653,6 +3652,18 @@ export const htmlString = `<!DOCTYPE html>
 
 function toggleGlobalMute(muted) {
     window.isMuted = muted;
+    const btn = document.getElementById('globalMuteBtn');
+    if (btn) {
+        btn.dataset.muted = window.isMuted.toString();
+        if (window.isMuted) {
+            btn.style.backgroundColor = "#ef4444"; // red
+            btn.innerHTML = '<i data-lucide="volume-x" style="width:18px; margin-right:6px;"></i> SOUND OFF';
+        } else {
+            btn.style.backgroundColor = "#22c55e"; // green
+            btn.innerHTML = '<i data-lucide="volume-2" style="width:18px; margin-right:6px;"></i> SOUND ON';
+        }
+        if (window.lucide) window.lucide.createIcons();
+    }
 }
                         if (data.type === 'RESCUE_REQUEST_DECLINED_REASSIGN') {
                         }
@@ -3674,7 +3685,7 @@ function toggleGlobalMute(muted) {
                                 window.currentSosAudio.loop = true;
                                 window.currentSosAudio.play().catch(e => console.log('Audio play failed: ', e));
                             } else if (data.type === 'RESCUE_REQUEST_COMPLETED') {
-                                showAdminToast(\`âœ… Mission complete: \${data.data?.sector || 'request'} marked done\`);
+                                showAdminToast(\`✅ Mission complete: \${data.data?.sector || 'request'} marked done\`);
                             }
 
                             refreshAllModules();
@@ -3763,12 +3774,12 @@ function toggleGlobalMute(muted) {
                 const body = document.getElementById('opsListBody');
                 if (body) {
                     body.innerHTML = \`<tr><td colspan="5" style="padding:40px; text-align:center; color:var(--danger); font-size:14px; font-weight:800; line-height:1.6;">
-                        âš ï¸ CONNECTION FAILED to backend server at \${API_BASE}.<br>
+                        ⚠️ CONNECTION FAILED to backend server at \${API_BASE}.<br>
                         <span style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-top:8px;">
                             Please verify the backend is running. If you are running the system on this laptop, reset connection settings to Localhost.
                         </span>
                         <a href="#" onclick="resetAdminServerIp(); return false;" style="display:inline-block; margin-top:12px; background:var(--accent); color:white; padding:8px 16px; border-radius:8px; text-decoration:none; font-family:sans-serif; font-size:13px; font-weight:700;">
-                            â† Reset Connection to Localhost
+                            ← Reset Connection to Localhost
                         </a>
                     </td></tr>\`;
                 }
@@ -4671,7 +4682,7 @@ function toggleGlobalMute(muted) {
                         let statusText = 'online';
                         let isOffline = false;
                         if (r.status === 'offline' || r.live_connected === false) {
-                            statusText = 'âš ï¸ Signal Lost / Offline';
+                            statusText = '⚠️ Signal Lost / Offline';
                             isOffline = true;
                         }
                         const m = addMarker(r.lat, r.lng, 'rescuer', rescuerIconHtml, \`Rescuer: \${r.name}\`, r.name, false, false, r.id, false, statusText, null, r.serial_number || r.phone, missionInfo);
@@ -5060,9 +5071,9 @@ function toggleGlobalMute(muted) {
                 if (req) {
                     let assignedTo = 'Unassigned';
                     if (req.assigned_officer_name) {
-                        assignedTo = \` \${req.assigned_officer_name}\`;
+                        assignedTo = \`\${req.assigned_officer_name}\`;
                     } else if (req.assigned_group_name) {
-                        assignedTo = \` \${req.assigned_group_name}\`;
+                        assignedTo = \`\${req.assigned_group_name}\`;
                     } else if (req.assigned_user_id) {
                         assignedTo = \`Rescuer \${req.assigned_user_id}\`;
                     } else if (req.assigned_group_id) {
@@ -5102,7 +5113,7 @@ function toggleGlobalMute(muted) {
             document.getElementById('commandFormPanel').style.display = 'none';
             document.getElementById('commandDetailsPanel').style.display = 'flex';
 
-            document.getElementById('tdId').innerText = \`\${cmd.id} â€¢ \${cmd.type.toUpperCase()}\`;
+            document.getElementById('tdId').innerText = \`\${cmd.id} • \${cmd.type.toUpperCase()}\`;
             document.getElementById('tdDesc').innerText = cmd.desc;
             document.getElementById('tdMeta').innerHTML = \`<b>Assigned To:</b> \${cmd.team} <br><br> <b>Target Zone:</b><br> \${cmd.zone}\`;
             document.getElementById('tdStatus').innerHTML = \`<span class="tag \${getTagForStatus(cmd.status)}">\${cmd.status}</span>\`;
@@ -5141,7 +5152,7 @@ function toggleGlobalMute(muted) {
                         if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
                         if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
                         if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
-                        if (items.length > 0) itemsHtml = items.join(' â€¢ ');
+                        if (items.length > 0) itemsHtml = items.join(' • ');
                     } catch (e) { }
                 }
                 const itemsListEl = document.getElementById('reqItemsList');
@@ -5365,7 +5376,7 @@ function toggleGlobalMute(muted) {
                     <td>\${closureThumb}</td>
                     <td>
                         <div style="display:flex; gap:4px;">
-                            \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${c.id}')">âœ… Close</button>\` : ''}
+                            \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${c.id}')">✅ Close</button>\` : ''}
                             \${isReassignable ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\${c.id}')"> Re-Assign</button>\` : ''}
                             <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \${isOngoing ? \`selectTask('\${c.id}')\` : \`openCompletedTaskDetailModal('\${c.id}')\`}">ï¸ View</button>
                         </div>
@@ -5513,7 +5524,7 @@ function toggleGlobalMute(muted) {
                     <td>\${closureThumb}</td>
                     <td>
                         <div style="display:flex; gap:4px;">
-                            \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${actionBtnId}')">âœ… Close</button>\` : ''}
+                            \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${actionBtnId}')">✅ Close</button>\` : ''}
                             \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\${actionBtnId}')"> Re-Assign</button>\` : ''}
                             <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \${isOngoing ? \`selectTask('\${displayId}')\` : \`openCompletedTaskDetailModal('\${displayId}')\`}">ï¸ View</button>
                         </div>
@@ -5535,16 +5546,17 @@ function toggleGlobalMute(muted) {
             const tableHeader = \`<tr>
                 <th style="width: 50px;">S.NO</th>
                 <th style="width: 90px;">ID</th>
-                <th style="width: 200px;">TASK / DESCRIPTION</th>
-                <th style="width: 150px;">INFORMATION</th>
+                <th style="width: 150px;">TASK</th>
+                <th style="width: 200px;">INFORMATION</th>
                 <th style="width: 80px;">IMAGE</th>
                 <th style="width: 150px;">AUDIO</th>
                 <th style="width: 100px;">TYPE</th>
                 <th style="width: 150px;">ZONE / AREA</th>
                 <th style="width: 150px;">ASSIGNED TO</th>
-                  <th style="width: 150px;">DECLINED BY</th>
-                <th style="width: 80px;">REQ</th>
-                <th style="width: 80px;">CMD</th>
+                <th style="width: 150px;">DECLINED BY</th>
+                <th style="width: 80px;">REQ TIME</th>
+                <th style="width: 80px;">CMD TIME</th>
+                <th style="width: 100px;">ASSIGNED BY</th>
                 <th style="width: 100px;">STATUS</th>
                 <th style="width: 100px;">CLOSURE REPORT</th>
                 <th style="width: 160px;">ACTION</th>
@@ -5627,7 +5639,7 @@ function toggleGlobalMute(muted) {
                     <td><span class="tag \${getTagForStatus(c.status)}">\${c.status}</span></td>
                     <td>\${closureThumb}</td>
                     <td style="display:flex; gap:6px;">
-                        \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${c.id}')">âœ… CLOSE</button>\` : ''}
+                        \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${c.id}')">✅ CLOSE</button>\` : ''}
                         \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\${c.id}')"> RE-ASSIGN</button>\` : ''}
                         <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \${isOngoing ? \`selectTask('\${c.id}')\` : \`openCompletedTaskDetailModal('\${c.id}')\`}">ï¸ VIEW</button>
                     </td>
@@ -5664,7 +5676,7 @@ function toggleGlobalMute(muted) {
                         </div>
                         <div style="display:flex; gap:8px;">
                             <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #eab308; border-color: #eab308; color: white;" onclick="openReassignModal('\${m.id}')"> RE ASSIGN TASK</button>
-                            <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${m.id}')">âœ… CLOSE</button>
+                            <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${m.id}')">✅ CLOSE</button>
                             <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="selectTask('\${m.id}')">ï¸ VIEW</button>
                         </div>
                     </div>
@@ -5943,7 +5955,7 @@ function toggleGlobalMute(muted) {
         }
 
         function openReassignModalFromDetails() {
-            const id = document.getElementById('tdId').innerText.split(' â€¢ ')[0];
+            const id = document.getElementById('tdId').innerText.split(' • ')[0];
             openReassignModal(id);
         }
 
@@ -6214,7 +6226,7 @@ function toggleGlobalMute(muted) {
                         <span style="font-size:36px;"></span>
                         <div>
                             <div style="color:#fff;font-size:18px;font-weight:900;letter-spacing:0.5px;">CRITICAL RESPONSE DISPATCH</div>
-                            <div style="color:rgba(255,255,255,0.8);font-size:13px;font-weight:600;">HIGH PRIORITY â€” REQUIRES IMMEDIATE ACTION</div>
+                            <div style="color:rgba(255,255,255,0.8);font-size:13px;font-weight:600;">HIGH PRIORITY — REQUIRES IMMEDIATE ACTION</div>
                         </div>
                     </div>
                     <!-- Body -->
@@ -6234,10 +6246,10 @@ function toggleGlobalMute(muted) {
                             </div>
                         </div>
                         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:20px;font-size:12px;color:#92400e;">
-                            âš¡ Dispatching this alert will send an <strong>urgent notification</strong> to all assigned rescuers requiring immediate Accept or Decline. The admin will be notified in real-time.
+                            ⚡ Dispatching this alert will send an <strong>urgent notification</strong> to all assigned rescuers requiring immediate Accept or Decline. The admin will be notified in real-time.
                         </div>
                         <div style="display:flex;gap:12px;">
-                            <button onclick="document.getElementById('criticalApprovalOverlay').remove();" style="flex:1;padding:14px;background:#f1f5f9;border:2px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:800;color:#64748b;cursor:pointer;">âœ— Cancel</button>
+                            <button onclick="document.getElementById('criticalApprovalOverlay').remove();" style="flex:1;padding:14px;background:#f1f5f9;border:2px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:800;color:#64748b;cursor:pointer;">❌ Cancel</button>
                             <button onclick="confirmCriticalDispatch(\${JSON.stringify(params).replace(/"/g, '&quot;')})" style="flex:1;padding:14px;background:#ef4444;border:none;border-radius:10px;font-size:15px;font-weight:900;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(239,68,68,0.4);"> CONFIRM DISPATCH</button>
                         </div>
                     </div>
@@ -6278,7 +6290,7 @@ function toggleGlobalMute(muted) {
             showAdminToast(' Critical Response dispatched! Rescuers have been alerted.');
         }
 
-        // â”€â”€â”€ Admin Toast Notification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─── Admin Toast Notification ───────────────────────────────────────────────
 
 
         async function fetchRescueRequests() {
@@ -6411,7 +6423,7 @@ function toggleGlobalMute(muted) {
 
                         if (items.length > 0) {
                             detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
-                                \${items.join(' â€¢ ')}
+                                \${items.join(' • ')}
                             </div>\`;
                         }
                     } catch (e) { }
@@ -6449,7 +6461,7 @@ function toggleGlobalMute(muted) {
                                 <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="openAssignModal('\${req.id}', '\${safeType}', '\${safeSector}', '\${req.urgency}', '\${num}')">\${assignBtnLabel}</button>
                                 <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px; color: var(--accent); border-color: var(--accent);" onclick="event.stopPropagation(); openReplyModal('\${req.device_id || req.phone}', '\${nickName}')">Reply</button>
                                 <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px;" onclick="event.stopPropagation(); declineRescueRequest('\${req.id}')">Decline</button>
-                                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeRescueRequest('\${req.id}')">âœ… Close</button>
+                                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeRescueRequest('\${req.id}')">✅ Close</button>
                             </div>
                         </div>
                     </div>
@@ -6867,7 +6879,7 @@ function toggleGlobalMute(muted) {
 
                     let assignedTo = 'Unassigned';
                     if (c.assigned_officer_name) {
-                        assignedTo = \` \${c.assigned_officer_name}\`;
+                        assignedTo = \`\${c.assigned_officer_name}\`;
                     } else if (c.assigned_group_name) {
                         assignedTo = \` \${c.assigned_group_name}\`;
                     } else if (c.target_phone) {
@@ -7040,10 +7052,10 @@ function toggleGlobalMute(muted) {
             const val = input.value.trim();
             if (val === '') {
                 localStorage.removeItem('serverIp');
-                showAdminToast("âœ“ Server IP reset to default (localhost)! Reconnecting...", "success");
+                showAdminToast("✓ Server IP reset to default (localhost)! Reconnecting...", "success");
             } else {
                 localStorage.setItem('serverIp', val);
-                showAdminToast("âœ“ Server IP saved! Reconnecting...", "success");
+                showAdminToast("✓ Server IP saved! Reconnecting...", "success");
             }
             
             const btn = document.querySelector('button[onclick="saveAdminServerIp()"]');
@@ -7051,7 +7063,7 @@ function toggleGlobalMute(muted) {
                 btn.style.backgroundColor = "#10b981";
                 btn.style.borderColor = "#10b981";
                 btn.style.color = "white";
-                btn.innerText = "âœ“ Saved";
+                btn.innerText = "✓ Saved";
             }
             setTimeout(() => {
                 window.location.reload();
@@ -7059,7 +7071,7 @@ function toggleGlobalMute(muted) {
         }
         function resetAdminServerIp() {
             localStorage.removeItem('serverIp');
-            showAdminToast("âœ“ Reset to default localhost. Reconnecting...", "success");
+            showAdminToast("✓ Reset to default localhost. Reconnecting...", "success");
             setTimeout(() => {
                 window.location.reload();
             }, 1200);
@@ -7069,10 +7081,10 @@ function toggleGlobalMute(muted) {
             const val = input.value.trim();
             if (val === '') {
                 localStorage.removeItem('serverIp');
-                showAdminToast("âœ“ Server IP reset to default (localhost)! Reconnecting...", "success");
+                showAdminToast("✓ Server IP reset to default (localhost)! Reconnecting...", "success");
             } else {
                 localStorage.setItem('serverIp', val);
-                showAdminToast("âœ“ Server IP saved! Reconnecting...", "success");
+                showAdminToast("✓ Server IP saved! Reconnecting...", "success");
             }
             
             const btn = document.querySelector('button[onclick="saveConfigServerIp()"]');
@@ -7080,7 +7092,7 @@ function toggleGlobalMute(muted) {
                 btn.style.backgroundColor = "#10b981";
                 btn.style.borderColor = "#10b981";
                 btn.style.color = "white";
-                btn.innerHTML = "âœ“ Server IP Saved";
+                btn.innerHTML = "✓ Server IP Saved";
             }
             setTimeout(() => {
                 window.location.reload();
@@ -7088,7 +7100,7 @@ function toggleGlobalMute(muted) {
         }
         function resetConfigServerIp() {
             localStorage.removeItem('serverIp');
-            showAdminToast("âœ“ Reset to default localhost. Reconnecting...", "success");
+            showAdminToast("✓ Reset to default localhost. Reconnecting...", "success");
             setTimeout(() => {
                 window.location.reload();
             }, 1200);
@@ -7256,7 +7268,7 @@ function toggleGlobalMute(muted) {
         }
 
 
-        // â”€â”€â”€ Member DB Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─── Member DB Logic ────────────────────────────────────────────────────────
         let currentGroups = [];
         let selectedGroupId = null;
 
@@ -7335,7 +7347,7 @@ function toggleGlobalMute(muted) {
                                 \${g.group_name}
                                 \${g.ai_managed === 1 || g.ai_managed === true ? \`<span class="tag tag-green" style="background:#dcfce7; color:#166534; border:1px solid #bbf7d0; font-size:8px; font-weight:900; padding:1px 4px; display:inline-flex; align-items:center; gap:1px; line-height:1;"><i data-lucide="cpu" style="width:8px; height:8px;"></i> AI</span>\` : ''}
                             </div>
-                            <div class="group-meta">\${g.actual_count || 0} Members â€¢ \${g.role_type}</div>
+                            <div class="group-meta">\${g.actual_count || 0} Members • \${g.role_type}</div>
                         </div>
                     </div>
                 \`;
@@ -7397,11 +7409,19 @@ function toggleGlobalMute(muted) {
 
             tbody.innerHTML = members.map((m, index) => {
                 const groupTags = m.groups && m.groups.length > 0
+                    ? m.groups.map(g => \`<span class="tag tag-blue" style="font-size:10px; padding:2px 6px; background:#eff6ff; color:#2563eb; border:1px solid #dbeafe;">\${g.group_name}</span>\`).join('')
+                    : \`<span class="tag tag-gray" style="font-size:10px; padding:2px 6px;">Unassigned</span>\`;
+
+                return \`
+                <tr>
+                    <td style="font-weight: 800; color: var(--text-muted);">\${String(index + 1).padStart(2, '0')}</td>
+                    <td>
                         <img src="\${m.photo_url || 'official_rescuer_icon.png'}" 
                              style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid var(--border);" />
                     </td>
                     <td style="font-weight:700; color:var(--accent); font-family: monospace;">\${m.device_id || m.serial_number || 'N/A'}</td>
                     <td><div style="font-weight:600;">\${m.name}</div></td>
+                    <td><div style="font-weight:600; font-family: monospace;">\${m.phone || 'N/A'}</div></td>
                     <td><code style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:700; color:#1e293b; border:1px solid #cbd5e1;">\${m.password || '123456'}</code></td>
                     <td>
                         <div style="display:flex; align-items:center; gap:6px;">
@@ -7466,7 +7486,7 @@ function toggleGlobalMute(muted) {
                     <input type="checkbox" name="assignUserSelect" value="\${m.id}">
                     <div style="flex:1;">
                         <div style="font-weight:600; font-size:14px;">\${m.name}</div>
-                        <div style="font-size:12px; color:var(--text-muted);">\${m.role} â€¢ \${m.device_id}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">\${m.role} • \${m.device_id}</div>
                     </div>
                 </label>
             \`).join('');
@@ -7517,7 +7537,7 @@ function toggleGlobalMute(muted) {
                     <input type="checkbox" name="aiUserSelect" value="\${m.id}" \${m.ai_managed === 1 || m.ai_managed === true ? 'checked' : ''}>
                     <div style="flex:1;">
                         <div style="font-weight:600; font-size:14px;">\${m.name}</div>
-                        <div style="font-size:12px; color:var(--text-muted);">\${m.role} â€¢ \${m.device_id || m.serial_number || 'N/A'}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">\${m.role} • \${m.device_id || m.serial_number || 'N/A'}</div>
                     </div>
                 </label>
             \`).join('');
@@ -7885,9 +7905,9 @@ function toggleGlobalMute(muted) {
                 if (req) {
                     let assignedTo = 'Unassigned';
                     if (req.assigned_officer_name) {
-                        assignedTo = \` \${req.assigned_officer_name}\`;
+                        assignedTo = \`\${req.assigned_officer_name}\`;
                     } else if (req.assigned_group_name) {
-                        assignedTo = \` \${req.assigned_group_name}\`;
+                        assignedTo = \`\${req.assigned_group_name}\`;
                     } else if (req.assigned_user_id) {
                         assignedTo = \`Rescuer \${req.assigned_user_id}\`;
                     } else if (req.assigned_group_id) {
@@ -8010,7 +8030,7 @@ function toggleGlobalMute(muted) {
                     if (d.address) extraInfo.push(\`Landmark/Input: <b>\${d.address}</b>\`);
                     
                     if (extraInfo.length > 0) {
-                        extraDetailsHtml = \`<div style="margin-top:8px; font-size:12px; font-weight:700; color:var(--text-muted);">â„¹ï¸ \${extraInfo.join(' | ')}</div>\`;
+                        extraDetailsHtml = \`<div style="margin-top:8px; font-size:12px; font-weight:700; color:var(--text-muted);">ℹ️ \${extraInfo.join(' | ')}</div>\`;
                     }
                 } catch (e) { }
             }
@@ -8204,7 +8224,7 @@ function toggleGlobalMute(muted) {
 
                                 if (items.length > 0) {
                                     detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
-                                    \${items.join(' â€¢ ')}
+                                    \${items.join(' • ')}
                                 </div>\`;
                                 }
                             } catch (e) {
@@ -8243,7 +8263,7 @@ function toggleGlobalMute(muted) {
                                     <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="closeModal('viewRequestsModal'); openAssignModal('\${req.id}', '\${safeType}', '\${safeSector}', '\${req.urgency}', '\${num}')">\${assignBtnLabel}</button>
                                     <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px; color: var(--accent); border-color: var(--accent);" onclick="closeModal('viewRequestsModal'); openReplyModal('\${req.device_id || req.phone}', '\${nickName}')">Reply</button>
                                     <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px;" onclick="closeModal('viewRequestsModal'); declineRescueRequest('\${req.id}')">Decline</button>
-                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="closeModal('viewRequestsModal'); closeRescueRequest('\${req.id}')">âœ… Close</button>
+                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="closeModal('viewRequestsModal'); closeRescueRequest('\${req.id}')">✅ Close</button>
                                 </div>
                             </div>
                         </div>
@@ -8522,7 +8542,7 @@ function toggleGlobalMute(muted) {
 
                             if (items.length > 0) {
                                 detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
-                                    \${items.join(' â€¢ ')}
+                                    \${items.join(' • ')}
                                 </div>\`;
                             }
                         } catch (e) { }
@@ -8562,7 +8582,7 @@ function toggleGlobalMute(muted) {
                                     <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="openAssignModal('\${req.id}', '\${safeType}', '\${safeSector}', '\${req.urgency}', '\${num}')">\${assignBtnLabel}</button>
                                     <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px; color: var(--accent); border-color: var(--accent);" onclick="event.stopPropagation(); openReplyModal('\${req.device_id || req.phone}', '\${nickName}')">Reply</button>
                                     <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px;" onclick="event.stopPropagation(); declineRescueRequest('\${req.id}')">Decline</button>
-                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeRescueRequest('\${req.id}')">âœ… Close</button>
+                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeRescueRequest('\${req.id}')">✅ Close</button>
                                 </div>
                             </div>
                         </div>
@@ -9357,11 +9377,11 @@ function toggleGlobalMute(muted) {
                                 <span class="tag \${getTagForStatus(g.status)}" style="font-size:10px;">\${g.status.toUpperCase()}</span>
                             </div>
                             <div style="font-size:12px; color:var(--text-muted); font-weight:600;">
-                                <i data-lucide="users" style="width:12px; display:inline-block; vertical-align:middle;"></i> Assigned: <b>\${g.team || 'Pending'}</b> â€¢ <i data-lucide="list" style="width:12px; display:inline-block; vertical-align:middle;"></i> Missions: <b>\${g.requests.length}</b>
+                                <i data-lucide="users" style="width:12px; display:inline-block; vertical-align:middle;"></i> Assigned: <b>\${g.team || 'Pending'}</b> • <i data-lucide="list" style="width:12px; display:inline-block; vertical-align:middle;"></i> Missions: <b>\${g.requests.length}</b>
                             </div>
                         </div>
                         <div style="display:flex; gap:10px;">
-                             <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="closeModal('activeGroupsModal'); closeTaskByAdmin('\${g.id}')">âœ… CLOSE</button>
+                             <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="closeModal('activeGroupsModal'); closeTaskByAdmin('\${g.id}')">✅ CLOSE</button>
                              <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #eab308; border-color: #eab308; color: white;" onclick="closeModal('activeGroupsModal'); openReassignModal('\${g.id}')"> RE-ASSIGN</button>
                              <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="closeModal('activeGroupsModal'); selectTask('\${g.id}')">ï¸ VIEW</button>
                         </div>
@@ -9445,7 +9465,7 @@ function toggleGlobalMute(muted) {
                                             </div>
                                             <div>
                                                 <div style="font-weight:900; font-size:14px; color:var(--primary);">\${(r.type || 'RESCUE').toUpperCase()} #\${r.id}</div>
-                                                <div style="color:var(--text-muted); font-size:11px; font-weight:600;">\${r.requester_name || 'Public'} â€¢ Sector: \${r.sector || 'N/A'}</div>
+                                                <div style="color:var(--text-muted); font-size:11px; font-weight:600;">\${r.requester_name || 'Public'} • Sector: \${r.sector || 'N/A'}</div>
                                             </div>
                                         </div>
                                         <div style="display:flex; align-items:center; gap:8px;">
@@ -9783,6 +9803,26 @@ const CONFIG_SND = 'UklGRmisAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YUSsAAAA
 <script>
 function toggleGlobalMute(muted) {
     window.isMuted = muted;
+    
+    const btn2 = document.getElementById('sidebarMuteBtn');
+    if (btn2) {
+        btn2.dataset.muted = window.isMuted.toString();
+        const iconSpan = btn2.querySelector('i');
+        const textSpan = btn2.querySelector('#sidebarMuteText');
+        if (window.isMuted) {
+            btn2.style.backgroundColor = "#ef4444";
+            btn2.style.boxShadow = "0 4px 6px -1px rgba(239, 68, 68, 0.3)";
+            if(iconSpan) iconSpan.setAttribute('data-lucide', 'volume-x');
+            if(textSpan) textSpan.innerText = 'System Audio: OFF';
+        } else {
+            btn2.style.backgroundColor = "#22c55e";
+            btn2.style.boxShadow = "0 4px 6px -1px rgba(34, 197, 94, 0.3)";
+            if(iconSpan) iconSpan.setAttribute('data-lucide', 'volume-2');
+            if(textSpan) textSpan.innerText = 'System Audio: ON';
+        }
+    }
+
+    if (window.lucide) window.lucide.createIcons();
 }
 </script>
 
