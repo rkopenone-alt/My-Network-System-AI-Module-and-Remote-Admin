@@ -1,0 +1,24 @@
+ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-22
+Device Hostname: , DESKTOP-KBHB0SB
+Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
+Generated At: , 23/6/2026, 3:27:22 am
+
+SECTION 1: RESCUE REQUESTS & TASKS
+Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
+96,sos,normal,completed,12.9943787,80.1956508,"{""transportMode"":""BOAT"",""needs"":[6,2,1,2],""peopleCount"":""1"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Sarah Khan (MEM-02),2026-06-22 21:32:52,2026-06-22 21:34:35,DESKTOP-KBHB0SB
+97,medical,critical,completed,12.9943831,80.1956392,Critical Emergency Triggered,Sarah Khan (MEM-02),2026-06-22 21:34:18,2026-06-22 21:34:47,DESKTOP-KBHB0SB
+98,pregnancy,critical,completed,12.9943841,80.1956498,Critical Emergency Triggered,Sarah Khan (MEM-02),2026-06-22 21:35:20,2026-06-22 21:35:54,DESKTOP-KBHB0SB
+99,pregnancy,critical,completed,12.9943836,80.1956456,Critical Emergency Triggered,Sarah Khan (MEM-02),2026-06-22 21:56:57,2026-06-22 21:57:21,DESKTOP-KBHB0SB
+
+
+SECTION 2: RESCUER COMMAND DISPATCHES
+Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
+88,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943787,""lng"":80.1956508,""urgency"":""normal"",""rescue_req_id"":96,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""BOAT\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""1\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}"",""assigned_by"":""AI""}",Normal,completed,2026-06-22 21:33:07,,DESKTOP-KBHB0SB
+89,N/A,919000000002,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943831,""lng"":80.1956392,""urgency"":""critical"",""rescue_req_id"":97,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,completed,2026-06-22 21:34:36,,DESKTOP-KBHB0SB
+90,N/A,919000000002,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943841,""lng"":80.1956498,""urgency"":""critical"",""rescue_req_id"":98,""requester_name"":""Citizen"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,completed,2026-06-22 21:35:38,,DESKTOP-KBHB0SB
+91,N/A,919000000002,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943836,""lng"":80.1956456,""urgency"":""critical"",""rescue_req_id"":99,""requester_name"":""Citizen"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,completed,2026-06-22 21:57:15,,DESKTOP-KBHB0SB
+
+
+SECTION 3: PUBLIC SOS ALERTS
+SOS ID,Device ID,Phone,Latitude,Longitude,Details,Status,Priority,Alert Time,Device Node
+NO SOS ALERTS FOR THIS DATE

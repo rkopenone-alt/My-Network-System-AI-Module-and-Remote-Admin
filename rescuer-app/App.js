@@ -341,16 +341,13 @@ export default function App() {
 
         try {
           const initialLoc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
-          const age = Date.now() - initialLoc.timestamp;
-          if (age < 30000 && initialLoc.coords.accuracy <= 20) {
-            if (webViewRef.current) {
-              const payload = JSON.stringify({
-                type: 'GPS_UPDATE',
-                lat: initialLoc.coords.latitude,
-                lng: initialLoc.coords.longitude
-              });
-              webViewRef.current.injectJavaScript(`window.postMessage(${payload}, '*'); true;`);
-            }
+          if (webViewRef.current) {
+            const payload = JSON.stringify({
+              type: 'GPS_UPDATE',
+              lat: initialLoc.coords.latitude,
+              lng: initialLoc.coords.longitude
+            });
+            webViewRef.current.injectJavaScript(`window.postMessage(${payload}, '*'); true;`);
           }
         } catch (e) {}
 
@@ -361,11 +358,6 @@ export default function App() {
             distanceInterval: 1,
           },
           (loc) => {
-            const age = Date.now() - loc.timestamp;
-            if (age > 30000) return; // Reject stale cached location
-            
-            if (loc.coords.accuracy > 15) return; // Accuracy threshold filter
-
             if (webViewRef.current) {
               const payload = JSON.stringify({
                 type: 'GPS_UPDATE',

@@ -2843,11 +2843,11 @@
                     </div>
                 `;
                 document.body.appendChild(modal);
-                if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: \'PLAY_SOUND\', sound: \'siren_loop\'}));
+                if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'PLAY_SOUND', sound: 'siren_loop'}));
             },
 
             async acceptCommandFromModal(id, lat, lng) {
-                if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: \'STOP_SOUND\'}));
+                if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'STOP_SOUND'}));
                 this.toast('ACCEPTING TASK...', '⏳');
                 try {
                     await fetch(`${this.API}/commands/${id}/status`, {
@@ -2885,7 +2885,7 @@
             },
 
             async declineCommandFromModal(id) {
-                if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: \'STOP_SOUND\'}));
+                if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'STOP_SOUND'}));
                 this.toast('DECLINING TASK...', '⏳');
                 try {
                     await fetch(`${this.API}/commands/${id}/status`, {

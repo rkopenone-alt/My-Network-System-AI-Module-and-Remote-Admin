@@ -12,8 +12,9 @@ env["ANDROID_HOME"] = r"C:\Users\Alienware\AppData\Local\Android\Sdk"
 def build_app(app_name, output_name):
     print(f"Building {app_name}...")
     cwd = os.path.join(workspace_dir, app_name, "android")
-    subprocess.run([".\\gradlew.bat", "clean"], cwd=cwd, env=env, shell=True)
-    res = subprocess.run([".\\gradlew.bat", "assembleRelease"], cwd=cwd, env=env, shell=True)
+    # Clean first
+    subprocess.run([".\gradlew.bat", "clean"], cwd=cwd, env=env, shell=True)
+    res = subprocess.run([".\gradlew.bat", "assembleRelease"], cwd=cwd, env=env, shell=True)
     if res.returncode == 0:
         apk_path = os.path.join(cwd, "app", "build", "outputs", "apk", "release", "app-release.apk")
         if os.path.exists(apk_path):
@@ -25,5 +26,5 @@ def build_app(app_name, output_name):
     else:
         print(f"Failed to build {app_name}")
 
-build_app("rescuer-app", "Rescuer_App_Rescue_AI.apk")
-build_app("admin-app", "Admin_App_Rescue.apk")
+build_app("rescuer-app", "Rescuer_App.apk")
+build_app("public-sos-app", "Public_App.apk")
