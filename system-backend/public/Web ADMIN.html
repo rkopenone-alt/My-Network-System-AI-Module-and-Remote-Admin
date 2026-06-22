@@ -5275,12 +5275,8 @@ function toggleGlobalMute(muted) {
                 if (c.requesterAudioUrl) {
                     const audioUrl = formatMediaUrl(c.requesterAudioUrl);
                     evidenceAudio = `<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 140px;">
-                        <audio controls style="width:130px; height:24px;" onclick="event.stopPropagation();">
-                            <source src="${audioUrl}" type="audio/wav">
-                            <source src="${audioUrl}" type="audio/mpeg">
-                            Your browser does not support audio.
-                        </audio>
-                        <a href="${audioUrl}" target="_blank" onclick="event.stopPropagation();" style="font-size:10px; font-weight:800; color:var(--primary); text-decoration:none;"> Download</a>
+                        <audio controls src="${audioUrl}" style="width:130px; height:32px; margin-bottom:4px;" onclick="event.stopPropagation();"></audio>
+                        <a href="${audioUrl}" target="_blank" style="font-size:10px; font-weight:800; color:#1d4ed8; text-decoration:none; border:1px solid #1d4ed8; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;" onclick="event.stopPropagation();">DOWNLOAD</a>
                     </div>`;
                 }
 
@@ -5310,7 +5306,7 @@ function toggleGlobalMute(muted) {
                         <div style="display:flex; gap:4px;">
                             ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ Close</button>` : ''}
                             ${isReassignable ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('${c.id}')"> Re-Assign</button>` : ''}
-                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); ${isOngoing ? `selectTask('${c.id}')` : `openCompletedTaskDetailModal('${c.id}')`}">ï¸ View</button>
+                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); ${isOngoing ? `selectTask('${c.id}')` : `openCompletedTaskDetailModal('${c.id}')`}">ï¸  View</button>
                         </div>
                     </td>
                 </tr>`;
@@ -5378,12 +5374,8 @@ function toggleGlobalMute(muted) {
                 if (r.audio_url) {
                     const audioUrl = formatMediaUrl(r.audio_url);
                     evidenceAudio = `<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 140px;">
-                        <audio controls style="width:130px; height:24px;" onclick="event.stopPropagation();">
-                            <source src="${audioUrl}" type="audio/wav">
-                            <source src="${audioUrl}" type="audio/mpeg">
-                            Your browser does not support audio.
-                        </audio>
-                        <a href="${audioUrl}" target="_blank" onclick="event.stopPropagation();" style="font-size:10px; font-weight:800; color:var(--primary); text-decoration:none;"> Download</a>
+                        <audio controls src="${audioUrl}" style="width:130px; height:32px; margin-bottom:4px;" onclick="event.stopPropagation();"></audio>
+                        <a href="${audioUrl}" target="_blank" style="font-size:10px; font-weight:800; color:#1d4ed8; text-decoration:none; border:1px solid #1d4ed8; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;" onclick="event.stopPropagation();">DOWNLOAD</a>
                     </div>`;
                 }
 
@@ -5415,8 +5407,8 @@ function toggleGlobalMute(muted) {
                 }
 
                 const displayId = `REQ-${r.id}`;
-                const formattedReqTime = formatLocalTime(r.created_at);
-                const formattedCmdTime = r.updated_at ? formatLocalTime(r.updated_at) : formattedReqTime;
+                const formattedReqTime = formatLocalDate(r.created_at) + ' ' + formatLocalTime(r.created_at);
+                const formattedCmdTime = r.updated_at ? formatLocalDate(r.updated_at) + ' ' + formatLocalTime(r.updated_at) : formattedReqTime;
 
                 // Let's link child/grouped tasks to their active command IDs for Close/Reassign actions
                 let actionBtnId = displayId;

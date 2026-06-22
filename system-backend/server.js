@@ -1460,7 +1460,7 @@ app.get('/api/rescue-requests', async (req, res) => {
 });
 
 app.post('/api/rescue-requests', async (req, res) => {
-    const { device_id, phone, type, lat, lng, details, urgency, sector, priority, image_data } = req.body;
+    const { device_id, phone, name, type, lat, lng, details, urgency, sector, priority, image_data } = req.body;
     try {
         // Enforce SOS Buffer
         const bufferSetting = await get(`SELECT value FROM settings WHERE key = 'sos_buffer_minutes'`);
@@ -1547,8 +1547,8 @@ app.post('/api/rescue-requests', async (req, res) => {
             }
         }
 
-        const result = await run(`INSERT INTO rescue_requests (device_id, phone, type, lat, lng, details, urgency, priority, sector, image_url, audio_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [device_id, phone, type || 'pregnancy', lat, lng, details, urgency || 'high', priority || 'normal', sector || 'Unknown Zone', imageUrl, audioUrl]);
+        const result = await run(`INSERT INTO rescue_requests (device_id, phone, name, type, lat, lng, details, urgency, priority, sector, image_url, audio_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [device_id, phone, name || 'Citizen', type || 'pregnancy', lat, lng, details, urgency || 'high', priority || 'normal', sector || 'Unknown Zone', imageUrl, audioUrl]);
         await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'requested')`, [result.lastID]);
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [result.lastID]);
         broadcast('NEW_RESCUE_REQUEST', reqData, 'admin');

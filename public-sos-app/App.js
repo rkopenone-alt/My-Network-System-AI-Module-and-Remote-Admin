@@ -910,6 +910,7 @@ function SOSTriggerScreen({ user, details, isSosLocked, countdown, onTriggerSOS,
       const { imageBase64, audioBase64, ...cleanDetails } = details || {};
       payload = {
         phone: user.phone,
+        name: user.name,
         device_id: user.serial_number || 'PUB-MOB',
         type: emergencyType,
         lat: location ? location.coords.latitude : 13.085,
@@ -1538,6 +1539,7 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
 
       payload = {
         phone: user.phone,
+        name: user.name,
         device_id: user.serial_number || 'PUB-MOB',
         type: selectedType,
         lat: location ? location.coords.latitude : 13.085,
