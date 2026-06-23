@@ -2727,18 +2727,28 @@
                         return;
                     }
 
-                        const updateTypes = [
-                            'NEW_RESCUE_REQUEST', 'RESCUE_REQUEST_ACCEPTED', 'RESCUE_REQUEST_DECLINED',
-                            'RESCUE_REQUEST_UPDATE', 'COMMAND_STATUS_UPDATE', 'RESCUE_REQUEST_COMPLETED',
-                            'SOS_ALERT', 'RESCUER_UPDATE', 'NEW_COMMAND', 'AI_STATUS_UPDATE',
-                            'RESCUE_REQUEST_IGNORED_REASSIGN', 'COMMAND_REASSIGNED', 'RESCUE_REQUEST_DECLINED_REASSIGN'
-                        ];
+                    const updateTypes = ['NEW_RESCUE_REQUEST', 'COMMAND_STATUS_UPDATE', 'COMMAND_COMPLETED', 'RESCUE_REQUEST_UPDATE', 'RESCUE_REQUEST_ACCEPTED', 'NEW_COMMAND', 'RESCUE_REQUEST_IGNORED_REASSIGN', 'RESCUE_REQUEST_DECLINED_REASSIGN', 'COMMAND_REASSIGNED'];
 
                     if (updateTypes.includes(msg.type)) {
                         this.refresh();
 
+                        // If it's a direct command, handle the modal/notification
                         if (msg.type === 'NEW_COMMAND' && msg.data) {
                             this.handleCommand(msg.data);
+                        }
+
+                        // If task was reassigned or ignored, clean up the UI for this rescuer
+                        if (['RESCUE_REQUEST_IGNORED_REASSIGN', 'RESCUE_REQUEST_DECLINED_REASSIGN', 'COMMAND_REASSIGNED'].includes(msg.type) && msg.data) {
+                            const reqId = msg.data.rescue_req_id || msg.data.req_id || msg.data.id;
+                            if (reqId) {
+                                document.querySelectorAll(`[data-req-id="${reqId}"]`).forEach(el => el.remove());
+                                if (this.activeMission && (this.activeMission.id == reqId || this.activeMission.req_id == reqId)) {
+                                    this.activeMission = null;
+                                    document.getElementById('missionBanner').style.display = 'none';
+                                    if (this.navPolyline) this.map.removeLayer(this.navPolyline);
+                                    this.toast('TASK REASSIGNED', '🔄');
+                                }
+                            }
                         }
 
                         // If current mission is completed by admin, clear it
@@ -2747,21 +2757,8 @@
                                 this.activeMission = null;
                                 document.getElementById('missionBanner').style.display = 'none';
                                 if (this.navPolyline) this.map.removeLayer(this.navPolyline);
-                                if (this.missionZoneLayer) this.map.removeLayer(this.missionZoneLayer);
                                 this.refresh();
                             }
-                        }
-                        
-                        // If an assignment was ignored or reassigned, clear it from active
-                        if (['RESCUE_REQUEST_IGNORED_REASSIGN', 'COMMAND_REASSIGNED', 'RESCUE_REQUEST_DECLINED_REASSIGN'].includes(msg.type)) {
-                            const targetId = msg.data && msg.data.rescue_req_id ? msg.data.rescue_req_id : (msg.data ? msg.data.id : null);
-                            if (this.activeMission && (this.activeMission.id == targetId || !targetId)) {
-                                this.activeMission = null;
-                                document.getElementById('missionBanner').style.display = 'none';
-                                if (this.navPolyline) this.map.removeLayer(this.navPolyline);
-                                if (this.missionZoneLayer) this.map.removeLayer(this.missionZoneLayer);
-                            }
-                            this.refresh();
                         }
                     }
                 };
@@ -2825,6 +2822,8 @@
 
                 const isCrit = c.priority === 'critical' || c.command_type === 'critical';
                 const modal = document.createElement('div');
+                modal.id = 'cmd_modal_' + c.id;
+                modal.setAttribute('data-req-id', payload.rescue_req_id || c.rescue_req_id || c.id || '');
                 modal.style.cssText = `
                     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
                     background: rgba(0,0,0,0.8); z-index: 10000;
@@ -2854,7 +2853,7 @@
 
                         <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Priority: ${c.priority || c.command_type || 'normal'}</p>
                         <div style="display: flex; gap: 10px; justify-content: center;">
-                            <button class="btn-action btn-primary" onclick="core.acceptCommandFromModal('${c.id}', ${payload.lat || 0}, ${payload.lng || 0}, ${isCrit}); this.closest('div').parentElement.parentElement.remove();">ACCEPT</button>
+                            <button class="btn-action btn-primary" onclick="core.acceptCommandFromModal('${c.id}', ${payload.lat || 0}, ${payload.lng || 0}); this.closest('div').parentElement.parentElement.remove();">ACCEPT</button>
                             <button class="btn-action btn-secondary" onclick="core.declineCommandFromModal('${c.id}'); this.closest('div').parentElement.parentElement.remove();">DECLINE</button>
                         </div>
                     </div>
@@ -2863,7 +2862,7 @@
                 if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'PLAY_SOUND', sound: 'siren_loop'}));
             },
 
-            async acceptCommandFromModal(id, lat, lng, isCrit = false) {
+            async acceptCommandFromModal(id, lat, lng) {
                 if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'STOP_SOUND'}));
                 this.toast('ACCEPTING TASK...', '⏳');
                 try {
@@ -2873,6 +2872,7 @@
                         body: JSON.stringify({ status: 'accepted', rescuer_phone: this.user.phone })
                     });
 
+                    const isCrit = c.priority === 'critical' || c.command_type === 'critical';
                     if (isCrit && this.activeMission && !['sos', 'medical', 'pregnancy', 'critical'].includes(this.activeMission.type.toLowerCase())) {
                         this.interruptedMission = { ...this.activeMission };
                         fetch(`${this.API}/users/${this.user.id}/interrupted-task`, {
@@ -2941,45 +2941,6 @@
         document.head.appendChild(style);
 
         window.core = core;
-
-        // Dynamic Full Sync on Reconnection
-        window.addEventListener('online', async () => {
-            if (!core.user || !core.API) return;
-            core.toast('Reconnected! Syncing data...', '🔄');
-            
-            // 1. Process offline actions
-            await core.processOfflineQueue();
-            
-            try {
-                // 2. ID Sync: Re-validate session
-                const token = localStorage.getItem('rescuer_token');
-                if (token) {
-                    const res = await fetch(`${core.API}/auth/verify-session`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ token })
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        core.user = data.user;
-                        localStorage.setItem('rescue_user_v3', JSON.stringify(data.user));
-                    }
-                }
-                
-                // 3. History Sync
-                const rawHistory = await core.fetchWithTimeout(`${core.API}/users/${core.user.id}/combined-history`, {}, 5000);
-                if (rawHistory) {
-                    const histCacheKey = 'cache_' + core.API + '/users/' + core.user.id + '/combined-history';
-                    localStorage.setItem(histCacheKey, JSON.stringify(rawHistory));
-                    if (core.currentTab === 'history') {
-                        core.renderHistory(rawHistory);
-                    }
-                }
-            } catch (e) {
-                console.log('Sync error:', e);
-            }
-        });
-
         window.onImageCaptured = (base64, id) => {
             core.capturedImages[id] = base64;
 

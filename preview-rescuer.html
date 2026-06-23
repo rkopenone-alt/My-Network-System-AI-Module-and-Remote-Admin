@@ -2739,6 +2739,7 @@
 
                         // If task was reassigned or ignored, clean up the UI for this rescuer
                         if (['RESCUE_REQUEST_IGNORED_REASSIGN', 'RESCUE_REQUEST_DECLINED_REASSIGN', 'COMMAND_REASSIGNED'].includes(msg.type) && msg.data) {
+                            if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'STOP_SOUND'}));
                             const reqId = msg.data.rescue_req_id || msg.data.req_id || msg.data.id;
                             if (reqId) {
                                 document.querySelectorAll(`[data-req-id="${reqId}"]`).forEach(el => el.remove());
@@ -2753,6 +2754,7 @@
 
                         // If current mission is completed by admin, clear it
                         if ((msg.type === 'COMMAND_STATUS_UPDATE' || msg.type === 'COMMAND_COMPLETED') && msg.data?.status === 'completed') {
+                            if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'STOP_SOUND'}));
                             if (this.activeMission && (this.activeMission.id === msg.data.id || ('CMD-' + this.activeMission.id) === msg.data.id)) {
                                 this.activeMission = null;
                                 document.getElementById('missionBanner').style.display = 'none';
@@ -2859,7 +2861,12 @@
                     </div>
                 `;
                 document.body.appendChild(modal);
-                if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'PLAY_SOUND', sound: 'siren_loop'}));
+                if(window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({type: 'PLAY_SOUND', sound: 'siren_loop'}));
+                    setTimeout(() => {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({type: 'STOP_SOUND'}));
+                    }, 3000);
+                }
             },
 
             async acceptCommandFromModal(id, lat, lng) {

@@ -1,7 +1,7 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-23
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 24/6/2026, 12:15:47 am
+Generated At: , 24/6/2026, 12:19:13 am
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
@@ -39,6 +39,10 @@ Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Resp
 112,pregnancy,critical,completed,12.9943779,80.1956515,Critical Emergency Triggered,Sarah Khan (MEM-02),2026-06-23 18:39:59,2026-06-23 18:40:18,DESKTOP-KBHB0SB
 113,medical,critical,completed,12.9943865,80.1956481,"Critical Emergency Triggered
 [Ignored by Rescuer ID: 2]",Arjun Singh (MEM-01),2026-06-23 18:45:09,2026-06-23 18:45:46,DESKTOP-KBHB0SB
+114,sos,normal,completed,12.9943877,80.1956491,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}
+[Declined by Rescuer ID: 2]",Arjun Singh (MEM-01),2026-06-23 18:47:16,2026-06-23 18:47:45,DESKTOP-KBHB0SB
+115,sos,normal,completed,12.9943807,80.1956452,"{""transportMode"":""AIR"",""needs"":[3,0,1,2],""peopleCount"":""2"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}
+[Ignored by Rescuer ID: 2]",Arjun Singh (MEM-01),2026-06-23 18:48:36,2026-06-23 18:49:12,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES
@@ -57,6 +61,8 @@ Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At
 103,N/A,919000000004,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.994385,""lng"":80.1956442,""urgency"":""critical"",""rescue_req_id"":111,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered\n[Ignored by Rescuer ID: 2]\n[Declined by Rescuer ID: 1]\n[Declined by Rescuer ID: 1]"",""assigned_by"":""AI""}",Critical,completed,2026-06-23 18:18:29,,DESKTOP-KBHB0SB
 104,N/A,919000000002,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943779,""lng"":80.1956515,""urgency"":""critical"",""rescue_req_id"":112,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,completed,2026-06-23 18:40:11,,DESKTOP-KBHB0SB
 105,N/A,919000000001,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943865,""lng"":80.1956481,""urgency"":""critical"",""rescue_req_id"":113,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered\n[Ignored by Rescuer ID: 2]"",""assigned_by"":""AI""}",Critical,completed,2026-06-23 18:45:21,,DESKTOP-KBHB0SB
+106,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943877,""lng"":80.1956491,""urgency"":""normal"",""rescue_req_id"":114,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}\n[Declined by Rescuer ID: 2]"",""assigned_by"":""AI""}",Normal,completed,2026-06-23 18:47:31,,DESKTOP-KBHB0SB
+107,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943807,""lng"":80.1956452,""urgency"":""normal"",""rescue_req_id"":115,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[3,0,1,2],\""peopleCount\"":\""2\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}\n[Ignored by Rescuer ID: 2]"",""assigned_by"":""AI""}",Normal,completed,2026-06-23 18:48:51,,DESKTOP-KBHB0SB
 
 
 SECTION 3: PUBLIC SOS ALERTS
