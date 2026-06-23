@@ -72,7 +72,7 @@ if os.path.exists(icon_source):
         os.makedirs(backup_mipmap, exist_ok=True)
         
         if os.path.exists(dest_folder):
-            for shape in ["ic_launcher.png", "ic_launcher_round.png"]:
+            for shape in ["ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"]:
                 icon_path = os.path.join(dest_folder, shape)
                 backup_path = os.path.join(backup_mipmap, shape)
                 if os.path.exists(icon_path):

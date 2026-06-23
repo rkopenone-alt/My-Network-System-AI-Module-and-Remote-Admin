@@ -918,7 +918,7 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
         }
         let personalReqs = await all(personalReqQuery, reqParams);
 
-        const userActions = await all(`SELECT rescue_req_id, action FROM sos_assignment_history WHERE rescuer_id = ? ORDER BY timestamp DESC`, [userId]);
+        const userActions = await all(`SELECT rescue_req_id, action FROM sos_assignment_history WHERE rescuer_id = ? ORDER BY created_at DESC`, [userId]);
         const userActionMap = {};
         userActions.forEach(row => {
             if (!userActionMap[row.rescue_req_id]) {
@@ -1699,6 +1699,12 @@ app.put('/api/rescue-requests/:id/decline', async (req, res) => {
         } else {
             rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rescuer_phone, rescuer_phone, rescuer_phone]);
         }
+
+        const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
+        if (rescuer && !reqData.assigned_group_id && reqData.assigned_user_id && reqData.assigned_user_id !== rescuer.id) {
+            return res.status(403).json({ error: 'Task is no longer assigned to you.' });
+        }
+
         const descAppend = `\n[Declined by Rescuer ID: ${rescuer ? rescuer.id : 'Unknown'}]`;
 
         await run(`UPDATE rescue_requests SET status = 'partially_declined', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, req.params.id]);
@@ -1732,6 +1738,12 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
             rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rPhone, rPhone, rPhone, `%${cleanedPhone}`]);
         } else {
             rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
+        }
+
+        if (rescuer && !reqData.assigned_group_id) {
+            if (reqData.assigned_user_id && reqData.assigned_user_id !== rescuer.id && status !== 'declined') {
+                return res.status(403).json({ error: 'Task is currently assigned to another unit.' });
+            }
         }
 
         if (status === 'completed') {
@@ -2581,7 +2593,7 @@ async function runAIAssignment() {
             FROM command_queue cq
             JOIN rescue_requests rr ON cq.command_payload LIKE '%"rescue_req_id":' || rr.id || '%' OR cq.command_payload LIKE '%"rescue_req_id":"' || rr.id || '"%'
             WHERE cq.status = 'assigned' AND cq.assigned_by = 'AI'
-            AND (strftime('%s', 'now') - strftime('%s', cq.updated_at)) >= ?
+            AND (strftime('%s', 'now') - strftime('%s', COALESCE(cq.updated_at, cq.created_at))) >= ?
             AND rr.status = 'assigned'
         `, [timeoutSeconds]);
 
@@ -2711,6 +2723,8 @@ async function runAIAssignment() {
                         [assignedPhone, cmdPayload, commandType, existingCommand.id]);
                     // Cancel any other active commands for the same request to prevent duplicates
                     await run(`UPDATE command_queue SET status = 'cancelled' WHERE id != ? AND (command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled', 'declined')`, [existingCommand.id, `%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`]);
+                    // CRITICAL FIX: Ensure the core database request points to the new AI rescuer so the previous rescuer's combined-history clears out the task!
+                    await run(`UPDATE rescue_requests SET assigned_user_id = ?, status = 'assigned', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [assignedUserId, req.id]);
                     const updatedCmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [existingCommand.id]);
                     broadcastToAdminAndTarget('NEW_COMMAND', updatedCmdData, bestUser.device_id); // Target specifically
                 } else {
@@ -2720,6 +2734,8 @@ async function runAIAssignment() {
                     if (newCmdId) {
                         // Cancel any other active commands for the same request to prevent duplicates
                         await run(`UPDATE command_queue SET status = 'cancelled' WHERE id != ? AND (command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled', 'declined')`, [newCmdId.id, `%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`]);
+                        // CRITICAL FIX
+                        await run(`UPDATE rescue_requests SET assigned_user_id = ?, status = 'assigned', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [assignedUserId, req.id]);
                         const newCmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [newCmdId.id]);
                         broadcastToAdminAndTarget('NEW_COMMAND', newCmdData, bestUser.device_id);
                     }

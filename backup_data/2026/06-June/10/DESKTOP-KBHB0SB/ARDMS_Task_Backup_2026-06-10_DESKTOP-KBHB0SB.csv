@@ -1,7 +1,7 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-10
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 23/6/2026, 7:14:43 pm
+Generated At: , 24/6/2026, 12:15:47 am
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
@@ -10,7 +10,7 @@ Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Resp
 66,sos,normal,completed,12.9941776,80.1956448,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-06-10 14:50:40,2026-06-10 15:14:42,DESKTOP-KBHB0SB
 67,sos,normal,completed,12.9942516,80.1957317,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Sarah Khan (MEM-02),2026-06-10 14:50:49,2026-06-10 15:14:44,DESKTOP-KBHB0SB
 68,sos,normal,completed,12.9942516,80.1957317,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Arjun Singh (MEM-01),2026-06-10 15:13:37,2026-06-10 15:14:39,DESKTOP-KBHB0SB
-69,pregnancy,critical,declined,12.9942648,80.1957415,Critical Emergency Triggered,Unassigned,2026-06-10 15:13:45,2026-06-10 15:14:32,DESKTOP-KBHB0SB
+69,pregnancy,critical,closed,12.9942648,80.1957415,Critical Emergency Triggered,Unassigned,2026-06-10 15:13:45,2026-06-23 18:43:45,DESKTOP-KBHB0SB
 70,medical,critical,completed,12.9942953,80.1956991,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-10 15:36:35,2026-06-10 15:38:35,DESKTOP-KBHB0SB
 71,pregnancy,critical,completed,12.9943815,80.1957093,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-10 19:54:38,2026-06-10 20:13:15,DESKTOP-KBHB0SB
 72,pregnancy,critical,completed,12.9942844,80.1957116,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-10 20:13:32,2026-06-10 20:13:56,DESKTOP-KBHB0SB

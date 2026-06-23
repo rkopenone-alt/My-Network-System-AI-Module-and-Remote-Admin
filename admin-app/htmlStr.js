@@ -3669,7 +3669,8 @@ export const htmlString = `<!DOCTYPE html>
                         const updateTypes = [
                             'NEW_RESCUE_REQUEST', 'RESCUE_REQUEST_ACCEPTED', 'RESCUE_REQUEST_DECLINED',
                             'RESCUE_REQUEST_UPDATE', 'COMMAND_STATUS_UPDATE', 'RESCUE_REQUEST_COMPLETED',
-                            'SOS_ALERT', 'RESCUER_UPDATE', 'NEW_COMMAND', 'AI_STATUS_UPDATE'
+                            'SOS_ALERT', 'RESCUER_UPDATE', 'NEW_COMMAND', 'AI_STATUS_UPDATE',
+                            'RESCUE_REQUEST_IGNORED_REASSIGN', 'COMMAND_REASSIGNED', 'RESCUE_REQUEST_DECLINED_REASSIGN'
                         ];
 
                         if (data.type === 'AI_STATUS_UPDATE') {
@@ -3705,13 +3706,15 @@ function toggleGlobalMute(muted) {
                         if (data.type === 'RESCUE_REQUEST_DECLINED_REASSIGN') {
                         }
                         if (updateTypes.includes(data.type)) {
-                            if (['RESCUE_REQUEST_ACCEPTED', 'RESCUE_REQUEST_COMPLETED', 'RESCUE_REQUEST_IN_PROGRESS'].includes(data.type)) {
+                            if (['RESCUE_REQUEST_ACCEPTED', 'RESCUE_REQUEST_COMPLETED', 'RESCUE_REQUEST_IN_PROGRESS', 'RESCUE_REQUEST_IGNORED_REASSIGN', 'COMMAND_REASSIGNED', 'RESCUE_REQUEST_DECLINED_REASSIGN'].includes(data.type)) {
                                 if (window.currentSosAudio) { window.currentSosAudio.pause(); window.currentSosAudio.currentTime = 0; }
                                 closeModal('sosAlertModal');
+                                if (document.getElementById('criticalApprovalOverlay')) document.getElementById('criticalApprovalOverlay').remove();
                             }
                             if (data.type === 'RESCUE_REQUEST_UPDATE' && data.data && data.data.status && data.data.status !== 'pending') {
                                 if (window.currentSosAudio) { window.currentSosAudio.pause(); window.currentSosAudio.currentTime = 0; }
                                 closeModal('sosAlertModal');
+                                if (document.getElementById('criticalApprovalOverlay')) document.getElementById('criticalApprovalOverlay').remove();
                             }
                             if (data.type === 'NEW_RESCUE_REQUEST' || data.type === 'SOS_ALERT') {
                                 showAdminToast(\` SOS/Emergency Alert from \${data.data?.sector || 'field'}!\`, 'error');

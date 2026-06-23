@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ARDMS Admin",
-    "slug": "admin-app",
+    "name": "AntiGravity Rescuer",
+    "slug": "rescuer-app",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/official_rescuer_icon.png",
@@ -12,7 +12,7 @@
       "backgroundColor": "#10b981"
     },
     "android": {
-      "package": "com.rescue.admin",
+      "package": "com.rescue.rescuer",
       "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/official_rescuer_icon.png",
