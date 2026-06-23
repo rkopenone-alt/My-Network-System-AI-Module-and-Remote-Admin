@@ -116,7 +116,6 @@ function generateTechStackPDF() {
     // ==========================================
     // PAGE 2: MOBILE & CONNECTIVITY GATEWAY
     // ==========================================
-    doc.addPage();
     addPageHeader('MOBILE ARCHITECTURE & REAL-TIME CONNECTIVITY GATEWAY', 'Section 4 & 5 | Operational Synchronization Ledger');
 
     addSectionHeader('4. MOBILE APPLICATION ARCHITECTURES');
@@ -156,7 +155,17 @@ function generateTechStackPDF() {
     // ==========================================
     // PAGE 3: WINDOWS LOCALHOST & PRIVATE DEVICE TESTING
     // ==========================================
-    doc.addPage();
+    
+    addSectionHeader('5.5. AUTONOMOUS TASK MANAGEMENT (AI SYSTEM)');
+    doc.fontSize(9.5).font('Helvetica').fillColor('#334155')
+       .text('To eliminate manual delays during high-stress disaster events, the system introduces fully autonomous triage and task distribution powered by advanced AI:', { align: 'justify' });
+    doc.moveDown(0.5);
+
+    drawBullet('AI Auto-Assignment:', 'An automated backend process powered by Google Gemini 1.5 Pro AI. It intelligently processes live situational data, interpreting JSON telemetry payloads to assign new incoming SOS requests to the most appropriate rescuer. The AI evaluates real-time GPS proximity, rescuer workload, traffic estimations, and unit type suitability.');
+    drawBullet('Dynamic Reassignment Buffer:', 'The system incorporates a strict fail-safe timeout logic. If an assigned rescuer loses internet connectivity, ignores the task beyond the configured interval, or manually declines the dispatch, the assignment is instantly revoked and auto-routes the task to the next optimal candidate.');
+    drawBullet('Intelligent Siren State Management:', 'Critical dispatch alerts physically ring the rescuer\'s device. To prevent debilitating audio loops in the field, the system enforces a strict state-machine that ceases the siren precisely upon task acceptance, decline, or auto-reassignment.');
+    drawBullet('Cache Evasion Techniques:', 'Utilizing strict cache-busting telemetry protocols, the mobile React Native WebViews are forced to bypass aggressive localized caching, guaranteeing absolute synchronization of task states across all units.');
+
     addPageHeader('WINDOWS HOST & PRIVATE DEVICE TESTING GUIDE', 'Section 6 | Step-by-Step Local Wi-Fi Synchronization');
 
     addSectionHeader('6. WINDOWS HOST & PRIVATE DEVICE TESTING GUIDE');
