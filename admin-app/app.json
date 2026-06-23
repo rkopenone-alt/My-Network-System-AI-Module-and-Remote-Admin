@@ -4,7 +4,7 @@
     "slug": "admin-app",
     "version": "1.0.0",
     "orientation": "default",
-    "icon": "./assets/official_rescuer_icon.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -15,7 +15,7 @@
       "package": "com.rescue.admin",
       "allowBackup": false,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/official_rescuer_icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#10b981"
       },
       "permissions": [

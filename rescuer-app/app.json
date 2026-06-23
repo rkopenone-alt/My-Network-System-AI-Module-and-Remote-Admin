@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "Rescuer Field App",
-    "slug": "rescuer-app",
+    "name": "ARDMS Admin",
+    "slug": "admin-app",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "orientation": "default",
+    "icon": "./assets/official_rescuer_icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1e40af"
+      "backgroundColor": "#10b981"
     },
     "android": {
-      "package": "com.rescue.rescuer",
+      "package": "com.rescue.admin",
       "allowBackup": false,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1e40af"
+        "foregroundImage": "./assets/official_rescuer_icon.png",
+        "backgroundColor": "#10b981"
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
@@ -37,7 +37,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "29765a8b-0397-4c8a-be24-f45ff78f1ce9"
+        "projectId": "8e3880e8-4734-4691-bc3f-65beb23ed967"
       }
     },
     "owner": "tmrk"

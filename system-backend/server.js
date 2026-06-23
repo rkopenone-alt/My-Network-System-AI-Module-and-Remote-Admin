@@ -906,7 +906,7 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
         let personalReqQuery = `
             SELECT DISTINCT 'request' as source, rr.id, rr.type, rr.sector, rr.status, rr.lat, rr.lng, 
                    rr.created_at, rr.updated_at, rr.image_url, rr.audio_url, rr.completion_image_url, 
-                   rr.details, rr.priority, rr.name, rr.phone 
+                   rr.details, rr.priority, rr.name, rr.phone, rr.assigned_user_id, rr.assigned_group_id
             FROM rescue_requests rr
             LEFT JOIN sos_assignment_history sah ON rr.id = sah.rescue_req_id
             WHERE (rr.assigned_user_id = ? OR sah.rescuer_id = ?)
@@ -916,7 +916,31 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
             personalReqQuery += ` OR (rr.assigned_group_id IN (${groupIds.map(() => '?').join(',')}))`;
             reqParams = reqParams.concat(groupIds);
         }
-        const personalReqs = await all(personalReqQuery, reqParams);
+        let personalReqs = await all(personalReqQuery, reqParams);
+
+        const userActions = await all(`SELECT rescue_req_id, action FROM sos_assignment_history WHERE rescuer_id = ? ORDER BY timestamp DESC`, [userId]);
+        const userActionMap = {};
+        userActions.forEach(row => {
+            if (!userActionMap[row.rescue_req_id]) {
+                userActionMap[row.rescue_req_id] = row.action; // Takes the latest action because of ORDER BY DESC
+            }
+        });
+
+        personalReqs = personalReqs.map(rr => {
+            const isAssignedUser = (rr.assigned_user_id == userId);
+            const isAssignedGroup = (rr.assigned_group_id && groupIds.includes(rr.assigned_group_id));
+            if (!isAssignedUser && !isAssignedGroup) {
+                const lastAction = userActionMap[rr.id];
+                if (lastAction && ['declined', 'ignored', 'cancelled'].includes(lastAction)) {
+                    rr.status = lastAction;
+                } else if (lastAction === 'assigned') {
+                    rr.status = 'ignored'; // Timed out or reassigned
+                } else {
+                    rr.status = 'reassigned';
+                }
+            }
+            return rr;
+        });
 
         // Group & Personal Commands — match STRICTLY
         const cleanDeviceId = (user.device_id || '').trim();

@@ -5379,8 +5379,8 @@ function toggleGlobalMute(muted) {
                 let evidenceAudio = '-';
                 if (c.requesterAudioUrl) {
                     const audioUrl = formatMediaUrl(c.requesterAudioUrl);
-                    evidenceAudio = \`<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 140px;">
-                        <audio controls src="\${audioUrl}" style="width:130px; height:32px; margin-bottom:4px;" onclick="event.stopPropagation();"></audio>
+                    evidenceAudio = \`<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 200px;" onmousedown="event.stopPropagation();" onclick="event.stopPropagation();">
+                        <audio controls src="\${audioUrl}" style="width:200px; height:32px; margin-bottom:4px;" onclick="event.stopPropagation();" onmousedown="event.stopPropagation();" preload="metadata"></audio>
                         <a href="\${audioUrl}" target="_blank" style="font-size:10px; font-weight:800; color:#1d4ed8; text-decoration:none; border:1px solid #1d4ed8; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;" onclick="event.stopPropagation();">DOWNLOAD</a>
                     </div>\`;
                 }
@@ -5478,8 +5478,8 @@ function toggleGlobalMute(muted) {
                 let evidenceAudio = '-';
                 if (r.audio_url) {
                     const audioUrl = formatMediaUrl(r.audio_url);
-                    evidenceAudio = \`<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 140px;">
-                        <audio controls src="\${audioUrl}" style="width:130px; height:32px; margin-bottom:4px;" onclick="event.stopPropagation();"></audio>
+                    evidenceAudio = \`<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 200px;" onmousedown="event.stopPropagation();" onclick="event.stopPropagation();">
+                        <audio controls src="\${audioUrl}" style="width:200px; height:32px; margin-bottom:4px;" onclick="event.stopPropagation();" onmousedown="event.stopPropagation();" preload="metadata"></audio>
                         <a href="\${audioUrl}" target="_blank" style="font-size:10px; font-weight:800; color:#1d4ed8; text-decoration:none; border:1px solid #1d4ed8; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;" onclick="event.stopPropagation();">DOWNLOAD</a>
                     </div>\`;
                 }
@@ -5546,7 +5546,7 @@ function toggleGlobalMute(muted) {
                     <td style="color:var(--text-muted); font-size: 12px;">\${formattedCmdTime}</td>
                     <td>
                         <span class="tag" style="background:\${r.assigned_by === 'AI' ? '#dcfce7' : '#f1f5f9'}; color:\${r.assigned_by === 'AI' ? '#166534' : '#475569'};">
-                            \${r.assigned_by === 'AI' ? 'AI' : 'Admin'}
+                            \${r.assigned_by === 'AI' ? 'AI-Admin' : 'Admin (Manual)'}
                         </span>
                     </td>
                     <td><span class="tag \${getTagForStatus(r.status)}">\${r.status}</span></td>
