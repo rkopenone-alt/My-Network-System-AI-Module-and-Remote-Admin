@@ -1,7 +1,7 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-23
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 24/6/2026, 1:33:53 am
+Generated At: , 24/6/2026, 1:37:43 am
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
@@ -57,11 +57,11 @@ Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Resp
 [Ignored by Rescuer ID: 3]
 [AI_ROTATION_COMPLETED]",Sarah Khan (MEM-02),2026-06-23 19:47:57,2026-06-23 19:51:58,DESKTOP-KBHB0SB
 121,sos,normal,completed,12.994384,80.1956435,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}",Sarah Khan (MEM-02),2026-06-23 19:52:13,2026-06-23 19:52:35,DESKTOP-KBHB0SB
-122,sos,normal,pending,12.9943923,80.195646,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}
+122,sos,normal,completed,12.9943923,80.195646,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}
 [Ignored by Rescuer ID: 2]
 [Ignored by Rescuer ID: 1]
 [Ignored by Rescuer ID: 3]
-[AI_ROTATION_COMPLETED]",Unassigned,2026-06-23 19:53:18,2026-06-23 19:54:01,DESKTOP-KBHB0SB
+[AI_ROTATION_COMPLETED]",Unassigned,2026-06-23 19:53:18,2026-06-23 20:07:41,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES
@@ -88,7 +88,7 @@ Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At
 111,N/A,919000000001,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943843,""lng"":80.1956461,""urgency"":""critical"",""rescue_req_id"":119,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered\n[Ignored by Rescuer ID: 2]"",""assigned_by"":""AI""}",Critical,completed,2026-06-23 19:43:31,,DESKTOP-KBHB0SB
 112,N/A,919000000004,"{""message"":""AI ASSIGNED: SUPPLIES at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943847,""lng"":80.1956435,""urgency"":""normal"",""rescue_req_id"":120,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}\n[Ignored by Rescuer ID: 2]\n[Ignored by Rescuer ID: 1]"",""assigned_by"":""AI""}",Normal,completed,2026-06-23 19:48:11,,DESKTOP-KBHB0SB
 113,N/A,919000000002,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.994384,""lng"":80.1956435,""urgency"":""normal"",""rescue_req_id"":121,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}"",""assigned_by"":""AI""}",Normal,completed,2026-06-23 19:52:31,,DESKTOP-KBHB0SB
-114,N/A,919000000004,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943923,""lng"":80.195646,""urgency"":""normal"",""rescue_req_id"":122,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}\n[Ignored by Rescuer ID: 2]\n[Ignored by Rescuer ID: 1]"",""assigned_by"":""AI""}",Normal,ignored,2026-06-23 19:53:31,,DESKTOP-KBHB0SB
+114,N/A,919000000004,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943923,""lng"":80.195646,""urgency"":""normal"",""rescue_req_id"":122,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}\n[Ignored by Rescuer ID: 2]\n[Ignored by Rescuer ID: 1]"",""assigned_by"":""AI""}",Normal,completed,2026-06-23 19:53:31,,DESKTOP-KBHB0SB
 
 
 SECTION 3: PUBLIC SOS ALERTS

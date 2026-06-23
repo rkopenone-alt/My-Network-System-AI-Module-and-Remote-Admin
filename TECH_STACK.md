@@ -66,6 +66,13 @@ The Rescue Operations System is divided into four highly-optimized, interconnect
 * **Offline Caching:** Full `localStorage` mirroring displays the rescue logs even if the app is launched in completely dead network zones.
 * **Session Preservation:** Modified clean routines safeguard `rescue_user_v3` details to avoid lockouts under harsh field environments.
 
+### 1.5. Autonomous Task Management (AI & Buffer System)
+* **AI Auto-Assignment Module:** An automated background process running in the backend that intelligently assigns new incoming SOS requests to the most appropriate rescuer based on configurable rules (e.g., proximity, workload, and unit type).
+* **Reassignment Buffer System:** Implements a dynamic fail-safe timeout logic. If an assigned rescuer goes offline, ignores the task beyond the configured buffer interval, or explicitly declines the mission, the system instantly revokes the assignment and autonomously re-assigns the task to the next available rescuer.
+* **Rescuer Task Siren System:** Field units receive an intrusive audio alert (siren) whenever a critical task is assigned. The system meticulously manages this audio state, guaranteeing the siren immediately stops if the task is accepted, declined, or auto-reassigned by the buffer system, preventing infinite alarms.
+* **WebView Cache Evasion:** Prevents React Native WebView from aggressively caching mission data by implementing timestamp-based cache-busters on fetch endpoints (e.g., `?_t=${Date.now()}`), guaranteeing field units always see the exact, real-time status of reassigned or completed tasks.
+* **Web Admin UX Integrity:** Enforces visual CSS rules (like `flex-wrap` and scrollable overflow containers) across the dashboard to ensure dense tactical data and action buttons don't break the layout on smaller command screens.
+
 ---
 
 ## 2. Deployment Guide
