@@ -80,6 +80,7 @@ const getParsedUrls = (ip) => {
 const GlobalState = {
   sosLockedUntil: 0,
   setIsConnected: null,
+  triggerHistorySync: null,
   lastSuccessTime: 0,
 };
 
@@ -1044,8 +1045,12 @@ function HistoryScreen({ user, onBack }) {
       }
     };
     fetchHistory();
+    GlobalState.triggerHistorySync = fetchHistory;
     const interval = setInterval(fetchHistory, 10000); // refresh every 10s
-    return () => clearInterval(interval);
+    return () => {
+      GlobalState.triggerHistorySync = null;
+      clearInterval(interval);
+    };
   }, [user]);
 
   return (
@@ -2026,6 +2031,56 @@ export default function App() {
     setUser(null);
     setScreen('login');
   };
+
+  // Full Sync on Reconnection
+  useEffect(() => {
+    if (isConnected && user) {
+      console.log('App reconnected! Triggering full sync...');
+      const fullSync = async () => {
+        try {
+          const token = await AsyncStorage.getItem('sosToken');
+          if (token) {
+            const res = await fetchWithTimeout(`${API_URL}/auth/verify-session`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token })
+            }, 5000);
+            if (res.ok) {
+              const data = await res.json();
+              await AsyncStorage.setItem('sosUser', JSON.stringify(data.user));
+              setUser(data.user);
+            }
+          }
+          // Flush offline requests immediately
+          const offlineListStr = await AsyncStorage.getItem('offlineRequests');
+          if (offlineListStr) {
+            const offlineList = JSON.parse(offlineListStr);
+            if (offlineList.length > 0) {
+              let stillOffline = [];
+              for (let req of offlineList) {
+                try {
+                  const r = await fetchWithTimeout(`${API_URL}/rescue-requests`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(req.payload)
+                  }, 5000);
+                  if (!r.ok) stillOffline.push(req);
+                } catch (e) {
+                  stillOffline.push(req);
+                }
+              }
+              await AsyncStorage.setItem('offlineRequests', JSON.stringify(stillOffline));
+            }
+          }
+          // Notify History page to refresh
+          if (GlobalState.triggerHistorySync) {
+            GlobalState.triggerHistorySync();
+          }
+        } catch(e) {}
+      };
+      fullSync();
+    }
+  }, [isConnected]); // Run when isConnected changes
 
   if (checking) {
     return (

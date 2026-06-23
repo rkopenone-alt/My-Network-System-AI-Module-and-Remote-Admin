@@ -2474,6 +2474,26 @@ app.post('/api/ai/interval', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/api/ai/reassign-interval', async (req, res) => {
+    try {
+        const valSet = await get(`SELECT value FROM settings WHERE key = 'ai_reassign_interval_val'`);
+        const unitSet = await get(`SELECT value FROM settings WHERE key = 'ai_reassign_interval_unit'`);
+        res.json({ 
+            value: valSet ? parseInt(valSet.value) : 10, 
+            unit: unitSet ? unitSet.value : 'Seconds' 
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/ai/reassign-interval', async (req, res) => {
+    const { value, unit } = req.body;
+    try {
+        await run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('ai_reassign_interval_val', ?)`, [String(value)]);
+        await run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('ai_reassign_interval_unit', ?)`, [String(unit)]);
+        res.json({ success: true, value, unit });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 let aiIntervalTimer = null;
 function stopAITimer() {
     if (aiIntervalTimer) {
@@ -2522,7 +2542,16 @@ async function runAIAssignment() {
         if (unit === 'Hours') bufferSecs = val * 3600;
 
         // ─── TIMEOUT LOGIC (Rescuer Ignored SOS) ──────────────────────────────────
-        const timeoutSeconds = 10; // Configurable timeout for rescuer response
+        const reValSet = await get(`SELECT value FROM settings WHERE key = 'ai_reassign_interval_val'`);
+        const reUnitSet = await get(`SELECT value FROM settings WHERE key = 'ai_reassign_interval_unit'`);
+        const reVal = reValSet ? parseInt(reValSet.value) || 10 : 10;
+        const reUnit = reUnitSet ? reUnitSet.value : 'Seconds';
+        
+        let timeoutSeconds = 10; // Configurable timeout for rescuer response
+        if (reUnit === 'Seconds') timeoutSeconds = reVal;
+        if (reUnit === 'Minutes') timeoutSeconds = reVal * 60;
+        if (reUnit === 'Hours') timeoutSeconds = reVal * 3600;
+
         const timedOutCommands = await all(`
             SELECT cq.*, rr.id as req_id, rr.details as req_details
             FROM command_queue cq
@@ -2566,6 +2595,8 @@ async function runAIAssignment() {
         const busyUserIds = new Set(activeTasks.map(t => t.assigned_user_id));
 
         for (const req of pendingRequests) {
+            if (req.details && req.details.includes('[AI_ROTATION_COMPLETED]')) continue;
+
             let bestUser = null;
             let shortestDistance = Infinity;
 
@@ -2596,9 +2627,12 @@ async function runAIAssignment() {
 
             if (!bestUser && req.details && (req.details.includes('[Declined by Rescuer ID:') || req.details.includes('[Ignored by Rescuer ID:'))) {
                 // All available AI rescuers declined this task! Alert the Admin Web
-                broadcastToAdminAndTarget('RESCUER_DECLINED_LAST', req, req.assigned_user_id);
-                // Move out of Live Command by setting to reassign_pending
-                await run(`UPDATE rescue_requests SET status = 'reassign_pending' WHERE id = ?`, [req.id]);
+                if (!req.details.includes('[AI_ROTATION_COMPLETED]')) {
+                    const descAppend = `\n[AI_ROTATION_COMPLETED]`;
+                    await run(`UPDATE rescue_requests SET status = 'pending', details = coalesce(details, '') || ? WHERE id = ?`, [descAppend, req.id]);
+                    await logCommand('AI_ROTATION_COMPLETED', 'System Engine', `All AI rescuers skipped Task #${req.id}`, { reqId: req.id });
+                    broadcastToAdminAndTarget('RESCUER_DECLINED_LAST', req, req.assigned_user_id);
+                }
             }
             if (bestUser) {
                 // Execution: Assign to the nearest eligible rescuer

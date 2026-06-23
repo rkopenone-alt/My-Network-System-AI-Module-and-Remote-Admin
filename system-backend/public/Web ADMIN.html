@@ -2485,6 +2485,43 @@
                     </div>
                 </div>
 
+                <!-- Box 3.6: AI Reassignment Interval Setting -->
+                <div class="card"
+                    style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <h3 style="margin: 0;">AI Reassignment Buffer</h3>
+                            <div id="aiReassignIntervalBadge"
+                                style="background: rgba(234, 88, 12, 0.1); color: #ea580c; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; border: 1.5px solid #ea580c; box-shadow: 0 2px 5px rgba(234, 88, 12, 0.05);">
+                                <i data-lucide="timer" style="width: 10px; height: 10px;"></i>
+                                Current Setting: <span id="activeAiReassignIntervalValue">10 Seconds</span>
+                            </div>
+                        </div>
+                        <p style="color:var(--text-muted);font-size:12px; margin-bottom: 16px;">Configure how long AI waits for a rescuer to respond before timing out and reassigning the SOS task.</p>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <label class="input-label"
+                            style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Run Interval</label>
+                        <div style="display:flex; gap:10px; align-items: center; flex-wrap: wrap;">
+                            <div style="display:flex; gap:6px; flex: 1; min-width: 200px;">
+                                <input type="number" id="aiReassignIntervalVal" class="form-control"
+                                    placeholder="e.g. 10" value="10"
+                                    style="width: 80px; height: 36px; font-size: 12px; border-radius: 6px;">
+                                <select id="aiReassignIntervalUnit" class="form-control" style="flex:1; height: 36px; font-size: 12px; border-radius: 6px;">
+                                    <option value="Seconds" selected>Seconds</option>
+                                    <option value="Minutes">Minutes</option>
+                                    <option value="Hours">Hours</option>
+                                </select>
+                                <button class="btn btn-primary"
+                                    onclick="updateAIReassignIntervalSetting()"
+                                    style="height: 36px; padding: 0 14px; font-size: 12px; white-space: nowrap; border-radius: 6px; background-color: #ea580c;">
+                                    <i data-lucide="save" style="width:14px;"></i> Set
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Box 4: Map Settings -->
                 <div class="card"
                     style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
@@ -6311,28 +6348,23 @@ function toggleGlobalMute(muted) {
 
             pendingReqs.forEach((req, index) => {
                 let typeLabel = req.type.charAt(0).toUpperCase() + req.type.slice(1) + ' Rescue';
-                let color = 'var(--special)';
-                let bg = '#f3e8ff';
-                let isCritical = true;
+                
+                // NEW LOGIC: Classification entirely depends on req.priority
+                let isCritical = (req.priority && req.priority.toLowerCase() === 'critical');
+                
+                let color = isCritical ? 'var(--critical)' : 'var(--special)';
+                let bg = isCritical ? 'rgba(239,68,68,0.05)' : '#f3e8ff';
 
                 if (req.type === 'medical') {
-                    color = 'var(--critical)';
-                    bg = '#fee2e2';
                     typeLabel = ' Medical Rescue';
                 } else if (req.type === 'pregnancy') {
-                    color = 'var(--special)';
-                    bg = '#f3e8ff';
                     typeLabel = ' Pregnancy Rescue';
                 } else if (req.type === 'food' || req.type === 'delivery' || req.type === 'medical_delivery') {
                     color = 'var(--pending)';
                     bg = '#fffbeb';
                     typeLabel = req.type === 'food' ? ' Food Delivery' : ' Medical Supply';
-                    isCritical = false;
                 } else if (req.type === 'sos') {
-                    color = 'var(--critical)';
-                    bg = 'rgba(239,68,68,0.05)';
                     typeLabel = ' SOS Alert Response';
-                    isCritical = true;
                 }
 
                 // Parse details for quantities
@@ -7147,8 +7179,15 @@ function toggleGlobalMute(muted) {
                 document.getElementById('aiIntervalVal').value = data.value;
                 document.getElementById('aiIntervalUnit').value = data.unit;
                 document.getElementById('activeAiIntervalValue').innerText = `${data.value} ${data.unit}`;
+                
+                const reRes = await fetch(`${API_BASE}/ai/reassign-interval`);
+                const reData = await reRes.json();
+                document.getElementById('aiReassignIntervalVal').value = reData.value;
+                document.getElementById('aiReassignIntervalUnit').value = reData.unit;
+                document.getElementById('activeAiReassignIntervalValue').innerText = `${reData.value} ${reData.unit}`;
+                
                 if(window.lucide) window.lucide.createIcons();
-            } catch (e) { console.error('Failed to fetch AI interval', e); }
+            } catch (e) { console.error('Failed to fetch AI intervals', e); }
         }
 
         async function updateAIIntervalSetting() {
@@ -7163,6 +7202,20 @@ function toggleGlobalMute(muted) {
                 document.getElementById('activeAiIntervalValue').innerText = `${val} ${unit}`;
                 showAdminToast(`AI Engine Interval updated to ${val} ${unit}`);
             } catch (e) { console.error('Failed to update AI interval', e); }
+        }
+
+        async function updateAIReassignIntervalSetting() {
+            const val = document.getElementById('aiReassignIntervalVal').value;
+            const unit = document.getElementById('aiReassignIntervalUnit').value;
+            try {
+                await fetch(`${API_BASE}/ai/reassign-interval`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ value: val, unit: unit })
+                });
+                document.getElementById('activeAiReassignIntervalValue').innerText = `${val} ${unit}`;
+                showAdminToast(`AI Reassignment Buffer updated to ${val} ${unit}`);
+            } catch (e) { console.error('Failed to update AI reassign interval', e); }
         }
 
 
@@ -9636,6 +9689,13 @@ function loadAIInterval() {
     .then(data => {
         if (data && data.value) document.getElementById('aiIntervalVal').value = data.value;
         if (data && data.unit) document.getElementById('aiIntervalUnit').value = data.unit;
+    }).catch(e => console.error(e));
+
+    fetch(`${API_BASE}/ai/reassign-interval`)
+    .then(r => r.json())
+    .then(data => {
+        if (data && data.value) document.getElementById('aiReassignIntervalVal').value = data.value;
+        if (data && data.unit) document.getElementById('aiReassignIntervalUnit').value = data.unit;
     }).catch(e => console.error(e));
 }
 
