@@ -3,7 +3,7 @@ const path = require('path');
 const PDFDocument = require('pdfkit');
 
 // Paths to save
-const workspaceRoot = 'c:\\Users\\Alienware\\Desktop\\Rescue Backup 26-04-2026';
+const workspaceRoot = path.join(__dirname, '..');
 const desktopBackupRoot = 'C:\\Users\\Alienware\\Desktop\\ARDMS file folder';
 
 const pdfWorkspacePath = path.join(workspaceRoot, 'TECH_STACK.pdf');

@@ -541,6 +541,13 @@ def create_report():
     b("3. Routing Calculation: Upon task assignment, the Rescuer App queries routing APIs to draw a blue tactical path linking their current location to the victim's location.")
     b("4. Live Telemetry Sync: As the Rescuer physically moves, their phone pulses updated coordinates every few seconds via WebSockets. The server reflects this movement, visibly animating the Rescuer's icon advancing along the route on both the Admin's screen and the Victim's screen.")
 
+    h1("I. Autonomous Task Management (AI & Buffer System)")
+    p("To eliminate manual delays during high-stress disaster events, the system introduces fully autonomous triage and task distribution.")
+    b("1. AI Auto-Assignment: An automated backend process dynamically assesses proximity, workload, and unit types to assign unhandled SOS requests to the best available field rescuer instantly.")
+    b("2. Dynamic Reassignment Buffer: The system incorporates a strict fail-safe timeout logic. If an assigned rescuer loses internet connectivity, ignores the task beyond the configured interval, or manually declines the dispatch, the assignment is instantly revoked and auto-routed to the next optimal candidate.")
+    b("3. Intelligent Siren State Management: Critical dispatch alerts physically ring the rescuer's device. To prevent debilitating audio loops in the field, the system enforces a strict state-machine that ceases the siren precisely upon task acceptance, decline, or auto-reassignment.")
+    b("4. Cache Evasion Techniques: Utilizing strict cache-busting telemetry protocols, the mobile React Native WebViews are forced to bypass aggressive localized caching, guaranteeing absolute synchronization of task states across all units.")
+
     file_path = os.path.join(os.getcwd(), 'ARDMS_Project_Report_User_Manual_v6.docx')
     doc.save(file_path)
     print(f"Docx saved to {file_path}")

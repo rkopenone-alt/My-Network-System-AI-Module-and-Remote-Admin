@@ -78,6 +78,11 @@ This document contains critical information regarding the system architecture, c
 - **Task Feed**: Separated into "Critical Response" and "Normal Logistics" feeds.
 - **Mission Logs**: Split into Critical and Normal history sections.
 
+### 4. Autonomous Task Management (AI Module)
+- **Auto-Assignment**: System autonomously assigns incoming SOS requests to rescuers based on proximity and load.
+- **Reassignment Buffer**: Failing to respond (offline, timeout, or explicit decline) auto-transfers the mission to the next available rescuer.
+- **Task Siren Rules**: Audio sirens only play during active assignments and automatically cease on accept/decline/re-assign events.
+
 ---
 
-*Last Updated: 2026-05-07*
+*Last Updated: 2026-06-24*
