@@ -1642,14 +1642,14 @@
                     }
 
                     // 2. Sync Combined History (Personal + Group Missions)
-                    const resHistory = await fetch(`${this.API}/users/${this.user.id}/combined-history`).catch(() => ({ ok: false, json: () => [] }));
+                    const resHistory = await fetch(`${this.API}/users/${this.user.id}/combined-history?_t=${Date.now()}`).catch(() => ({ ok: false, json: () => [] }));
                     const historyData = resHistory.ok ? await resHistory.json() : [];
 
                     // Sort: Latest on top
                     historyData.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
 
                     // Filter: Show all active statuses (assigned = awaiting acceptance, accepted/ongoing = in progress)
-                    const activeData = historyData.filter(t => t.status && !['completed', 'resolved', 'inactive', 'declined', 'cancelled', 'ignored'].includes(t.status.toLowerCase()));
+                    const activeData = historyData.filter(t => t.status && !['completed', 'resolved', 'inactive', 'declined', 'cancelled', 'ignored', 'reassigned'].includes(t.status.toLowerCase()));
 
                     // Deduplicate identical tasks (Requests vs Commands, and duplicate Commands)
                     const seenRescueReqIds = new Set();
@@ -1948,7 +1948,7 @@
                 let customGroupPolygon = null;
 
                 try {
-                    const resHistory = await fetch(`${this.API}/users/${this.user.id}/combined-history`);
+                    const resHistory = await fetch(`${this.API}/users/${this.user.id}/combined-history?_t=${Date.now()}`);
                     const historyData = await resHistory.json();
                     const task = historyData.find(t => String(t.id) === String(id) && t.source === source);
 
@@ -2379,7 +2379,7 @@
 
                 let rawHistory = [];
                 try {
-                    const res = await fetch(`${this.API}/users/${this.user.id}/combined-history`);
+                    const res = await fetch(`${this.API}/users/${this.user.id}/combined-history?_t=${Date.now()}`);
                     rawHistory = await res.json();
                     
                     // Update cache on success

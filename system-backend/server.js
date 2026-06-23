@@ -1712,9 +1712,9 @@ app.put('/api/rescue-requests/:id/decline', async (req, res) => {
             await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'declined')`, [req.params.id, rescuer.id]);
         }
         await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [req.params.id]);
-        const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
+        const updatedReqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
 
-        broadcastToAdminAndTarget('RESCUE_REQUEST_DECLINED_REASSIGN', reqData, reqData.assigned_user_id);
+        broadcastToAdminAndTarget('RESCUE_REQUEST_DECLINED_REASSIGN', updatedReqData, updatedReqData.assigned_user_id);
         await logCommand('RESCUE_REQUEST_DECLINED', 'Commander', `Request ID: ${req.params.id}`, {});
         triggerBackup();
         res.json({ message: 'Request declined' });
