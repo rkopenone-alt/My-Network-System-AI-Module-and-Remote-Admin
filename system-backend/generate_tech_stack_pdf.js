@@ -43,6 +43,13 @@ function generateTechStackPDF() {
         doc.lineGap(3);
     };
 
+    const addInlineHeader = (titleText, subtitleText) => {
+        doc.moveDown(1.5);
+        doc.fillColor('#0f172a').fontSize(16).font('Helvetica-Bold').text(titleText);
+        doc.fontSize(10).font('Helvetica-Oblique').fillColor('#94a3b8').text(subtitleText);
+        doc.moveDown(0.5);
+    };
+
     const addSectionHeader = (title) => {
         doc.moveDown(0.8);
         doc.fontSize(12).font('Helvetica-Bold').fillColor('#0f172a').text(title);
@@ -116,7 +123,7 @@ function generateTechStackPDF() {
     // ==========================================
     // PAGE 2: MOBILE & CONNECTIVITY GATEWAY
     // ==========================================
-    addPageHeader('MOBILE ARCHITECTURE & REAL-TIME CONNECTIVITY GATEWAY', 'Section 4 & 5 | Operational Synchronization Ledger');
+    addInlineHeader('MOBILE ARCHITECTURE & REAL-TIME CONNECTIVITY GATEWAY', 'Section 4 & 5 | Operational Synchronization Ledger');
 
     addSectionHeader('4. MOBILE APPLICATION ARCHITECTURES');
     doc.fontSize(9.5).font('Helvetica').fillColor('#334155')
@@ -166,7 +173,7 @@ function generateTechStackPDF() {
     drawBullet('Intelligent Siren State Management:', 'Critical dispatch alerts physically ring the rescuer\'s device. To prevent debilitating audio loops in the field, the system enforces a strict state-machine that ceases the siren precisely upon task acceptance, decline, or auto-reassignment.');
     drawBullet('Cache Evasion Techniques:', 'Utilizing strict cache-busting telemetry protocols, the mobile React Native WebViews are forced to bypass aggressive localized caching, guaranteeing absolute synchronization of task states across all units.');
 
-    addPageHeader('WINDOWS HOST & PRIVATE DEVICE TESTING GUIDE', 'Section 6 | Step-by-Step Local Wi-Fi Synchronization');
+    addInlineHeader('WINDOWS HOST & PRIVATE DEVICE TESTING GUIDE', 'Section 6 | Step-by-Step Local Wi-Fi Synchronization');
 
     addSectionHeader('6. WINDOWS HOST & PRIVATE DEVICE TESTING GUIDE');
     doc.fontSize(9.5).font('Helvetica').fillColor('#334155')
