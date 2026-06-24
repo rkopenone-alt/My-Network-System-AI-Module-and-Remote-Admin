@@ -7782,6 +7782,7 @@ function toggleGlobalMute(muted) {
             const inputVal = document.getElementById('manualIpInput').value.trim();
             if (!inputVal) {
                 localStorage.removeItem('manualServerIp');
+                if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: '' })); }
                 showAdminToast("Manual IP cleared! Reverting to Auto-Detect...", "success");
                 setTimeout(() => window.location.reload(), 1200);
                 return;
@@ -7798,6 +7799,7 @@ function toggleGlobalMute(muted) {
 
                 if (res.ok) {
                     localStorage.setItem('manualServerIp', inputVal);
+                    if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: inputVal })); }
                     showAdminToast("Manual IP reachable and saved! Reconnecting...", "success");
                     setTimeout(() => window.location.reload(), 1200);
                 } else {
@@ -7813,12 +7815,14 @@ function toggleGlobalMute(muted) {
         function forceManualIp() {
             const inputVal = document.getElementById('manualIpInput').value.trim();
             localStorage.setItem('manualServerIp', inputVal);
+            if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: inputVal })); }
             showAdminToast("Forcing Manual IP! Reconnecting...", "success");
             setTimeout(() => window.location.reload(), 1200);
         }
 
         function useAutoIp() {
             localStorage.removeItem('manualServerIp');
+            if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: '' })); }
             showAdminToast("Reverting to Auto-Detect! Reconnecting...", "success");
             setTimeout(() => window.location.reload(), 1200);
         }
