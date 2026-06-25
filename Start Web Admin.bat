@@ -16,6 +16,6 @@ powershell -Command "Start-Process powershell -ArgumentList '-Command \"New-NetF
 
 echo [*] Starting Backend Server...
 cd system-backend
-npm start
+node server.js
 
 pause
