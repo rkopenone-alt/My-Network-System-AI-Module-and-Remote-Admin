@@ -1,0 +1,19 @@
+ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-25
+Device Hostname: , DESKTOP-KBHB0SB
+Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
+Generated At: , 25/6/2026, 3:51:29 pm
+
+SECTION 1: RESCUE REQUESTS & TASKS
+Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
+125,medical,critical,assigned,12.9152406,77.5860314,Critical Emergency Triggered,Vikram Rao (MEM-03),2026-06-25 10:12:02,2026-06-25 10:12:38,DESKTOP-KBHB0SB
+126,pregnancy,critical,pending,12.9152558,77.5860078,Critical Emergency Triggered,Unassigned,2026-06-25 10:21:28,2026-06-25 10:21:28,DESKTOP-KBHB0SB
+
+
+SECTION 2: RESCUER COMMAND DISPATCHES
+Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
+NO COMMANDS DISPATCHED FOR THIS DATE
+
+
+SECTION 3: PUBLIC SOS ALERTS
+SOS ID,Device ID,Phone,Latitude,Longitude,Details,Status,Priority,Alert Time,Device Node
+NO SOS ALERTS FOR THIS DATE

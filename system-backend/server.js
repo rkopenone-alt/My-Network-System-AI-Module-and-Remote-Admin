@@ -1652,7 +1652,7 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
             details: reqData.details || ''
         });
 
-        const existingManualCommand = await get(`SELECT * FROM command_queue WHERE json_extract(command_payload, '$.rescue_req_id') = ?`, [reqData.id]);
+        const existingManualCommand = await get(`SELECT * FROM command_queue WHERE (CASE WHEN json_valid(command_payload) THEN json_extract(command_payload, '$.rescue_req_id') ELSE NULL END) = ?`, [reqData.id]);
         
         let targetCmdId = null;
         if (existingManualCommand) {
