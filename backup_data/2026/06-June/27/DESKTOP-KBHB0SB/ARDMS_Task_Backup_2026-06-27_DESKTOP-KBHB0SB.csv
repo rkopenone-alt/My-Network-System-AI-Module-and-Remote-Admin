@@ -1,0 +1,24 @@
+ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-27
+Device Hostname: , DESKTOP-KBHB0SB
+Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
+Generated At: , 27/6/2026, 11:59:45 pm
+
+SECTION 1: RESCUE REQUESTS & TASKS
+Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
+132,medical,critical,completed,14.4554556,79.9939218,"Critical Emergency Triggered
+[Ignored by Rescuer ID: 3]
+[Ignored by Rescuer ID: 2]
+[Ignored by Rescuer ID: 1]
+[AI_ROTATION_COMPLETED]",Arjun Singh (MEM-01),2026-06-27 18:18:47,2026-06-27 18:20:30,DESKTOP-KBHB0SB
+133,medical,critical,completed,14.4554556,79.9939218,Critical Emergency Triggered,Sarah Khan (MEM-02),2026-06-27 18:29:22,2026-06-27 18:29:43,DESKTOP-KBHB0SB
+
+
+SECTION 2: RESCUER COMMAND DISPATCHES
+Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
+123,N/A,919000000001,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":14.4554556,""lng"":79.9939218,""urgency"":""critical"",""rescue_req_id"":132,""requester_name"":""Amit Kumar"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Ignored by Rescuer ID: 3]\n[Ignored by Rescuer ID: 2]"",""assigned_by"":""AI""}",Critical,completed,2026-06-27 18:19:05,,DESKTOP-KBHB0SB
+124,N/A,919000000002,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":14.4554556,""lng"":79.9939218,""urgency"":""critical"",""rescue_req_id"":133,""requester_name"":""Amit Kumar"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI""}",Critical,completed,2026-06-27 18:29:35,,DESKTOP-KBHB0SB
+
+
+SECTION 3: PUBLIC SOS ALERTS
+SOS ID,Device ID,Phone,Latitude,Longitude,Details,Status,Priority,Alert Time,Device Node
+NO SOS ALERTS FOR THIS DATE

@@ -6277,7 +6277,7 @@ function toggleGlobalMute(muted) {
         async function fetchRescueRequests() {
             try {
                 // Fetch all requests to ensure Notification Log has full visibility
-                const res = await fetch(`${API_BASE}/rescue-requests`);
+                const res = await fetch(`${API_BASE}/rescue-requests?_t=${Date.now()}`);
                 const data = await res.json();
 
                 // Sort by recency
