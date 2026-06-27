@@ -1171,6 +1171,7 @@
                         <div style="display: flex; gap: 10px; align-items: stretch; margin-bottom: 15px; height: 80px;">
                             <div class="config-card" style="flex: 8; margin-bottom: 0; padding: 0; display: flex;">
                                 <textarea id="inpLoc" class="input-field" placeholder="Enter full address, landmarks..."
+                                    oninput="core.checkFormValidity()"
                                     style="flex: 1; font-size:14px; padding:12px; resize: none; border-radius: 12px; border: none; outline: none;"></textarea>
                             </div>
                             <div style="flex: 2.5; display: flex; flex-direction: column; gap: 6px;">
@@ -1199,7 +1200,7 @@
                     </div>
                     
                     <div style="flex-shrink: 0; padding: 15px 0; background: var(--bg);">
-                        <button class="submit-btn" style="padding: 18px; font-size: 16px;"
+                        <button id="btnFormSubmit" class="submit-btn" style="padding: 18px; font-size: 16px; opacity: 0.5;" disabled
                             onclick="core.nav('SOS')">CONFIRM & PROCEED</button>
                     </div>
                 </div>
@@ -2269,6 +2270,17 @@
                     });
                     this.showScreen('screenCriticalSOS');
                 } else {
+                    // Normal SOS selected: Clear inputs and reset counters
+                    if (document.getElementById('inpLoc')) document.getElementById('inpLoc').value = '';
+                    if (document.getElementById('n_people')) document.getElementById('n_people').value = 0;
+                    if (document.getElementById('n_food')) document.getElementById('n_food').value = 0;
+                    if (document.getElementById('n_med')) document.getElementById('n_med').value = 0;
+                    if (document.getElementById('n_sanitary')) document.getElementById('n_sanitary').value = 0;
+                    
+                    this.needs = { people: 0, food: 0, med: 0, sanitary: 0, route: null };
+                    
+                    document.querySelectorAll('.route-btn').forEach(b => b.classList.remove('active'));
+                    this.checkFormValidity();
                     this.showScreen('screenForm');
                 }
             },
@@ -2482,11 +2494,32 @@
             updateNeeds(key, val) {
                 this.needs[key] = Math.max(0, this.needs[key] + val);
                 document.getElementById('n_' + key).value = this.needs[key];
+                this.checkFormValidity();
             },
 
             manualNeeds(key, val) {
                 this.needs[key] = Math.max(0, parseInt(val) || 0);
                 document.getElementById('n_' + key).value = this.needs[key];
+                this.checkFormValidity();
+            },
+
+            checkFormValidity() {
+                const btn = document.getElementById('btnFormSubmit');
+                if (!btn) return;
+                const p = this.needs.people || 0;
+                const f = this.needs.food || 0;
+                const m = this.needs.med || 0;
+                const s = this.needs.sanitary || 0;
+                const hasRoute = !!this.needs.route;
+                const txt = document.getElementById('inpLoc') ? document.getElementById('inpLoc').value.trim() : '';
+                
+                if (p > 0 || f > 0 || m > 0 || s > 0 || hasRoute || txt.length > 0) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                } else {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                }
             },
 
             startSOS(priority = 'normal') {
@@ -2898,6 +2931,7 @@
                     btn.classList.add('active');
                     this.toast(`PREFERRING ${route.toUpperCase()}`, '🚀');
                 }
+                this.checkFormValidity();
             },
 
             bootstrap() {

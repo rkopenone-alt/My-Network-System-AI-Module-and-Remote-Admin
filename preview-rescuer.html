@@ -2782,7 +2782,7 @@
             },
 
             handleCommand(c) {
-                if (c.status === 'completed' || c.status === 'declined') return;
+                if (c.status === 'completed' || c.status === 'declined' || c.status === 'ignored' || c.status === 'reassigned' || c.status === 'cancelled') return;
 
                 // Security/Targeting check: only show if for this rescuer or their group
                 const myPhone = this.user?.phone;

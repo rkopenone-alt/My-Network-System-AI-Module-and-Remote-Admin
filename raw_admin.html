@@ -5459,14 +5459,27 @@ function toggleGlobalMute(muted) {
                 }
 
                 let assignedTo = 'Unassigned';
+                let rescuerUser = null;
+                if (window.currentUsers && r.assigned_user_id) {
+                    rescuerUser = window.currentUsers.find(u => String(u.id) === String(r.assigned_user_id));
+                }
+
+                let statusIcon = '';
+                if (rescuerUser) {
+                    statusIcon = rescuerUser.status === 'online' 
+                        ? '<span style="font-size:10px; margin-left:4px;" title="Online">🟢</span>' 
+                        : '<span style="font-size:10px; margin-left:4px;" title="Offline">🔴</span>';
+                }
+
                 if (r.assigned_officer_name) {
-                    assignedTo = \`👤 \${r.assigned_officer_name}\`;
+                    assignedTo = `👤 \${r.assigned_officer_name}\${statusIcon}`;
                 } else if (r.assigned_group_name) {
-                    assignedTo = \`👥 \${r.assigned_group_name}\`;
+                    assignedTo = `👥 \${r.assigned_group_name}`;
                 } else if (r.assigned_user_id) {
-                    assignedTo = \`Rescuer \${r.assigned_user_id}\`;
+                    const rescuerName = rescuerUser ? rescuerUser.name : `Rescuer \${r.assigned_user_id}`;
+                    assignedTo = `👤 \${rescuerName}\${statusIcon}`;
                 } else if (r.assigned_group_id) {
-                    assignedTo = \`Group \${r.assigned_group_id}\`;
+                    assignedTo = `Group \${r.assigned_group_id}`;
                 }
                 
                 let declinedBy = '-';
@@ -6842,25 +6855,35 @@ function toggleGlobalMute(muted) {
                 // Map the DB commands to the UI format
                 cmds = data.map(c => {
                     let payload = {};
-                    try {
-                        if (typeof c.command_payload === 'string') {
-                            payload = JSON.parse(c.command_payload);
-                        } else {
-                            payload = c.command_payload || {};
-                        }
-                    } catch (e) { }
-
                     let assignedTo = 'Unassigned';
-                    if (c.assigned_officer_name) {
-                        assignedTo = \`👤 \${c.assigned_officer_name}\`;
-                    } else if (c.assigned_group_name) {
-                        assignedTo = \`👥 \${c.assigned_group_name}\`;
-                    } else if (c.target_phone) {
-                        assignedTo = c.target_phone;
-                    } else if (c.group_id) {
-                        assignedTo = \`Group \${c.group_id}\`;
+                    let rescuerUser = null;
+                    if (window.currentUsers) {
+                        if (c.assigned_officer_name) {
+                            rescuerUser = window.currentUsers.find(u => u.name === c.assigned_officer_name);
+                        } else if (c.target_phone) {
+                            const tpClean = c.target_phone.replace(/\D/g, '').slice(-10);
+                            rescuerUser = window.currentUsers.find(u => {
+                                const p = (u.phone || '').replace(/\D/g, '').slice(-10);
+                                return p && p === tpClean;
+                            });
+                        }
+                    }
+                    let statusIcon = '';
+                    if (rescuerUser) {
+                        statusIcon = rescuerUser.status === 'online' 
+                            ? '<span style="font-size:10px; margin-left:4px;" title="Online">🟢</span>' 
+                            : '<span style="font-size:10px; margin-left:4px;" title="Offline">🔴</span>';
                     }
 
+                    if (c.assigned_officer_name) {
+                        assignedTo = `👤 ${c.assigned_officer_name}${statusIcon}`;
+                    } else if (c.assigned_group_name) {
+                        assignedTo = `👥 ${c.assigned_group_name}`;
+                    } else if (c.target_phone) {
+                        assignedTo = `👤 ${c.target_phone}${statusIcon}`;
+                    } else if (c.group_id) {
+                        assignedTo = `Group \${c.group_id}`;
+                    }
                     // Special handling for Tactical Groups
                     let description = payload.message || c.command_payload;
                     let detailSummary = c.requester_details || payload.details || null;

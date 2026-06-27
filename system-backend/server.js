@@ -465,6 +465,8 @@ const socketManager = {
 
 wss.on('connection', (ws) => {
     let currentDeviceId = null;
+    ws.isAlive = true;
+    ws.on('pong', () => { ws.isAlive = true; });
 
     ws.on('message', async (message) => {
         try {
@@ -472,9 +474,15 @@ wss.on('connection', (ws) => {
 
             if (type === 'REGISTER') {
                 currentDeviceId = deviceId;
+                ws.deviceId = deviceId;
                 socketManager.addClient(deviceId, ws);
                 if (room) socketManager.joinRoom(deviceId, room);
                 ws.send(JSON.stringify({ type: 'REGISTERED', status: 'ready', serverTime: new Date().toISOString() }));
+                
+                // Update online status in database
+                run(`UPDATE users SET status = 'online', last_seen = CURRENT_TIMESTAMP WHERE device_id = ? OR phone = ?`, [deviceId, deviceId])
+                    .then(() => socketManager.broadcast('RESCUER_STATUS_CHANGE', { deviceId, status: 'online' }, 'admin'))
+                    .catch(e => console.error('Status Update Error:', e));
             }
 
             if (type === 'ACK') {
@@ -482,6 +490,7 @@ wss.on('connection', (ws) => {
             }
 
             if (type === 'HEARTBEAT' || type === 'PING') {
+                ws.isAlive = true;
                 ws.send(JSON.stringify({ type: 'PONG', timestamp: new Date().toISOString() }));
             }
 
@@ -496,8 +505,33 @@ wss.on('connection', (ws) => {
     });
 
     ws.on('close', () => {
-        if (currentDeviceId) socketManager.removeClient(currentDeviceId);
+        if (currentDeviceId) {
+            socketManager.removeClient(currentDeviceId);
+            run(`UPDATE users SET status = 'offline', last_seen = CURRENT_TIMESTAMP WHERE device_id = ? OR phone = ?`, [currentDeviceId, currentDeviceId])
+                .then(() => socketManager.broadcast('RESCUER_STATUS_CHANGE', { deviceId: currentDeviceId, status: 'offline' }, 'admin'))
+                .catch(e => console.error('Status Update Error:', e));
+        }
     });
+});
+
+const heartbeatInterval = setInterval(() => {
+    wss.clients.forEach((ws) => {
+        if (ws.isAlive === false) {
+            if (ws.deviceId) {
+                run(`UPDATE users SET status = 'offline', last_seen = CURRENT_TIMESTAMP WHERE device_id = ? OR phone = ?`, [ws.deviceId, ws.deviceId])
+                    .then(() => socketManager.broadcast('RESCUER_STATUS_CHANGE', { deviceId: ws.deviceId, status: 'offline' }, 'admin'))
+                    .catch(e => console.error('Status Update Error:', e));
+                socketManager.removeClient(ws.deviceId);
+            }
+            return ws.terminate();
+        }
+        ws.isAlive = false;
+        ws.ping();
+    });
+}, 30000);
+
+wss.on('close', () => {
+    clearInterval(heartbeatInterval);
 });
 
 const broadcast = (type, data, room = null) => socketManager.broadcast(type, data, room);
@@ -1603,6 +1637,15 @@ app.post('/api/rescue-requests', async (req, res) => {
 app.put('/api/rescue-requests/:id/accept', async (req, res) => {
     const { assigned_user_id, assigned_group_id } = req.body;
     try {
+        const currentReq = await get(`SELECT status, assigned_user_id FROM rescue_requests WHERE id = ?`, [req.params.id]);
+        if (!currentReq) return res.status(404).json({ error: "Request not found." });
+        if (currentReq.status === 'assigned' && currentReq.assigned_user_id && currentReq.assigned_user_id !== assigned_user_id) {
+            return res.status(400).json({ error: "Task has already been assigned to another rescuer or reassigned due to timeout." });
+        }
+        if (currentReq.status === 'completed' || currentReq.status === 'finished') {
+            return res.status(400).json({ error: "Task is already completed." });
+        }
+
         await run(`UPDATE rescue_requests SET status = 'assigned', assigned_user_id = ?, assigned_group_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
             [assigned_user_id, assigned_group_id, req.params.id]);
 
@@ -2267,7 +2310,10 @@ app.put('/api/commands/:id/location', async (req, res) => {
         const cmd = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
         if (!cmd) return res.status(404).json({ error: 'Command not found' });
 
-        const payload = JSON.parse(cmd.command_payload || '{}');
+        let payload = {};
+        try {
+            payload = typeof cmd.command_payload === 'string' ? JSON.parse(cmd.command_payload || '{}') : (cmd.command_payload || {});
+        } catch(e) { console.error("JSON parse error in location:", e); }
         payload.lat = lat;
         payload.lng = lng;
         payload.coords = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
@@ -2298,7 +2344,10 @@ app.put('/api/commands/:id/reassign', async (req, res) => {
         await run(`UPDATE command_queue SET target_phone = ?, group_id = ?, status = 'pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [effectivePhone || null, effectiveGroupId || null, req.params.id]);
         let cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
 
-        let payload = JSON.parse(cmdData.command_payload || '{}');
+        let payload = {};
+        try {
+            payload = typeof cmdData.command_payload === 'string' ? JSON.parse(cmdData.command_payload || '{}') : (cmdData.command_payload || {});
+        } catch(e) { console.error("JSON parse error in reassign:", e); }
         if (req.body.custom_polygon) {
             payload.custom_polygon = req.body.custom_polygon;
             await run(`UPDATE command_queue SET command_payload = ? WHERE id = ?`, [JSON.stringify(payload), req.params.id]);
@@ -2619,8 +2668,8 @@ async function runAIAssignment() {
         const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE (status = 'pending' OR status = 'partially_declined') AND (strftime('%s', 'now') - strftime('%s', created_at)) >= ? ORDER BY id ASC`, [bufferSecs]);
         if (pendingRequests.length === 0) return;
 
-        // Fetch AI Managed Users
-        const aiUsers = await all(`SELECT * FROM users WHERE ai_managed = 1 AND status = 'active'`);
+        // Fetch AI Managed Users who are online
+        const aiUsers = await all(`SELECT * FROM users WHERE ai_managed = 1 AND status = 'online'`);
         if (aiUsers.length === 0) return;
 
         // Get latest rescuer locations

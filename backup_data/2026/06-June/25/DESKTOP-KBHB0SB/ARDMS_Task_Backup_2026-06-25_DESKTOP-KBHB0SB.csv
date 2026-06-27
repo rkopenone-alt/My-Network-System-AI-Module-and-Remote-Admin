@@ -1,17 +1,34 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-25
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 25/6/2026, 3:51:29 pm
+Generated At: , 25/6/2026, 4:30:00 pm
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
 125,medical,critical,assigned,12.9152406,77.5860314,Critical Emergency Triggered,Vikram Rao (MEM-03),2026-06-25 10:12:02,2026-06-25 10:12:38,DESKTOP-KBHB0SB
-126,pregnancy,critical,pending,12.9152558,77.5860078,Critical Emergency Triggered,Unassigned,2026-06-25 10:21:28,2026-06-25 10:21:28,DESKTOP-KBHB0SB
+126,pregnancy,critical,completed,12.9152558,77.5860078,Critical Emergency Triggered,Sarah Khan (MEM-02),2026-06-25 10:21:28,2026-06-25 10:41:05,DESKTOP-KBHB0SB
+127,pregnancy,critical,completed,12.9152339,77.5860295,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-25 10:36:54,2026-06-25 10:39:32,DESKTOP-KBHB0SB
+128,pregnancy,critical,completed,12.9152297,77.5860293,"Critical Emergency Triggered
+[Declined by Rescuer ID: 3]
+[Declined by Rescuer ID: 1]
+[AI_ROTATION_COMPLETED]",Unassigned,2026-06-25 10:38:06,2026-06-25 10:39:16,DESKTOP-KBHB0SB
+129,pregnancy,critical,completed,12.9152229,77.5860362,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-25 10:39:09,2026-06-25 10:41:16,DESKTOP-KBHB0SB
+130,pregnancy,critical,completed,12.9152323,77.5860313,"Critical Emergency Triggered
+[Declined by Rescuer ID: 2]
+[Ignored by Rescuer ID: 3]",Arjun Singh (MEM-01),2026-06-25 10:51:36,2026-06-25 10:52:22,DESKTOP-KBHB0SB
+131,sos,critical,completed,12.9152241,77.5860378,"Critical Emergency Triggered
+[Ignored by Rescuer ID: 2]
+[Ignored by Rescuer ID: 3]",Arjun Singh (MEM-01),2026-06-25 10:58:40,2026-06-25 10:59:59,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES
 Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
-NO COMMANDS DISPATCHED FOR THIS DATE
+117,N/A,919000000001,"{""message"":""PREGNANCY RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9152339,""lng"":77.5860295,""urgency"":""critical"",""rescue_req_id"":127,""requester_name"":""Amit Kumar"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",critical,completed,2026-06-25 10:37:01,,DESKTOP-KBHB0SB
+118,N/A,919000000001,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9152297,""lng"":77.5860293,""urgency"":""critical"",""rescue_req_id"":128,""requester_name"":""Amit Kumar"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer ID: 3]"",""assigned_by"":""AI""}",Critical,completed,2026-06-25 10:38:23,,DESKTOP-KBHB0SB
+119,N/A,919000000001,"{""message"":""PREGNANCY TASK at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9152229,""lng"":77.5860362,""urgency"":""critical"",""rescue_req_id"":129,""requester_name"":""Amit Kumar"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered""}",normal,completed,2026-06-25 10:39:22,,DESKTOP-KBHB0SB
+120,N/A,919000000002,"{""message"":""SELF-ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9152558,""lng"":77.5860078,""urgency"":""critical"",""rescue_req_id"":126,""requester_name"":""Amit Kumar"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered"",""assigned_by"":""Self""}",Critical,completed,2026-06-25 10:41:02,,DESKTOP-KBHB0SB
+121,N/A,919000000001,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9152323,""lng"":77.5860313,""urgency"":""critical"",""rescue_req_id"":130,""requester_name"":""Amit Kumar"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer ID: 2]\n[Ignored by Rescuer ID: 3]"",""assigned_by"":""AI""}",Critical,completed,2026-06-25 10:51:54,,DESKTOP-KBHB0SB
+122,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9152241,""lng"":77.5860378,""urgency"":""critical"",""rescue_req_id"":131,""requester_name"":""Amit Kumar"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Ignored by Rescuer ID: 2]\n[Ignored by Rescuer ID: 3]"",""assigned_by"":""AI""}",Critical,completed,2026-06-25 10:58:54,,DESKTOP-KBHB0SB
 
 
 SECTION 3: PUBLIC SOS ALERTS
