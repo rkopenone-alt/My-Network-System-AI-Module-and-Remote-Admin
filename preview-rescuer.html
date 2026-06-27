@@ -1680,6 +1680,16 @@
                         }
                     }
 
+                    // Check if current active mission is still valid
+                    if (this.activeMission) {
+                        const stillValid = dedupedData.find(t => (String(t.id) === String(this.activeMission.id) || 'CMD-' + t.id === String(this.activeMission.id) || t.id === String(this.activeMission.id).replace('CMD-', '').replace('REQ-', '')) && (t.status === 'accepted' || t.status === 'ongoing' || t.status === 'in_progress'));
+                        if (!stillValid) {
+                            this.activeMission = null;
+                            document.getElementById('missionBanner').style.display = 'none';
+                            if (this.navPolyline) { this.map.removeLayer(this.navPolyline); this.navPolyline = null; }
+                        }
+                    }
+
                     // Check if there is an active mission that we should resume visually
                     const ongoingTask = dedupedData.find(t => t.status === 'accepted' || t.status === 'ongoing' || t.status === 'in_progress');
                     if (ongoingTask && !this.activeMission) {
@@ -1911,11 +1921,12 @@
                 this.showLoader(true);
                 try {
                     const endpoint = source === 'command' ? 'commands' : 'rescue-requests';
-                    await fetch(`${this.API}/${endpoint}/${id}/status`, {
+                    const res = await fetch(`${this.API}/${endpoint}/${id}/status`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'accepted', rescuer_phone: this.user.phone })
                     });
+                    if (!res.ok) throw new Error((await res.json()).error || 'Failed to accept');
 
                     const isCrit = ['sos', 'medical', 'pregnancy', 'critical'].includes(type.toLowerCase());
                     // If this is a critical task and we had a normal task active, mark it as interrupted
@@ -1932,7 +1943,8 @@
 
                     await this.startMission(id, type, sector, lat, lng, source);
                 } catch (e) {
-                    await this.startMission(id, type, sector, lat, lng); // Fallback
+                    this.toast(e.message || 'FAILED', '❌');
+                    this.refresh();
                 } finally {
                     this.showLoader(false);
                 }
@@ -2213,7 +2225,7 @@
                 this.showLoader(true);
                 try {
                     const endpoint = (source === 'command' || this.activeMission?.source === 'command') ? 'commands' : 'rescue-requests';
-                    await fetch(`${this.API}/${endpoint}/${id}/status`, {
+                    const res = await fetch(`${this.API}/${endpoint}/${id}/status`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -2222,6 +2234,7 @@
                             completion_image: photoBase64
                         })
                     });
+                    if (!res.ok) throw new Error((await res.json()).error || 'Failed to complete task');
 
                     // Clear captured image after successful submit
                     delete this.capturedImages[id];
@@ -2323,19 +2336,21 @@
                     const rescuerPhone = this.user ? this.user.phone : null;
                     const cleanId = String(id).replace('CMD-', '').replace('REQ-', '');
                     
+                    let res;
                     if (source === 'command' || String(id).startsWith('CMD-')) {
-                        await fetch(`${this.API}/commands/${cleanId}/status`, {
+                        res = await fetch(`${this.API}/commands/${cleanId}/status`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ status: 'declined', rescuer_phone: rescuerPhone })
                         });
                     } else {
-                        await fetch(`${this.API}/rescue-requests/${cleanId}/decline`, {
+                        res = await fetch(`${this.API}/rescue-requests/${cleanId}/decline`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ rescuer_phone: rescuerPhone })
                         });
                     }
+                    if (!res.ok) throw new Error((await res.json()).error || 'Failed to decline task');
                     this.toast('Task Declined', '❌');
                     this.refresh();
                 } catch (e) {
@@ -2727,7 +2742,7 @@
                         return;
                     }
 
-                    const updateTypes = ['NEW_RESCUE_REQUEST', 'COMMAND_STATUS_UPDATE', 'COMMAND_COMPLETED', 'RESCUE_REQUEST_UPDATE', 'RESCUE_REQUEST_ACCEPTED', 'NEW_COMMAND', 'RESCUE_REQUEST_IGNORED_REASSIGN', 'RESCUE_REQUEST_DECLINED_REASSIGN', 'COMMAND_REASSIGNED'];
+                    const updateTypes = ['NEW_RESCUE_REQUEST', 'COMMAND_STATUS_UPDATE', 'COMMAND_COMPLETED', 'RESCUE_REQUEST_UPDATE', 'RESCUE_REQUEST_ACCEPTED', 'NEW_COMMAND', 'RESCUE_REQUEST_IGNORED_REASSIGN', 'RESCUE_REQUEST_DECLINED_REASSIGN', 'COMMAND_REASSIGNED', 'TASK_REVOKED'];
 
                     if (updateTypes.includes(msg.type)) {
                         this.refresh();
@@ -2738,7 +2753,7 @@
                         }
 
                         // If task was reassigned or ignored, clean up the UI for this rescuer
-                        if (['RESCUE_REQUEST_IGNORED_REASSIGN', 'RESCUE_REQUEST_DECLINED_REASSIGN', 'COMMAND_REASSIGNED'].includes(msg.type) && msg.data) {
+                        if (['RESCUE_REQUEST_IGNORED_REASSIGN', 'RESCUE_REQUEST_DECLINED_REASSIGN', 'COMMAND_REASSIGNED', 'TASK_REVOKED'].includes(msg.type) && msg.data) {
                             if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'STOP_SOUND'}));
                             const reqId = msg.data.rescue_req_id || msg.data.req_id || msg.data.id;
                             if (reqId) {
@@ -2747,7 +2762,7 @@
                                     this.activeMission = null;
                                     document.getElementById('missionBanner').style.display = 'none';
                                     if (this.navPolyline) this.map.removeLayer(this.navPolyline);
-                                    this.toast('TASK REASSIGNED', '🔄');
+                                    this.toast(msg.type === 'TASK_REVOKED' ? 'TASK REVOKED' : 'TASK REASSIGNED', msg.type === 'TASK_REVOKED' ? '🚫' : '🔄');
                                 }
                             }
                         }
@@ -2873,11 +2888,12 @@
                 if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'STOP_SOUND'}));
                 this.toast('ACCEPTING TASK...', '⏳');
                 try {
-                    await fetch(`${this.API}/commands/${id}/status`, {
+                    const res = await fetch(`${this.API}/commands/${id}/status`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'accepted', rescuer_phone: this.user.phone })
                     });
+                    if (!res.ok) throw new Error((await res.json()).error || 'Failed to accept command');
 
                     const isCrit = c.priority === 'critical' || c.command_type === 'critical';
                     if (isCrit && this.activeMission && !['sos', 'medical', 'pregnancy', 'critical'].includes(this.activeMission.type.toLowerCase())) {
@@ -2911,11 +2927,12 @@
                 if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'STOP_SOUND'}));
                 this.toast('DECLINING TASK...', '⏳');
                 try {
-                    await fetch(`${this.API}/commands/${id}/status`, {
+                    const res = await fetch(`${this.API}/commands/${id}/status`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: 'declined', rescuer_phone: this.user.phone })
                     });
+                    if (!res.ok) throw new Error((await res.json()).error || 'Failed to decline command');
                     this.refresh();
                     this.toast('TASK DECLINED', '❌');
                 } catch (e) {

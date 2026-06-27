@@ -682,7 +682,7 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid ID or PIN' });
         }
         
-        if (user.status !== 'active') {
+        if (user.status === 'disabled' || user.status === 'inactive') {
             await logCommand('LOGIN_REJECTED', 'System', idOrPhone, { reason: 'Account disabled' });
             return res.status(403).json({ error: 'Account disabled by Administrator' });
         }
@@ -728,7 +728,7 @@ const verifyToken = (req, res, next) => {
         // Check if user is still active in database
         try {
             const user = await get(`SELECT status, password FROM users WHERE id = ?`, [decoded.id]);
-            if (!user || user.status !== 'active') {
+            if (!user || user.status === 'disabled' || user.status === 'inactive') {
                 return res.status(403).json({ error: 'Account disabled by Administrator' });
             }
             if (decoded.passwordHash) {
@@ -1162,7 +1162,7 @@ app.put('/api/users/:id', async (req, res) => {
         }
 
         // If user is disabled, force local logout instantly via WebSocket sync
-        if (status && status !== 'active') {
+        if (status && (status === 'disabled' || status === 'inactive')) {
             socketManager.send(user.phone, 'USER_DISABLED', { reason: 'Account disabled by administrator' });
             socketManager.send(user.serial_number, 'USER_DISABLED', { reason: 'Account disabled by administrator' });
             if (device_id) {
@@ -1639,8 +1639,8 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
     try {
         const currentReq = await get(`SELECT status, assigned_user_id FROM rescue_requests WHERE id = ?`, [req.params.id]);
         if (!currentReq) return res.status(404).json({ error: "Request not found." });
-        if (currentReq.status === 'assigned' && currentReq.assigned_user_id && currentReq.assigned_user_id !== assigned_user_id) {
-            return res.status(400).json({ error: "Task has already been assigned to another rescuer or reassigned due to timeout." });
+        if (currentReq.status === 'assigned' && currentReq.assigned_user_id !== assigned_user_id) {
+            return res.status(403).json({ error: "Task has already been assigned to another rescuer or reassigned due to timeout." });
         }
         if (currentReq.status === 'completed' || currentReq.status === 'finished') {
             return res.status(400).json({ error: "Task is already completed." });
@@ -1744,7 +1744,7 @@ app.put('/api/rescue-requests/:id/decline', async (req, res) => {
         }
 
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
-        if (rescuer && !reqData.assigned_group_id && reqData.assigned_user_id && reqData.assigned_user_id !== rescuer.id) {
+        if (rescuer && !reqData.assigned_group_id && reqData.assigned_user_id !== rescuer.id) {
             return res.status(403).json({ error: 'Task is no longer assigned to you.' });
         }
 
@@ -1784,8 +1784,10 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
         }
 
         if (rescuer && !reqData.assigned_group_id) {
-            if (reqData.assigned_user_id && reqData.assigned_user_id !== rescuer.id && status !== 'declined') {
-                return res.status(403).json({ error: 'Task is currently assigned to another unit.' });
+            if (reqData.assigned_user_id !== rescuer.id && status !== 'declined') {
+                if (!(status === 'accepted' && (reqData.status === 'pending' || reqData.status === 'partially_declined'))) {
+                    return res.status(403).json({ error: 'Task is currently assigned to another unit or has been revoked.' });
+                }
             }
         }
 
@@ -2136,6 +2138,18 @@ app.put('/api/commands/:id/status', async (req, res) => {
         } else {
             rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
         }
+        if (!cmdData) return res.status(404).json({ error: 'Command not found' });
+        if (['ignored', 'cancelled', 'reassigned'].includes(cmdData.status) && status !== 'declined') {
+            return res.status(403).json({ error: 'Command is no longer active or has been revoked.' });
+        }
+        if (rescuer && !cmdData.group_id) {
+            const tpClean = (cmdData.target_phone || '').replace(/\D/g, '').slice(-10);
+            const myClean = (rescuer.phone || '').replace(/\D/g, '').slice(-10);
+            const isTarget = cmdData.target_phone === rescuer.phone || cmdData.target_phone === rescuer.device_id || String(cmdData.target_phone) === String(rescuer.id) || (tpClean && myClean && tpClean === myClean);
+            if (!isTarget && status !== 'declined') {
+                return res.status(403).json({ error: 'Command was reassigned to another unit.' });
+            }
+        }
 
         if (status === 'completed') {
             if (rescuer) {
@@ -2341,8 +2355,12 @@ app.put('/api/commands/:id/reassign', async (req, res) => {
             if (user) effectivePhone = user.phone || user.device_id;
         }
 
+        const oldCmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
         await run(`UPDATE command_queue SET target_phone = ?, group_id = ?, status = 'pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [effectivePhone || null, effectiveGroupId || null, req.params.id]);
         let cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
+        if (oldCmdData && oldCmdData.target_phone) {
+            broadcastToAdminAndTarget('TASK_REVOKED', { id: req.params.id, rescue_req_id: oldCmdData.command_payload ? JSON.parse(oldCmdData.command_payload).rescue_req_id : null }, oldCmdData.target_phone);
+        }
 
         let payload = {};
         try {
@@ -2659,6 +2677,7 @@ async function runAIAssignment() {
                 await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'ignored')`, [cmd.req_id, rescuer ? rescuer.id : null]);
                 await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [cmd.req_id]);
                 broadcastToAdminAndTarget('RESCUE_REQUEST_IGNORED_REASSIGN', { rescue_req_id: cmd.req_id, rescuerId, message: `Rescuer ignored assignment (Timeout). AI is finding next eligible unit.` }, rescuerId);
+                broadcastToAdminAndTarget('TASK_REVOKED', { rescue_req_id: cmd.req_id }, rescuerId);
                 await logCommand('AI_TIMEOUT_REASSIGN', 'System Engine', `Task ${cmd.id} ignored by ${rescuerId}`, { reqId: cmd.req_id });
             }
         }

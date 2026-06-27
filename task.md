@@ -1,4 +1,5 @@
 # Phase 1: Database Schema Extensions
+- `[x]` Task 6: Run `sync_apps.py` and `build_rescuer.py` to compile APK.in `system-backend/server.js`.
 - `[/]` Create `sos_assignment_history` table in `system-backend/server.js`.
 - `[/]` Create `sos_completion_log` table in `system-backend/server.js`.
 - `[ ]` Add logging inserts for `sos_assignment_history` on assignment/accept/decline/ignore.
