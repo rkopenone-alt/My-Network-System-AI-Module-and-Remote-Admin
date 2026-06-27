@@ -4562,7 +4562,7 @@ function toggleGlobalMute(muted) {
                 } else {
                     zones = globalZones;
                     rescuers = globalRescuers;
-                    tasks = rescueRequests.filter(r => r.status !== 'completed' && r.status !== 'declined');
+                    tasks = rescueRequests.filter(r => ['pending', 'accepted', 'partially_declined', 'in_progress', 'assigned'].includes(r.status));
                     activeCmds = rawCmds;
                     groups = currentGroups;
                 }
@@ -6804,23 +6804,25 @@ function toggleGlobalMute(muted) {
                 alert("Cannot close: Invalid Task ID");
                 return;
             }
-            if (!confirm(\`Are you sure you want to mark \${fullId} as completed?\`)) return;
+            if (!confirm(`Are you sure you want to mark ${fullId} as completed?`)) return;
 
-            const dbId = fullId.replace('CMD-', '');
+            const dbId = fullId.replace('CMD-', '').replace('REQ-', '');
 
             // Handle dummy tasks
             if (dbId.startsWith('DUMMY-')) {
                 if (window._mockData_cmds) {
                     window._mockData_cmds = window._mockData_cmds.filter(c => c.id !== dbId);
-                    showAdminToast(\`Test Task \${fullId} closed (removed from session)\`);
+                    showAdminToast(`Test Task ${fullId} closed (removed from session)`);
                     fetchCommands();
                     closeTaskDetails();
                     return;
                 }
             }
+            const isRequest = fullId.startsWith('REQ-') || (!fullId.startsWith('CMD-') && isNaN(Number(fullId)));
+            const endpoint = isRequest ? `rescue-requests/${dbId}/status` : `commands/${dbId}/status`;
 
             try {
-                const res = await fetch(\`\${API_BASE}/commands/\${dbId}/status\`, {
+                const res = await fetch(`${API_BASE}/${endpoint}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: 'completed' })
