@@ -28,3 +28,9 @@ After completing UI changes, fixes, or modifying workflows:
 - **Task Reassignment UI**: When dealing with UI element states (e.g., hiding completed tasks, handling task reassignments), rely on explicit filters like `t.status !== 'completed' && t.status !== 'reassigned'`.
 - **UI Overflow**: When working with `.actionable-actions` or similar flex containers with buttons, remember to include `flex-wrap: wrap;` so that UI elements don't overflow out of the card.
 - **Mangled Characters**: If encountering weird text like `ï¸ `, it is likely a corrupted UTF-8 emoji or icon character. Replace it cleanly with the plain text or correct Lucide icon.
+
+## Backend AI Engine & WebSocket Rules
+- **Task Reassignment Logic**: The AI assignment loop must ensure that if a task is reset to `pending`, any existing entries in `sos_assignment_history` for that task are cleared or ignored. Otherwise, rescuers will be falsely skipped on reassignment.
+- **WebSocket Broadcasts**: Do not use generic `broadcast()` for `NEW_COMMAND`. Use `socketManager.send(deviceId, ...)` or `broadcastToAdminAndTarget()` to ensure only the assigned rescuer gets the task and siren popup.
+- **Proximity AI**: The assignment system prioritizes rescuers within a 50m radius of the emergency. If multiple rescuers are within that radius, they can be processed based on distance or assigned concurrently depending on the strategy.
+- **App IP Configurations**: Mobile APKs use a manual IP entry system to connect to the backend. Rebuilding the APKs is NOT required when changing Wi-Fi networks; the user only needs to type the new IP address into the app interface.
