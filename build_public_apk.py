@@ -35,11 +35,12 @@ shutil.copy(os.path.join(admin_dir, "htmlStr.js"), os.path.join(rescuer_dir, "ht
 shutil.copy(os.path.join(admin_dir, "app.json"), os.path.join(rescuer_dir, "app.json"))
 shutil.copy(os.path.join(admin_dir, "App.js"), os.path.join(rescuer_dir, "App.js"))
 
-new_strings = strings_content.replace('Rescuer Field App', 'Public SOS Rescue')
+import re
+new_strings = re.sub(r'<string name="app_name">.*?</string>', '<string name="app_name">Public SOS Rescue</string>', strings_content)
 with open(strings_xml, 'w', encoding='utf-8') as f:
     f.write(new_strings)
 
-new_gradle = gradle_content.replace("applicationId 'com.rescue.rescuer'", "applicationId 'com.rescue.public'")
+new_gradle = re.sub(r"applicationId\s+['\"].*?['\"]", "applicationId 'com.rescue.public'", gradle_content)
 with open(build_gradle, 'w', encoding='utf-8') as f:
     f.write(new_gradle)
 
