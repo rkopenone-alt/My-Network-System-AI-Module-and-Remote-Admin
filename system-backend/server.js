@@ -2771,7 +2771,7 @@ async function runAIAssignment() {
             AND (
                 u.status = 'online' 
                 OR u.is_online = 1 
-                OR (rl.last_updated IS NOT NULL AND (strftime('%s', 'now') - strftime('%s', rl.last_updated)) < 120)
+                OR (rl.last_updated IS NOT NULL AND (strftime('%s', 'now') - strftime('%s', rl.last_updated)) < 300)
             )
         `);
         if (aiUsers.length === 0) return;

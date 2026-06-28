@@ -5276,7 +5276,7 @@ function toggleGlobalMute(muted) {
             const activeGroupReqIds = new Set();
             cmds.forEach(gc => {
                 const s = (gc.status || '').toLowerCase();
-                const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'assigned', 'acknowledged', 'declined', 'in_progress', 'active'].includes(s);
+                const isOngoing = ['assigned', 'accepted', 'in_progress', 'pending', 'acknowledged'].includes(s);
                 if (gc.type === 'group' && isOngoing && gc.requestIds) {
                     gc.requestIds.forEach(id => activeGroupReqIds.add(String(id)));
                 }
@@ -5284,7 +5284,7 @@ function toggleGlobalMute(muted) {
 
             cmds.forEach((c) => {
                 const s = (c.status || '').toLowerCase();
-                const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'assigned', 'acknowledged', 'declined', 'in_progress', 'active'].includes(s);
+                const isOngoing = ['assigned', 'accepted', 'in_progress', 'pending', 'acknowledged'].includes(s);
 
                 // Skip if this is an individual command belonging to a request that is part of an active/ongoing grouped command
                 if (isOngoing && c.type !== 'group' && c.rescueReqId && activeGroupReqIds.has(String(c.rescueReqId))) {
@@ -5589,11 +5589,8 @@ function toggleGlobalMute(muted) {
                         groupDetails = parsed.missions || c.details;
                     } catch (e) {
                         groupDetails = c.details;
-                    }
-                }
-                
-                const s = (c.status || '').toLowerCase();
-                const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'assigned', 'acknowledged', 'declined', 'in_progress', 'active'].includes(s);
+                                    const s = (c.status || '').toLowerCase();
+                const isOngoing = ['assigned', 'accepted', 'in_progress', 'pending', 'acknowledged'].includes(s);
                 
                 let closureThumb = '-';
                 if (c.completion_image_url) {
@@ -5619,7 +5616,7 @@ function toggleGlobalMute(muted) {
                     <td style="display:flex; gap:6px;">
                         ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${c.id}')">✅ CLOSE</button>` : ''}
                         ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('${c.id}')"> RE-ASSIGN</button>` : ''}
-                        <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); ${isOngoing ? `selectTask('${c.id}')` : `openCompletedTaskDetailModal('${c.id}')`}">ï¸ VIEW</button>
+                        <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); ${isOngoing ? `selectTask('${c.id}')` : `openCompletedTaskDetailModal('${c.id}')`}">ï¸  VIEW</button>
                     </td>
                 </tr>
             `;
@@ -5632,7 +5629,7 @@ function toggleGlobalMute(muted) {
             const criticalMissions = cmds.filter(c => {
                 const s = (c.status || '').toLowerCase();
                 const t = (c.type || '').toLowerCase();
-                return (t === 'critical' || t === 'sos' || t === 'medical') && s !== 'completed';
+                return (t === 'critical' || t === 'sos' || t === 'medical') && ['assigned', 'accepted', 'in_progress', 'pending', 'acknowledged'].includes(s);
             });
             const hub = document.getElementById('criticalOperationsHub');
             const hubList = document.getElementById('criticalTasksList');

@@ -5308,7 +5308,7 @@ function toggleGlobalMute(muted) {
             const activeGroupReqIds = new Set();
             cmds.forEach(gc => {
                 const s = (gc.status || '').toLowerCase();
-                const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'assigned', 'acknowledged', 'declined', 'in_progress', 'active'].includes(s);
+                const isOngoing = ['assigned', 'accepted', 'in_progress', 'pending', 'acknowledged'].includes(s);
                 if (gc.type === 'group' && isOngoing && gc.requestIds) {
                     gc.requestIds.forEach(id => activeGroupReqIds.add(String(id)));
                 }
@@ -5316,7 +5316,7 @@ function toggleGlobalMute(muted) {
 
             cmds.forEach((c) => {
                 const s = (c.status || '').toLowerCase();
-                const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'assigned', 'acknowledged', 'declined', 'in_progress', 'active'].includes(s);
+                const isOngoing = ['assigned', 'accepted', 'in_progress', 'pending', 'acknowledged'].includes(s);
 
                 // Skip if this is an individual command belonging to a request that is part of an active/ongoing grouped command
                 if (isOngoing && c.type !== 'group' && c.rescueReqId && activeGroupReqIds.has(String(c.rescueReqId))) {
@@ -5613,7 +5613,7 @@ function toggleGlobalMute(muted) {
                 }
                 
                 const s = (c.status || '').toLowerCase();
-                const isOngoing = ['ongoing', 'critical', 'pending', 'accepted', 'assigned', 'acknowledged', 'declined', 'in_progress', 'active'].includes(s);
+                const isOngoing = ['assigned', 'accepted', 'in_progress', 'pending', 'acknowledged'].includes(s);
                 
                 let closureThumb = '-';
                 if (c.completion_image_url) {
@@ -5652,7 +5652,7 @@ function toggleGlobalMute(muted) {
             const criticalMissions = cmds.filter(c => {
                 const s = (c.status || '').toLowerCase();
                 const t = (c.type || '').toLowerCase();
-                return (t === 'critical' || t === 'sos' || t === 'medical') && s !== 'completed';
+                return (t === 'critical' || t === 'sos' || t === 'medical') && ['assigned', 'accepted', 'in_progress', 'pending', 'acknowledged'].includes(s);
             });
             const hub = document.getElementById('criticalOperationsHub');
             const hubList = document.getElementById('criticalTasksList');
