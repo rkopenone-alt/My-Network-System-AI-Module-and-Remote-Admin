@@ -16,8 +16,12 @@ The backend API responsible for delivering mission histories has been refactored
 - It strictly asserts `rr.assigned_user_id = ? OR cq.target_phone = ?` utilizing exact matches. This prevents any possibility of mission state mirroring or false Accept/Decline button injection.
 
 ### 3. Robust Candidate Online Detection Fallback
-- When query selects eligible `aiUsers`, it now joins the `rescuer_locations` table and validates if the rescuer's location was updated within the last 120 seconds. This prevents active, connected rescuers from being marked offline during temporary WebSocket pings/heartbeat timeouts.
+- When query selects eligible `aiUsers`, it now joins the `rescuer_locations` table and validates if the rescuer's location was updated within the last **300 seconds (5 minutes)**. This prevents active, connected rescuers from being marked offline during temporary WebSocket pings/heartbeat timeouts or slower GPS reporting frequencies.
 - Removed the static `[AI_ROTATION_COMPLETED]` shortcut bypass from pending rescue requests. If a task goes back to pending due to being ignored or declined, it will now rotate to any other online/available AI-controlled rescuers who have not yet attempted the task.
+
+### 4. Active/Ongoing Status Filtering in Admin Dashboard
+- Updated the active list filters (`isOngoing` and `criticalMissions` selectors in both `raw_admin.html` and `system-backend/public/Web ADMIN.html`) to restrict matches purely to active states: `['assigned', 'accepted', 'in_progress', 'pending', 'acknowledged']`.
+- Closed/ignored/declined/completed commands will now immediately clear from the map, live tables, and "Critical Response Hub" panels, and they will only display in the "New Notifications" panel on the right sidebar for Admin review/reply/manual assignment.
 
 ---
 
