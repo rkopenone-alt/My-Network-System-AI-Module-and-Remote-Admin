@@ -1,6 +1,7 @@
 @echo off
 title ARDMS Web Admin Launcher
 color 0B
+cd /d "%~dp0"
 cls
 
 echo ===================================================
