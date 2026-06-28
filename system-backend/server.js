@@ -2760,8 +2760,20 @@ async function runAIAssignment() {
         const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE (status = 'pending' OR status = 'partially_declined') AND (strftime('%s', 'now') - strftime('%s', created_at)) >= ? ORDER BY id ASC`, [bufferSecs]);
         if (pendingRequests.length === 0) return;
 
-        // Fetch AI Managed Users who are online and active
-        const aiUsers = await all(`SELECT * FROM users WHERE (ai_managed = 1 OR ai_controlled = 1) AND (status = 'online' OR is_online = 1) AND is_available = 1 AND status != 'busy' AND status != 'suspended'`);
+        // Fetch AI Managed Users who are active, online, or recently updated location
+        const aiUsers = await all(`
+            SELECT DISTINCT u.* FROM users u
+            LEFT JOIN rescuer_locations rl ON u.device_id = rl.device_id OR u.phone = rl.device_id
+            WHERE (u.ai_managed = 1 OR u.ai_controlled = 1)
+            AND u.is_available = 1 
+            AND u.status != 'busy' 
+            AND u.status != 'suspended'
+            AND (
+                u.status = 'online' 
+                OR u.is_online = 1 
+                OR (rl.last_updated IS NOT NULL AND (strftime('%s', 'now') - strftime('%s', rl.last_updated)) < 120)
+            )
+        `);
         if (aiUsers.length === 0) return;
 
         // Get latest rescuer locations
@@ -2772,7 +2784,6 @@ async function runAIAssignment() {
         const busyUserIds = new Set(activeTasks.map(t => t.assigned_user_id));
 
         for (const req of pendingRequests) {
-            if (req.details && req.details.includes('[AI_ROTATION_COMPLETED]')) continue;
 
             const historyRows = await all(`SELECT DISTINCT rescuer_id FROM sos_assignment_history WHERE rescue_req_id = ? AND action IN ('ignored', 'declined')`, [req.id]);
             const attemptedRescuers = new Set(historyRows.map(r => r.rescuer_id));
