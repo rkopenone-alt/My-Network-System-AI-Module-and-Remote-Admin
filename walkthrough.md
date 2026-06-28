@@ -15,7 +15,24 @@ The backend API responsible for delivering mission histories has been refactored
 - The query now enforces a rigid `LEFT JOIN` on `rescue_requests`.
 - It strictly asserts `rr.assigned_user_id = ? OR cq.target_phone = ?` utilizing exact matches. This prevents any possibility of mission state mirroring or false Accept/Decline button injection.
 
-### 3. Database Schema Patch (Public Caller Info)
+### 3. Robust Candidate Online Detection Fallback
+- When query selects eligible `aiUsers`, it now joins the `rescuer_locations` table and validates if the rescuer's location was updated within the last 120 seconds. This prevents active, connected rescuers from being marked offline during temporary WebSocket pings/heartbeat timeouts.
+- Removed the static `[AI_ROTATION_COMPLETED]` shortcut bypass from pending rescue requests. If a task goes back to pending due to being ignored or declined, it will now rotate to any other online/available AI-controlled rescuers who have not yet attempted the task.
+
+---
+
+## Compilation
+
+The updated `preview-rescuer.html` was previously compiled into the final container:
+- **Rescuer App APK built**: `Rescuer_App_Rescue_AI.apk`
+
+---
+
+## Git Operations
+
+The changes have been staged and committed locally. You can manually push them to GitHub.
+
+### 4. Database Schema Patch (Public Caller Info)
 The core `rescue_requests` table was silently failing to ingest public user credentials because the `name` column was omitted in the backend schema definition.
 - A programmatic `ALTER TABLE` has been executed at the server boot layer to dynamically ensure the `name` column exists.
 - The **Phone Number** and **Name** of the SOS caller are now successfully mapped and prominently displayed on the **Web Admin Dashboard**'s SOS Popup Alerts.
