@@ -196,6 +196,8 @@ db.serialize(() => {
     db.run(`ALTER TABLE command_queue ADD COLUMN completion_image_url TEXT`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE groups ADD COLUMN ai_managed INTEGER DEFAULT 0`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE users ADD COLUMN ai_managed INTEGER DEFAULT 0`, (err) => { /* ignore */ });
+    db.run(`ALTER TABLE users ADD COLUMN is_online INTEGER DEFAULT 0`, (err) => { /* ignore */ });
+    db.run(`UPDATE users SET status = 'offline', is_online = 0 WHERE role != 'public'`);
 
     // Backfill serial numbers for existing users
     db.all("SELECT id, role FROM users WHERE serial_number IS NULL", [], (err, rows) => {
@@ -1808,6 +1810,9 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
     try {
         let finalStatus = status;
         let reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
+        if (status === 'pending') {
+            await run(`DELETE FROM sos_assignment_history WHERE rescue_req_id = ? AND action IN ('ignored', 'declined')`, [req.params.id]);
+        }
 
         // Find the rescuer who is accepting or completing the task (robust match on phone/device_id)
         const rPhone = rescuer_phone;
@@ -1819,7 +1824,7 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
             rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
         }
 
-        if (!reqData.assigned_group_id) {
+        if (status !== 'closed' && !reqData.assigned_group_id) {
             if (reqData.assigned_user_id) {
                 if (!rescuer || reqData.assigned_user_id !== rescuer.id) {
                     return res.status(403).json({ error: 'Task is no longer assigned to this rescuer.' });
@@ -2791,8 +2796,7 @@ async function runAIAssignment() {
             const historyRows = await all(`SELECT DISTINCT rescuer_id FROM sos_assignment_history WHERE rescue_req_id = ? AND action IN ('ignored', 'declined')`, [req.id]);
             const attemptedRescuers = new Set(historyRows.map(r => r.rescuer_id));
 
-            let bestUser = null;
-            let shortestDistance = Infinity;
+            let eligibleUsers = [];
 
             // Sequential Assignment Logic & Smart GPS Assignment
             for (const user of aiUsers) {
@@ -2811,34 +2815,46 @@ async function runAIAssignment() {
                     dist = getDistance(req.lat, req.lng, loc.lat, loc.lng);
                 }
 
-                // 3. Selection: Prioritize geographically closer rescuer
-                if (dist < shortestDistance) {
-                    shortestDistance = dist;
-                    bestUser = user;
-                } else if (dist === shortestDistance && !bestUser) {
-                    bestUser = user; // Fallback if no location data is available
+                eligibleUsers.push({ user, dist });
+            }
+
+            // Sort by distance ascending
+            eligibleUsers.sort((a, b) => a.dist - b.dist);
+
+            let assignedUsers = [];
+            if (eligibleUsers.length > 0) {
+                // Find rescuers within 50 meters (0.05 KM)
+                const nearUsers = eligibleUsers.filter(u => u.dist <= 0.05);
+                if (nearUsers.length > 0) {
+                    assignedUsers = nearUsers.map(u => u.user);
+                } else {
+                    // Fallback to the single nearest rescuer
+                    assignedUsers = [eligibleUsers[0].user];
                 }
             }
 
-            if (!bestUser && req.details && (req.details.includes('[Declined by Rescuer ID:') || req.details.includes('[Ignored by Rescuer ID:'))) {
-                // All available AI rescuers declined this task! Alert the Admin Web
-                if (!req.details.includes('[AI_ROTATION_COMPLETED]')) {
-                    const descAppend = `\n[AI_ROTATION_COMPLETED]`;
-                    await run(`UPDATE rescue_requests SET status = 'pending', details = coalesce(details, '') || ? WHERE id = ?`, [descAppend, req.id]);
-                    await logCommand('AI_ROTATION_COMPLETED', 'System Engine', `All AI rescuers skipped Task #${req.id}`, { reqId: req.id });
-                    broadcastToAdminAndTarget('RESCUER_DECLINED_LAST', req, req.assigned_user_id);
+            if (assignedUsers.length === 0) {
+                if (req.details && (req.details.includes('[Declined by Rescuer ID:') || req.details.includes('[Ignored by Rescuer ID:'))) {
+                    // All available AI rescuers declined this task! Alert the Admin Web
+                    if (!req.details.includes('[AI_ROTATION_COMPLETED]')) {
+                        const descAppend = `\n[AI_ROTATION_COMPLETED]`;
+                        await run(`UPDATE rescue_requests SET status = 'pending', details = coalesce(details, '') || ? WHERE id = ?`, [descAppend, req.id]);
+                        await logCommand('AI_ROTATION_COMPLETED', 'System Engine', `All AI rescuers skipped Task #${req.id}`, { reqId: req.id });
+                        broadcastToAdminAndTarget('RESCUER_DECLINED_LAST', req, req.assigned_user_id);
+                    }
                 }
+                continue;
             }
-            if (bestUser) {
-                // Execution: Assign to the nearest eligible rescuer
+
+            for (const bestUser of assignedUsers) {
                 const assignedUserId = bestUser.id;
                 const assignedName = bestUser.name;
                 const assignedPhone = bestUser.phone || bestUser.device_id || bestUser.id.toString();
 
                 const nextVersion = (req.assignment_version || 0) + 1;
 
-                // Atomic Check: Ensure it wasn't manually handled during buffer
-                const updateRes = await run(`UPDATE rescue_requests SET status = 'assigned', assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ? AND (status = 'pending' OR status = 'partially_declined')`,
+                // Atomic Check: Ensure it wasn't manually handled during buffer (allow status = 'assigned' for concurrent near matches)
+                const updateRes = await run(`UPDATE rescue_requests SET status = 'assigned', assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ? AND (status = 'pending' OR status = 'partially_declined' OR status = 'assigned')`,
                     [assignedUserId, nextVersion, req.id]);
 
                 if (updateRes.changes === 0) {
@@ -2876,16 +2892,12 @@ async function runAIAssignment() {
                     assignment_version: nextVersion
                 });
 
-                // ─── DUPLICATE PREVENTION: UPSERT COMMAND QUEUE ───────────────────
-                // Check if there is an existing command for this request using LIKE for robust cross-type matching
-                const existingCommand = await get(`SELECT * FROM command_queue WHERE command_payload LIKE ? OR command_payload LIKE ?`, [`%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`]);
+                // ─── DUPLICATE PREVENTION: UPSERT COMMAND QUEUE FOR THIS SPECIFIC TARGET ───
+                const existingCommand = await get(`SELECT * FROM command_queue WHERE (command_payload LIKE ? OR command_payload LIKE ?) AND target_phone = ?`, [`%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`, assignedPhone]);
                 
                 if (existingCommand) {
                     await run(`UPDATE command_queue SET target_phone = ?, command_payload = ?, status = 'assigned', priority = ?, assigned_by = 'AI', updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`,
                         [assignedPhone, cmdPayload, commandType, nextVersion, existingCommand.id]);
-                    // Cancel any other active commands for the same request to prevent duplicates
-                    await run(`UPDATE command_queue SET status = 'cancelled' WHERE id != ? AND (command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled', 'declined')`, [existingCommand.id, `%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`]);
-                    // CRITICAL FIX: Ensure the core database request points to the new AI rescuer so the previous rescuer's combined-history clears out the task!
                     await run(`UPDATE rescue_requests SET assigned_user_id = ?, status = 'assigned', updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [assignedUserId, nextVersion, req.id]);
                     const updatedCmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [existingCommand.id]);
                     broadcastToAdminAndTarget('NEW_COMMAND', updatedCmdData, bestUser.device_id); // Target specifically
@@ -2894,9 +2906,6 @@ async function runAIAssignment() {
                         [assignedPhone, commandType, cmdPayload, commandType, nextVersion]);
                     const newCmdId = await get('SELECT last_insert_rowid() as id');
                     if (newCmdId) {
-                        // Cancel any other active commands for the same request to prevent duplicates
-                        await run(`UPDATE command_queue SET status = 'cancelled' WHERE id != ? AND (command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled', 'declined')`, [newCmdId.id, `%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`]);
-                        // CRITICAL FIX
                         await run(`UPDATE rescue_requests SET assigned_user_id = ?, status = 'assigned', updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [assignedUserId, nextVersion, req.id]);
                         const newCmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [newCmdId.id]);
                         broadcastToAdminAndTarget('NEW_COMMAND', newCmdData, bestUser.device_id);

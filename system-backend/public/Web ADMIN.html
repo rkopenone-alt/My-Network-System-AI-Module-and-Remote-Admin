@@ -3605,7 +3605,8 @@
                             'NEW_RESCUE_REQUEST', 'RESCUE_REQUEST_ACCEPTED', 'RESCUE_REQUEST_DECLINED',
                             'RESCUE_REQUEST_UPDATE', 'COMMAND_STATUS_UPDATE', 'RESCUE_REQUEST_COMPLETED',
                             'SOS_ALERT', 'RESCUER_UPDATE', 'NEW_COMMAND', 'AI_STATUS_UPDATE',
-                            'RESCUE_REQUEST_IGNORED_REASSIGN', 'COMMAND_REASSIGNED', 'RESCUE_REQUEST_DECLINED_REASSIGN'
+                            'RESCUE_REQUEST_IGNORED_REASSIGN', 'COMMAND_REASSIGNED', 'RESCUE_REQUEST_DECLINED_REASSIGN',
+                            'RESCUER_STATUS_CHANGE'
                         ];
 
                         if (data.type === 'AI_STATUS_UPDATE') {
@@ -6495,7 +6496,9 @@ function toggleGlobalMute(muted) {
                 let userOptions = '<option value="">-- Select Person --</option>';
                 users.forEach(u => {
                     if (u.role !== 'public') {
-                        userOptions += `<option value="${u.id}">${u.name} (${u.role})</option>`;
+                        const isOnline = u.is_online === 1 || u.status === 'online';
+                        const statusIndicator = isOnline ? '● [ONLINE]' : '○ [OFFLINE]';
+                        userOptions += `<option value="${u.id}">${statusIndicator} ${u.name} (${u.role})</option>`;
                     }
                 });
 
@@ -7453,7 +7456,15 @@ function toggleGlobalMute(muted) {
                             ${groupTags}
                         </div>
                     </td>
-                    <td><span class="tag ${m.status === 'active' ? 'tag-green' : 'tag-gray'}">${m.status}</span></td>
+                    <td>
+                        <span class="tag" style="font-size: 11px; padding: 4px 8px; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;
+                            ${m.is_online === 1 || m.status === 'online' 
+                                ? 'background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;' 
+                                : 'background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;'
+                            }">
+                            ● ${m.is_online === 1 || m.status === 'online' ? 'ONLINE' : 'OFFLINE'}
+                        </span>
+                    </td>
                     <td style="text-align:right;">
                         <button class="action-icon" onclick="openEditMemberModal(${m.id})" title="Edit"><i data-lucide="edit-2" style="width:14px;"></i></button>
                         <button class="action-icon danger" onclick="deleteMember(${m.id})" title="Delete"><i data-lucide="trash-2" style="width:14px;"></i></button>
