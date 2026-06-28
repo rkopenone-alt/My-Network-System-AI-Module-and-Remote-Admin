@@ -1750,8 +1750,7 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
         
         // Fetch the full command object to broadcast to the rescuer
         if (targetCmdId) {
-            const cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [targetCmdId]);
-            broadcast('NEW_COMMAND', cmdData);
+            await broadcastToAdminAndTarget('NEW_COMMAND', cmdData, targetUserId || targetDeviceId);
         }
 
         await logCommand('RESCUE_REQUEST_ACCEPTED', 'Commander', `Request ID: ${req.params.id}`, { assigned_user_id, assigned_group_id, commandType });
@@ -2084,7 +2083,17 @@ app.post('/api/commands', async (req, res) => {
             }
         }
 
-        broadcast('NEW_COMMAND', { id: cmd.id, target_phone, group_id, command_type: command_type || 'direct', payload: command_payload });
+        const wsPayload = { id: cmd.id, target_phone, group_id, command_type: command_type || 'direct', payload: command_payload };
+        if (group_id) {
+            const members = await all(`SELECT u.device_id, u.phone FROM group_members gm JOIN users u ON gm.user_id = u.id WHERE gm.group_id = ?`, [group_id]);
+            for (const m of members) {
+                if (m.device_id) socketManager.send(m.device_id, 'NEW_COMMAND', wsPayload);
+                if (m.phone) socketManager.send(m.phone, 'NEW_COMMAND', wsPayload);
+            }
+            broadcast('NEW_COMMAND', wsPayload, 'admin');
+        } else {
+            await broadcastToAdminAndTarget('NEW_COMMAND', wsPayload, target_phone);
+        }
         await logCommand('COMMAND_ISSUED', actor || 'Commander', target_phone || `Group ${group_id}`, command_payload);
 
         // TACTICAL SYNC: If this is a group/cluster mission, update all associated rescue requests
