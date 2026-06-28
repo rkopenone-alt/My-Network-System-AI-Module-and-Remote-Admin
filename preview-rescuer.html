@@ -2770,6 +2770,7 @@
                         if (['RESCUE_REQUEST_IGNORED_REASSIGN', 'RESCUE_REQUEST_DECLINED_REASSIGN', 'COMMAND_REASSIGNED', 'TASK_REVOKED'].includes(msg.type) && msg.data) {
                             if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type: 'STOP_SOUND'}));
                             const reqId = msg.data.rescue_req_id || msg.data.req_id || msg.data.id || msg.data.task_id;
+                            const cmdId = msg.data.command_id || msg.data.cmd_id;
                             if (reqId) {
                                 document.querySelectorAll(`[data-req-id="${reqId}"]`).forEach(el => el.remove());
                                 if (this.activeMission && (this.activeMission.id == reqId || this.activeMission.req_id == reqId || String(this.activeMission.id).replace('CMD-', '').replace('REQ-', '') == String(reqId))) {
@@ -2778,6 +2779,9 @@
                                     if (this.navPolyline) { this.map.removeLayer(this.navPolyline); this.navPolyline = null; }
                                     this.toast(msg.type === 'TASK_REVOKED' ? 'TASK REVOKED' : 'TASK REASSIGNED', msg.type === 'TASK_REVOKED' ? '🚫' : '🔄');
                                 }
+                            }
+                            if (cmdId) {
+                                document.querySelectorAll(`[data-command-id="${cmdId}"], #cmd_modal_${cmdId}`).forEach(el => el.remove());
                             }
                         }
 
@@ -2855,6 +2859,7 @@
                 const modal = document.createElement('div');
                 modal.id = 'cmd_modal_' + c.id;
                 modal.setAttribute('data-req-id', payload.rescue_req_id || c.rescue_req_id || c.id || '');
+                modal.setAttribute('data-command-id', c.id || '');
                 modal.style.cssText = `
                     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
                     background: rgba(0,0,0,0.8); z-index: 10000;

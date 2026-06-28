@@ -571,15 +571,15 @@ const broadcastToAdminAndTarget = async (type, data, targetUserIdOrDeviceId = nu
     
     // 2. Safely target the specific rescuer if provided
     if (targetUserIdOrDeviceId) {
-        if (typeof targetUserIdOrDeviceId === 'number' || !isNaN(Number(targetUserIdOrDeviceId))) {
-            const user = await get('SELECT device_id FROM users WHERE id = ?', [Number(targetUserIdOrDeviceId)]);
-            if (user && user.device_id) {
-                socketManager.send(user.device_id, type, data);
-            }
-        } else {
-            // It's already a device ID string
-            socketManager.send(targetUserIdOrDeviceId, type, data);
+        const user = await get('SELECT device_id, phone FROM users WHERE id = ? OR phone = ? OR device_id = ?', 
+            [targetUserIdOrDeviceId, targetUserIdOrDeviceId, targetUserIdOrDeviceId]);
+        if (user && user.device_id) {
+            socketManager.send(user.device_id, type, data);
         }
+        if (user && user.phone) {
+            socketManager.send(user.phone, type, data);
+        }
+        socketManager.send(targetUserIdOrDeviceId, type, data);
     }
 };
 
@@ -1763,13 +1763,13 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
 
 app.put('/api/rescue-requests/:id/decline', async (req, res) => {
     try {
-        const { rescuer_phone } = req.body;
+        const { rescuer_phone } = req.body || {};
         const cleanedPhone = (rescuer_phone || '').replace(/\D/g, '').slice(-10);
         let rescuer = null;
         if (cleanedPhone) {
-            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rescuer_phone, rescuer_phone, rescuer_phone, `%${cleanedPhone}`]);
-        } else {
-            rescuer = await get(`SELECT id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rescuer_phone, rescuer_phone, rescuer_phone]);
+            rescuer = await get(`SELECT id, device_id FROM users WHERE phone = ? OR device_id = ? OR id = ? OR REPLACE(REPLACE(phone, '+', ''), ' ', '') LIKE ?`, [rescuer_phone, rescuer_phone, rescuer_phone, `%${cleanedPhone}`]);
+        } else if (rescuer_phone) {
+            rescuer = await get(`SELECT id, device_id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rescuer_phone, rescuer_phone, rescuer_phone]);
         }
 
         const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
@@ -1777,11 +1777,14 @@ app.put('/api/rescue-requests/:id/decline', async (req, res) => {
             return res.status(403).json({ error: 'Task is no longer assigned to you.' });
         }
 
-        const descAppend = `\n[Declined by Rescuer ID: ${rescuer ? rescuer.id : 'Unknown'}]`;
+        const descAppend = rescuer ? `\n[Declined by Rescuer ID: ${rescuer.id}]` : `\n[Declined by Admin]`;
         const reqObj = await get(`SELECT assignment_version FROM rescue_requests WHERE id = ?`, [req.params.id]);
         const nextVersion = (reqObj ? reqObj.assignment_version || 0 : 0) + 1;
+        
+        // If rescuer is null, the admin manually declined the request, so mark status as 'declined' permanently.
+        const targetStatus = rescuer ? 'partially_declined' : 'declined';
 
-        await run(`UPDATE rescue_requests SET status = 'partially_declined', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, nextVersion, req.params.id]);
+        await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [targetStatus, descAppend, nextVersion, req.params.id]);
         await run(`UPDATE command_queue SET status = 'declined', updated_at = CURRENT_TIMESTAMP, assignment_version = ? WHERE (command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled')`, [nextVersion, `%"rescue_req_id":${req.params.id}%`, `%"rescue_req_id":"${req.params.id}"%`]);
         if (rescuer) {
             await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'declined')`, [req.params.id, rescuer.id]);
@@ -1800,7 +1803,7 @@ app.put('/api/rescue-requests/:id/decline', async (req, res) => {
 // Status update for rescuer to mark completed
 app.put('/api/rescue-requests/:id/status', async (req, res) => {
     const { status, rescuer_phone, completion_image } = req.body;
-    const validStatuses = ['pending', 'accepted', 'completed', 'declined', 'in_progress'];
+    const validStatuses = ['pending', 'accepted', 'completed', 'declined', 'in_progress', 'closed'];
     if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
     try {
         let finalStatus = status;
@@ -2749,8 +2752,8 @@ async function runAIAssignment() {
                 await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'ignored')`, [cmd.req_id, rescuer ? rescuer.id : null]);
                 await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [cmd.req_id]);
                 
-                broadcastToAdminAndTarget('RESCUE_REQUEST_IGNORED_REASSIGN', { rescue_req_id: cmd.req_id, rescuerId, message: `Rescuer ignored assignment (Timeout). AI is finding next eligible unit.`, assignment_version: nextVersion }, rescuerId);
-                broadcastToAdminAndTarget('TASK_REVOKED', { task_id: cmd.req_id, old_rescuer_id: rescuerId, new_assignment_version: nextVersion }, rescuerId);
+                broadcastToAdminAndTarget('RESCUE_REQUEST_IGNORED_REASSIGN', { rescue_req_id: cmd.req_id, command_id: cmd.id, rescuerId, message: `Rescuer ignored assignment (Timeout). AI is finding next eligible unit.`, assignment_version: nextVersion }, rescuerId);
+                broadcastToAdminAndTarget('TASK_REVOKED', { task_id: cmd.req_id, command_id: cmd.id, old_rescuer_id: rescuerId, new_assignment_version: nextVersion }, rescuerId);
                 await logCommand('AI_TIMEOUT_REASSIGN', 'System Engine', `Task ${cmd.id} ignored by ${rescuerId}`, { reqId: cmd.req_id });
             }
         }

@@ -6702,12 +6702,12 @@ function toggleGlobalMute(muted) {
         }
 
         async function closeRescueRequest(id) {
-            if (!confirm(`Are you sure you want to manually mark this request as completed?`)) return;
+            if (!confirm(`Are you sure you want to manually mark this request as closed?`)) return;
             try {
                 const res = await fetch(`${API_BASE}/rescue-requests/${id}/status`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'completed' })
+                    body: JSON.stringify({ status: 'closed' })
                 });
                 if (res.ok) {
                     showAdminToast(`Rescue request closed successfully`);

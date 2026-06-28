@@ -3647,22 +3647,6 @@
                             refreshAllModules(); // Refresh tasks
                             return;
                         }
-
-function toggleGlobalMute(muted) {
-    window.isMuted = muted;
-    const btn = document.getElementById('globalMuteBtn');
-    if (btn) {
-        btn.dataset.muted = window.isMuted.toString();
-        if (window.isMuted) {
-            btn.style.backgroundColor = "#ef4444"; // red
-            btn.innerHTML = '<i data-lucide="volume-x" style="width:18px; margin-right:6px;"></i> SOUND OFF';
-        } else {
-            btn.style.backgroundColor = "#22c55e"; // green
-            btn.innerHTML = '<i data-lucide="volume-2" style="width:18px; margin-right:6px;"></i> SOUND ON';
-        }
-        if (window.lucide) window.lucide.createIcons();
-    }
-}
                         if (data.type === 'RESCUE_REQUEST_DECLINED_REASSIGN') {
                             Swal.fire({
                                 icon: 'warning',
@@ -3721,6 +3705,22 @@ function toggleGlobalMute(muted) {
             }
         }
 
+function toggleGlobalMute(muted) {
+    window.isMuted = muted;
+    const btn = document.getElementById('globalMuteBtn');
+    if (btn) {
+        btn.dataset.muted = window.isMuted.toString();
+        if (window.isMuted) {
+            btn.style.backgroundColor = "#ef4444"; // red
+            btn.innerHTML = '<i data-lucide="volume-x" style="width:18px; margin-right:6px;"></i> SOUND OFF';
+        } else {
+            btn.style.backgroundColor = "#22c55e"; // green
+            btn.innerHTML = '<i data-lucide="volume-2" style="width:18px; margin-right:6px;"></i> SOUND ON';
+        }
+        if (window.lucide) window.lucide.createIcons();
+    }
+}
+
         // --- GLOBAL REFRESH & SYNC HUB ---
         function refreshAllModules() {
             console.log("[SYSTEM] Executing Global Sync...");
@@ -3732,6 +3732,7 @@ function toggleGlobalMute(muted) {
             if (typeof updateNotifBadges === 'function') updateNotifBadges();
             if (typeof fetchUsers === 'function') fetchUsers();
             if (typeof fetchGroups === 'function') fetchGroups();
+            if (typeof fetchOperations === 'function') fetchOperations();
         }
 
         function showAdminToast(msg, type = 'info') {
@@ -7769,7 +7770,7 @@ function toggleGlobalMute(muted) {
         async function checkDetectedIp() {
             let detectedIp = null;
             try {
-                const res = await fetch(`\${PROTOCOL}//\${window.location.hostname || 'localhost'}:3001/api/server-ip`);
+                const res = await fetch(`\${PROTOCOL}//\${SERVER_IP}:3001/api/server-ip`);
                 if (res.ok) {
                     const data = await res.json();
                     detectedIp = data.ip;
@@ -7966,31 +7967,31 @@ function toggleGlobalMute(muted) {
 
             let evidenceImgHtml = '';
             if (cmd.requesterImageUrl) {
-                const fullUrl = cmd.requesterImageUrl.startsWith('http') ? cmd.requesterImageUrl : \`http://\${window.location.hostname || 'localhost'}:3001\${cmd.requesterImageUrl}\`;
-                evidenceImgHtml = \`
+                const fullUrl = formatMediaUrl(cmd.requesterImageUrl);
+                evidenceImgHtml = `
                     <div style="flex:1; min-width:240px; display:flex; flex-direction:column; gap:6px;">
                         <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Evidence Photo</span>
                         <div style="border-radius:12px; overflow:hidden; border:2px solid var(--border); height:180px;">
-                            <img src="\${fullUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="window.open('\${fullUrl}', '_blank')">
+                            <img src="${fullUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="window.open('${fullUrl}', '_blank')">
                         </div>
-                    </div>\`;
+                    </div>`;
             }
 
             let closureImgHtml = '';
             if (cmd.completion_image_url) {
-                const fullUrl = cmd.completion_image_url.startsWith('http') ? cmd.completion_image_url : \`http://\${window.location.hostname || 'localhost'}:3001\${cmd.completion_image_url}\`;
-                closureImgHtml = \`
+                const fullUrl = formatMediaUrl(cmd.completion_image_url);
+                closureImgHtml = `
                     <div style="flex:1; min-width:240px; display:flex; flex-direction:column; gap:6px;">
                         <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Closure / Proof Photo</span>
                         <div style="border-radius:12px; overflow:hidden; border:2px solid #22c55e; height:180px;">
-                            <img src="\${fullUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="window.open('\${fullUrl}', '_blank')">
+                            <img src="${fullUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="window.open('${fullUrl}', '_blank')">
                         </div>
-                    </div>\`;
+                    </div>`;
             }
 
             let audioHtml = '';
             if (cmd.requesterAudioUrl) {
-                const audioUrl = cmd.requesterAudioUrl.startsWith('http') ? cmd.requesterAudioUrl : \`http://\${window.location.hostname || 'localhost'}:3001\${cmd.requesterAudioUrl}\`;
+                const audioUrl = formatMediaUrl(cmd.requesterAudioUrl);
                 audioHtml = \`
                     <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px; margin-top:10px; width:100%;">
                         <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:8px;">Requester Audio Message</span>
@@ -8260,7 +8261,7 @@ function toggleGlobalMute(muted) {
                                     <b>Priority:</b> <span style="color:\${isCritical ? '#e11d48' : 'var(--text-muted)'}; font-weight:900;">\${(req.priority || (isCritical ? 'CRITICAL' : 'NORMAL')).toUpperCase()}</span><br>
                                     <b>Urgency:</b> <span style="color:\${(req.urgency || '').toLowerCase() === 'critical' ? 'var(--critical)' : 'inherit'}; font-weight:700;">\${(req.urgency || '').toUpperCase()}</span>
                                     \${detailsHtml}
-                                    \${req.image_url ? \`<div style="margin-top:8px;"><img src="http://\${window.location.hostname || 'localhost'}:3001\${req.image_url}" style="width:80px; height:80px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>\` : ''}
+                                    \${req.image_url ? \`<div style="margin-top:8px;"><img src="\${formatMediaUrl(req.image_url)}" style="width:80px; height:80px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>\` : ''}
                                 </div>
                                 <div class="actionable-actions" style="margin-top: 10px;">
                                     <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="closeModal('viewRequestsModal'); openAssignModal('\${req.id}', '\${safeType}', '\${safeSector}', '\${req.urgency}', '\${num}')">\${assignBtnLabel}</button>
@@ -8579,7 +8580,7 @@ function toggleGlobalMute(muted) {
                                     <b>Priority:</b> <span style="color:\${isCritical ? '#e11d48' : 'var(--text-muted)'}; font-weight:900;">\${(req.priority || (isCritical ? 'CRITICAL' : 'NORMAL')).toUpperCase()}</span><br>
                                     <b>Urgency:</b> <span style="color:\${(req.urgency || '').toLowerCase() === 'critical' ? 'var(--critical)' : 'inherit'}; font-weight:700;">\${(req.urgency || '').toUpperCase()}</span>
                                     \${detailsHtml}
-                                    \${req.image_url ? \`<div style="margin-top:8px;"><img src="http://\${window.location.hostname || 'localhost'}:3001\${req.image_url}" style="width:60px; height:60px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>\` : ''}
+                                    \${req.image_url ? \`<div style="margin-top:8px;"><img src="\${formatMediaUrl(req.image_url)}" style="width:60px; height:60px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>\` : ''}
                                 </div>
                                 <div class="actionable-actions">
                                     <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="openAssignModal('\${req.id}', '\${safeType}', '\${safeSector}', '\${req.urgency}', '\${num}')">\${assignBtnLabel}</button>
@@ -9459,67 +9460,67 @@ function toggleGlobalMute(muted) {
                             <span style="font-weight:900; color:var(--special);">#GRP-\${id.toString().slice(-4)}</span>
                         </div>
                         <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:32px;">
-                            \${data.requests.map(r => \`
-                                <div class="card" id="grouped-req-card-\${r.id}" style="margin:0; padding:0; background:white; border-radius:12px; border:1px solid #f1f5f9; overflow:hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
-                                    <div style="padding:16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleGroupedReqDetails('\${r.id}')">
+                            ${data.requests.map(r => `
+                                <div class="card" id="grouped-req-card-${r.id}" style="margin:0; padding:0; background:white; border-radius:12px; border:1px solid #f1f5f9; overflow:hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+                                    <div style="padding:16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleGroupedReqDetails('${r.id}')">
                                         <div style="display:flex; align-items:center; gap:12px;">
                                             <div style="width:36px; height:36px; border-radius:10px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:var(--text-muted);">
-                                                <i data-lucide="\${(r.type || '').toLowerCase() === 'medical' ? 'radio' : 'package'}" style="width:18px;"></i>
+                                                <i data-lucide="${(r.type || '').toLowerCase() === 'medical' ? 'radio' : 'package'}" style="width:18px;"></i>
                                             </div>
                                             <div>
-                                                <div style="font-weight:900; font-size:14px; color:var(--primary);">\${(r.type || 'RESCUE').toUpperCase()} #\${r.id}</div>
-                                                <div style="color:var(--text-muted); font-size:11px; font-weight:600;">\${r.requester_name || 'Public'} • Sector: \${r.sector || 'N/A'}</div>
+                                                <div style="font-weight:900; font-size:14px; color:var(--primary);">${(r.type || 'RESCUE').toUpperCase()} #${r.id}</div>
+                                                <div style="color:var(--text-muted); font-size:11px; font-weight:600;">${r.requester_name || 'Public'} • Sector: ${r.sector || 'N/A'}</div>
                                             </div>
                                         </div>
                                         <div style="display:flex; align-items:center; gap:8px;">
-                                            <span class="tag \${(r.urgency || r.priority || 'Normal').toLowerCase() === 'critical' ? 'tag-red' : 'tag-green'}" style="font-size:9px; padding:3px 6px;">
-                                                \${(r.urgency || r.priority || 'Normal').toUpperCase()}
+                                            <span class="tag ${(r.urgency || r.priority || 'Normal').toLowerCase() === 'critical' ? 'tag-red' : 'tag-green'}" style="font-size:9px; padding:3px 6px;">
+                                                ${(r.urgency || r.priority || 'Normal').toUpperCase()}
                                             </span>
-                                            <i data-lucide="chevron-down" class="toggle-icon-\${r.id}" style="width:16px; color:var(--text-muted); transition: transform 0.3s ease;"></i>
+                                            <i data-lucide="chevron-down" class="toggle-icon-${r.id}" style="width:16px; color:var(--text-muted); transition: transform 0.3s ease;"></i>
                                         </div>
                                     </div>
-                                    <div id="grouped-req-drawer-\${r.id}" style="display:none; border-top:1px solid #f8fafc; background:#fcfdfe; padding:20px; transition: all 0.3s ease;">
+                                    <div id="grouped-req-drawer-${r.id}" style="display:none; border-top:1px solid #f8fafc; background:#fcfdfe; padding:20px; transition: all 0.3s ease;">
                                         <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:12px;">
                                             <tr style="border-bottom:1px solid #f8fafc;">
                                                 <td style="padding:8px 0; font-weight:600; color:var(--text-muted); width:35%;">Contact Phone</td>
-                                                <td style="padding:8px 0; font-weight:800; color:var(--accent);">\${r.requester_phone || 'N/A'}</td>
+                                                <td style="padding:8px 0; font-weight:800; color:var(--accent);">${r.requester_phone || 'N/A'}</td>
                                             </tr>
                                             <tr style="border-bottom:1px solid #f8fafc;">
                                                 <td style="padding:8px 0; font-weight:600; color:var(--text-muted);">Coordinates</td>
-                                                <td style="padding:8px 0; font-weight:700; color:var(--primary); font-family:monospace;">\${r.lat ? r.lat.toFixed(6) : 'N/A'}, \${r.lng ? r.lng.toFixed(6) : 'N/A'}</td>
+                                                <td style="padding:8px 0; font-weight:700; color:var(--primary); font-family:monospace;">${r.lat ? r.lat.toFixed(6) : 'N/A'}, ${r.lng ? r.lng.toFixed(6) : 'N/A'}</td>
                                             </tr>
                                             <tr style="border-bottom:1px solid #f8fafc;">
                                                 <td style="padding:8px 0; font-weight:600; color:var(--text-muted);">Detailed Location</td>
-                                                <td style="padding:8px 0; font-weight:700; color:var(--primary);">\${r.location_name || 'Locating...'}</td>
+                                                <td style="padding:8px 0; font-weight:700; color:var(--primary);">${r.location_name || 'Locating...'}</td>
                                             </tr>
                                             <tr>
                                                 <td style="padding:8px 0; font-weight:600; color:var(--text-muted);">Citizen Notes</td>
-                                                <td style="padding:8px 0; font-weight:600; color:var(--text-main); line-height:1.4;">\${r.details || r.description || 'No additional notes provided.'}</td>
+                                                <td style="padding:8px 0; font-weight:600; color:var(--text-main); line-height:1.4;">${r.details || r.description || 'No additional notes provided.'}</td>
                                             </tr>
                                         </table>
                                         
-                                        \${r.image_url ? \`
+                                        ${r.image_url ? `
                                             <div style="margin-bottom:15px; border-radius:8px; overflow:hidden; border:1px solid var(--border);">
-                                                <img src="http://\${window.location.hostname || 'localhost'}:3001\${r.image_url}" style="width:100%; max-height:200px; object-fit:cover; display:block;" onclick="window.open(this.src)">
+                                                <img src="${formatMediaUrl(r.image_url)}" style="width:100%; max-height:200px; object-fit:cover; display:block;" onclick="window.open(this.src)">
                                             </div>
-                                        \` : ''}
+                                        ` : ''}
 
                                         <div style="display:flex; gap:8px; margin-top:12px;">
-                                            <button class="btn btn-outline" style="flex:1; padding:8px 12px; font-size:11px; color:var(--accent); border-color:var(--accent); min-height:36px;" onclick="event.stopPropagation(); openReplyModal('\${r.device_id || r.phone}', '\${r.requester_name || 'Citizen'}')">
+                                            <button class="btn btn-outline" style="flex:1; padding:8px 12px; font-size:11px; color:var(--accent); border-color:var(--accent); min-height:36px;" onclick="event.stopPropagation(); openReplyModal('${r.device_id || r.phone}', '${r.requester_name || 'Citizen'}')">
                                                 <i data-lucide="message-square" style="width:12px; margin-right:4px; display:inline-block; vertical-align:middle;"></i> Reply
                                             </button>
-                                            <button class="btn btn-outline" style="flex:1; padding:8px 12px; font-size:11px; min-height:36px;" onclick="event.stopPropagation(); declineRescueRequest('\${r.id}')">
+                                            <button class="btn btn-outline" style="flex:1; padding:8px 12px; font-size:11px; min-height:36px;" onclick="event.stopPropagation(); declineRescueRequest('${r.id}')">
                                                 Decline
                                             </button>
-                                            <button class="btn btn-primary" style="flex:1; padding:8px 12px; font-size:11px; background:#ef4444; border-color:#ef4444; color:white; min-height:36px;" onclick="event.stopPropagation(); closeRescueRequest('\${r.id}')">
+                                            <button class="btn btn-primary" style="flex:1; padding:8px 12px; font-size:11px; background:#ef4444; border-color:#ef4444; color:white; min-height:36px;" onclick="event.stopPropagation(); closeRescueRequest('${r.id}')">
                                                 <i data-lucide="check-circle" style="width:12px; margin-right:4px; display:inline-block; vertical-align:middle;"></i> Complete
                                             </button>
                                         </div>
                                     </div>
                                 </div>
-                            \`).join('')}
+                            `).join('')}
                         </div>
-                    \` : \`
+                    ` : `
                         <div class="section-title" style="font-size:12px; letter-spacing:0.5px;"><i data-lucide="user" style="width:14px;"></i> Full Request Intelligence</div>
                         <div class="card" style="margin:0 0 32px 0; padding:0; background:white; border-radius:16px; overflow:hidden; border:1px solid #f1f5f9;">
                             <table style="width:100%; border-collapse:collapse; font-size:13px;">
