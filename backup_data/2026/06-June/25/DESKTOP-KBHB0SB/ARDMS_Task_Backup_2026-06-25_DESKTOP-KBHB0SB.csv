@@ -1,11 +1,11 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-25
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 28/6/2026, 12:21:12 am
+Generated At: , 28/6/2026, 10:53:32 am
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
-125,medical,critical,assigned,12.9152406,77.5860314,Critical Emergency Triggered,Vikram Rao (MEM-03),2026-06-25 10:12:02,2026-06-25 10:12:38,DESKTOP-KBHB0SB
+125,medical,critical,completed,12.9152406,77.5860314,Critical Emergency Triggered,Vikram Rao (MEM-03),2026-06-25 10:12:02,2026-06-28 03:24:33,DESKTOP-KBHB0SB
 126,pregnancy,critical,completed,12.9152558,77.5860078,Critical Emergency Triggered,Sarah Khan (MEM-02),2026-06-25 10:21:28,2026-06-25 10:41:05,DESKTOP-KBHB0SB
 127,pregnancy,critical,completed,12.9152339,77.5860295,Critical Emergency Triggered,Arjun Singh (MEM-01),2026-06-25 10:36:54,2026-06-25 10:39:32,DESKTOP-KBHB0SB
 128,pregnancy,critical,completed,12.9152297,77.5860293,"Critical Emergency Triggered

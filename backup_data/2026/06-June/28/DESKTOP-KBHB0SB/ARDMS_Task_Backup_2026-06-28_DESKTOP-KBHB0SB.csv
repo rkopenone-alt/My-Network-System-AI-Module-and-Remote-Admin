@@ -1,0 +1,31 @@
+ARDMS SYSTEM BACKUP REPORT - DATE: 2026-06-28
+Device Hostname: , DESKTOP-KBHB0SB
+Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
+Generated At: , 28/6/2026, 10:53:33 am
+
+SECTION 1: RESCUE REQUESTS & TASKS
+Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
+135,pregnancy,critical,completed,14.4551259,79.9946208,"Critical Emergency Triggered
+[Ignored by Rescuer ID: 2]
+[Ignored by Rescuer ID: 3]",Arjun Singh (MEM-01),2026-06-28 05:16:39,2026-06-28 05:17:22,DESKTOP-KBHB0SB
+136,supplies,normal,completed,14.4551259,79.9946208,"{""transportMode"":""BOAT"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}
+[Ignored by Rescuer ID: 1]
+[Ignored by Rescuer ID: 3]
+[AI_ROTATION_COMPLETED]
+[Declined by Rescuer ID: 1]",Unassigned,2026-06-28 05:20:46,2026-06-28 05:23:31,DESKTOP-KBHB0SB
+137,sos,normal,completed,14.4551259,79.9946208,"{""transportMode"":""ROAD"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}
+[Ignored by Rescuer ID: 3]
+[Ignored by Rescuer ID: 1]
+[AI_ROTATION_COMPLETED]",Unassigned,2026-06-28 05:22:10,2026-06-28 05:23:28,DESKTOP-KBHB0SB
+
+
+SECTION 2: RESCUER COMMAND DISPATCHES
+Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
+126,N/A,919000000001,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":14.4551259,""lng"":79.9946208,""urgency"":""critical"",""rescue_req_id"":135,""requester_name"":""Amit Kumar"",""requester_phone"":""918000000001"",""details"":""Critical Emergency Triggered\n[Ignored by Rescuer ID: 2]\n[Ignored by Rescuer ID: 3]"",""assigned_by"":""AI""}",Critical,completed,2026-06-28 05:16:49,,DESKTOP-KBHB0SB
+127,N/A,919000000004,"{""message"":""AI ASSIGNED: SUPPLIES at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":14.4551259,""lng"":79.9946208,""urgency"":""normal"",""rescue_req_id"":136,""requester_name"":""Amit Kumar"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""BOAT\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}\n[Ignored by Rescuer ID: 1]"",""assigned_by"":""AI""}",Normal,completed,2026-06-28 05:20:58,,DESKTOP-KBHB0SB
+128,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":14.4551259,""lng"":79.9946208,""urgency"":""normal"",""rescue_req_id"":137,""requester_name"":""Amit Kumar"",""requester_phone"":""918000000001"",""details"":""{\""transportMode\"":\""ROAD\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}\n[Ignored by Rescuer ID: 3]"",""assigned_by"":""AI""}",Normal,completed,2026-06-28 05:22:28,,DESKTOP-KBHB0SB
+
+
+SECTION 3: PUBLIC SOS ALERTS
+SOS ID,Device ID,Phone,Latitude,Longitude,Details,Status,Priority,Alert Time,Device Node
+NO SOS ALERTS FOR THIS DATE

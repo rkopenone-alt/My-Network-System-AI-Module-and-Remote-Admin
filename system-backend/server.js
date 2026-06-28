@@ -334,10 +334,15 @@ db.serialize(() => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+    db.run(`ALTER TABLE rescue_requests ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE rescue_requests ADD COLUMN priority TEXT DEFAULT 'normal'`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE rescue_requests ADD COLUMN name TEXT`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE rescue_requests ADD COLUMN image_url TEXT`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE rescue_requests ADD COLUMN audio_url TEXT`, (err) => { /* ignore */ });
+    db.run(`ALTER TABLE rescue_requests ADD COLUMN assignment_version INTEGER DEFAULT 0`, (err) => { /* ignore */ });
+    db.run(`ALTER TABLE rescue_requests ADD COLUMN assignment_timestamp DATETIME`, (err) => { /* ignore */ });
+    db.run(`ALTER TABLE command_queue ADD COLUMN assignment_version INTEGER DEFAULT 0`, (err) => { /* ignore */ });
+    db.run(`ALTER TABLE command_queue ADD COLUMN assignment_timestamp DATETIME`, (err) => { /* ignore */ });
 
     // Mission Lifecycle & Audit Tables
     db.run(`CREATE TABLE IF NOT EXISTS sos_assignment_history (
@@ -480,7 +485,7 @@ wss.on('connection', (ws) => {
                 ws.send(JSON.stringify({ type: 'REGISTERED', status: 'ready', serverTime: new Date().toISOString() }));
                 
                 // Update online status in database
-                run(`UPDATE users SET status = 'online', last_seen = CURRENT_TIMESTAMP WHERE device_id = ? OR phone = ?`, [deviceId, deviceId])
+                run(`UPDATE users SET status = 'online', is_online = 1, is_available = 1, last_seen = CURRENT_TIMESTAMP WHERE device_id = ? OR phone = ?`, [deviceId, deviceId])
                     .then(() => socketManager.broadcast('RESCUER_STATUS_CHANGE', { deviceId, status: 'online' }, 'admin'))
                     .catch(e => console.error('Status Update Error:', e));
             }
@@ -492,6 +497,30 @@ wss.on('connection', (ws) => {
             if (type === 'HEARTBEAT' || type === 'PING') {
                 ws.isAlive = true;
                 ws.send(JSON.stringify({ type: 'PONG', timestamp: new Date().toISOString() }));
+            }
+
+            if (type === 'TASK_SYNC') {
+                // Client reconnect state sync verification
+                const { task_id, current_assigned_rescuer_id, assignment_version } = data;
+                if (task_id) {
+                    const reqObj = await get(`SELECT assigned_user_id, assignment_version, status FROM rescue_requests WHERE id = ?`, [task_id]);
+                    const rescuer = await get(`SELECT id FROM users WHERE device_id = ? OR phone = ?`, [deviceId, deviceId]);
+                    if (reqObj && rescuer) {
+                        const isAssigned = (reqObj.assigned_user_id === rescuer.id && reqObj.status === 'assigned');
+                        const versionMatches = (reqObj.assignment_version === assignment_version);
+                        if (!isAssigned || !versionMatches) {
+                            console.log(`[Sync] Stale task detected during sync for task #${task_id} on rescuer ID ${rescuer.id}. Issuing TASK_REVOKED.`);
+                            ws.send(JSON.stringify({
+                                type: 'TASK_REVOKED',
+                                data: {
+                                    task_id: task_id,
+                                    old_rescuer_id: rescuer.id,
+                                    new_assignment_version: reqObj.assignment_version
+                                }
+                            }));
+                        }
+                    }
+                }
             }
 
             if (type === 'RESCUER_LOCATION') {
@@ -507,7 +536,7 @@ wss.on('connection', (ws) => {
     ws.on('close', () => {
         if (currentDeviceId) {
             socketManager.removeClient(currentDeviceId);
-            run(`UPDATE users SET status = 'offline', last_seen = CURRENT_TIMESTAMP WHERE device_id = ? OR phone = ?`, [currentDeviceId, currentDeviceId])
+            run(`UPDATE users SET status = 'offline', is_online = 0, last_seen = CURRENT_TIMESTAMP WHERE device_id = ? OR phone = ?`, [currentDeviceId, currentDeviceId])
                 .then(() => socketManager.broadcast('RESCUER_STATUS_CHANGE', { deviceId: currentDeviceId, status: 'offline' }, 'admin'))
                 .catch(e => console.error('Status Update Error:', e));
         }
@@ -518,7 +547,7 @@ const heartbeatInterval = setInterval(() => {
     wss.clients.forEach((ws) => {
         if (ws.isAlive === false) {
             if (ws.deviceId) {
-                run(`UPDATE users SET status = 'offline', last_seen = CURRENT_TIMESTAMP WHERE device_id = ? OR phone = ?`, [ws.deviceId, ws.deviceId])
+                run(`UPDATE users SET status = 'offline', is_online = 0, last_seen = CURRENT_TIMESTAMP WHERE device_id = ? OR phone = ?`, [ws.deviceId, ws.deviceId])
                     .then(() => socketManager.broadcast('RESCUER_STATUS_CHANGE', { deviceId: ws.deviceId, status: 'offline' }, 'admin'))
                     .catch(e => console.error('Status Update Error:', e));
                 socketManager.removeClient(ws.deviceId);
@@ -1749,10 +1778,14 @@ app.put('/api/rescue-requests/:id/decline', async (req, res) => {
         }
 
         const descAppend = `\n[Declined by Rescuer ID: ${rescuer ? rescuer.id : 'Unknown'}]`;
+        const reqObj = await get(`SELECT assignment_version FROM rescue_requests WHERE id = ?`, [req.params.id]);
+        const nextVersion = (reqObj ? reqObj.assignment_version || 0 : 0) + 1;
 
-        await run(`UPDATE rescue_requests SET status = 'partially_declined', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, req.params.id]);
+        await run(`UPDATE rescue_requests SET status = 'partially_declined', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, nextVersion, req.params.id]);
+        await run(`UPDATE command_queue SET status = 'declined', updated_at = CURRENT_TIMESTAMP, assignment_version = ? WHERE (command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled')`, [nextVersion, `%"rescue_req_id":${req.params.id}%`, `%"rescue_req_id":"${req.params.id}"%`]);
         if (rescuer) {
             await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'declined')`, [req.params.id, rescuer.id]);
+            broadcastToAdminAndTarget('TASK_REVOKED', { task_id: req.params.id, old_rescuer_id: rescuer.id, new_assignment_version: nextVersion }, rescuer.device_id);
         }
         await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [req.params.id]);
         const updatedReqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [req.params.id]);
@@ -1783,10 +1816,15 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
             rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
         }
 
-        if (rescuer && !reqData.assigned_group_id) {
-            if (reqData.assigned_user_id !== rescuer.id && status !== 'declined') {
-                if (!(status === 'accepted' && (reqData.status === 'pending' || reqData.status === 'partially_declined'))) {
-                    return res.status(403).json({ error: 'Task is currently assigned to another unit or has been revoked.' });
+        if (!reqData.assigned_group_id) {
+            if (reqData.assigned_user_id) {
+                if (!rescuer || reqData.assigned_user_id !== rescuer.id) {
+                    return res.status(403).json({ error: 'Task is no longer assigned to this rescuer.' });
+                }
+            } else {
+                // If it is unassigned/pending, it can only be accepted/assigned. Completing or in_progress changes on unassigned requests are rejected
+                if (status !== 'accepted' && status !== 'declined') {
+                    return res.status(403).json({ error: 'Task is no longer assigned to this rescuer.' });
                 }
             }
         }
@@ -2147,7 +2185,7 @@ app.put('/api/commands/:id/status', async (req, res) => {
             const myClean = (rescuer.phone || '').replace(/\D/g, '').slice(-10);
             const isTarget = cmdData.target_phone === rescuer.phone || cmdData.target_phone === rescuer.device_id || String(cmdData.target_phone) === String(rescuer.id) || (tpClean && myClean && tpClean === myClean);
             if (!isTarget && status !== 'declined') {
-                return res.status(403).json({ error: 'Command was reassigned to another unit.' });
+                return res.status(403).json({ error: 'Task is no longer assigned to this rescuer.' });
             }
         }
 
@@ -2356,16 +2394,29 @@ app.put('/api/commands/:id/reassign', async (req, res) => {
         }
 
         const oldCmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
-        await run(`UPDATE command_queue SET target_phone = ?, group_id = ?, status = 'pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [effectivePhone || null, effectiveGroupId || null, req.params.id]);
+        let oldPayload = {};
+        try { oldPayload = JSON.parse(oldCmdData.command_payload); } catch(e){}
+        const reqId = oldPayload.rescue_req_id;
+        let nextVersion = 1;
+        if (reqId) {
+            const reqObj = await get(`SELECT assignment_version FROM rescue_requests WHERE id = ?`, [reqId]);
+            nextVersion = (reqObj ? reqObj.assignment_version || 0 : 0) + 1;
+        }
+
+        await run(`UPDATE command_queue SET target_phone = ?, group_id = ?, status = 'pending', updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [effectivePhone || null, effectiveGroupId || null, nextVersion, req.params.id]);
         let cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
         if (oldCmdData && oldCmdData.target_phone) {
-            broadcastToAdminAndTarget('TASK_REVOKED', { id: req.params.id, rescue_req_id: oldCmdData.command_payload ? JSON.parse(oldCmdData.command_payload).rescue_req_id : null }, oldCmdData.target_phone);
+            broadcastToAdminAndTarget('TASK_REVOKED', { task_id: reqId || req.params.id, old_rescuer_id: oldCmdData.target_phone, new_assignment_version: nextVersion }, oldCmdData.target_phone);
         }
 
         let payload = {};
         try {
             payload = typeof cmdData.command_payload === 'string' ? JSON.parse(cmdData.command_payload || '{}') : (cmdData.command_payload || {});
         } catch(e) { console.error("JSON parse error in reassign:", e); }
+        payload.assignment_version = nextVersion;
+        await run(`UPDATE command_queue SET command_payload = ? WHERE id = ?`, [JSON.stringify(payload), req.params.id]);
+        cmdData.command_payload = JSON.stringify(payload);
+
         if (req.body.custom_polygon) {
             payload.custom_polygon = req.body.custom_polygon;
             await run(`UPDATE command_queue SET command_payload = ? WHERE id = ?`, [JSON.stringify(payload), req.params.id]);
@@ -2396,8 +2447,8 @@ app.put('/api/commands/:id/reassign', async (req, res) => {
                 }
 
                 // Update requests
-                await run(`UPDATE rescue_requests SET status = 'assigned', assigned_group_id = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`,
-                    [effectiveGroupId || null, targetUserId || null, ...reqIds]);
+                await run(`UPDATE rescue_requests SET status = 'assigned', assigned_group_id = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`,
+                    [effectiveGroupId || null, targetUserId || null, nextVersion, ...reqIds]);
 
                 // Write new assignment to history
                 if (targetUserId) {
@@ -2690,12 +2741,16 @@ async function runAIAssignment() {
             
             // Ensure we don't append it repeatedly
             if (!(cmd.req_details || '').includes(`[Ignored by Rescuer ID: ${rescuerId}]`)) {
-                await run(`UPDATE rescue_requests SET status = 'pending', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, cmd.req_id]);
-                await run(`UPDATE command_queue SET status = 'ignored', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [cmd.id]);
+                const reqObj = await get(`SELECT assignment_version FROM rescue_requests WHERE id = ?`, [cmd.req_id]);
+                const nextVersion = (reqObj ? reqObj.assignment_version || 0 : 0) + 1;
+
+                await run(`UPDATE rescue_requests SET status = 'pending', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, nextVersion, cmd.req_id]);
+                await run(`UPDATE command_queue SET status = 'ignored', updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [nextVersion, cmd.id]);
                 await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'ignored')`, [cmd.req_id, rescuer ? rescuer.id : null]);
                 await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [cmd.req_id]);
-                broadcastToAdminAndTarget('RESCUE_REQUEST_IGNORED_REASSIGN', { rescue_req_id: cmd.req_id, rescuerId, message: `Rescuer ignored assignment (Timeout). AI is finding next eligible unit.` }, rescuerId);
-                broadcastToAdminAndTarget('TASK_REVOKED', { rescue_req_id: cmd.req_id }, rescuerId);
+                
+                broadcastToAdminAndTarget('RESCUE_REQUEST_IGNORED_REASSIGN', { rescue_req_id: cmd.req_id, rescuerId, message: `Rescuer ignored assignment (Timeout). AI is finding next eligible unit.`, assignment_version: nextVersion }, rescuerId);
+                broadcastToAdminAndTarget('TASK_REVOKED', { task_id: cmd.req_id, old_rescuer_id: rescuerId, new_assignment_version: nextVersion }, rescuerId);
                 await logCommand('AI_TIMEOUT_REASSIGN', 'System Engine', `Task ${cmd.id} ignored by ${rescuerId}`, { reqId: cmd.req_id });
             }
         }
@@ -2705,8 +2760,8 @@ async function runAIAssignment() {
         const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE (status = 'pending' OR status = 'partially_declined') AND (strftime('%s', 'now') - strftime('%s', created_at)) >= ? ORDER BY id ASC`, [bufferSecs]);
         if (pendingRequests.length === 0) return;
 
-        // Fetch AI Managed Users who are online
-        const aiUsers = await all(`SELECT * FROM users WHERE ai_managed = 1 AND status = 'online'`);
+        // Fetch AI Managed Users who are online and active
+        const aiUsers = await all(`SELECT * FROM users WHERE (ai_managed = 1 OR ai_controlled = 1) AND (status = 'online' OR is_online = 1) AND is_available = 1 AND status != 'busy' AND status != 'suspended'`);
         if (aiUsers.length === 0) return;
 
         // Get latest rescuer locations
@@ -2719,6 +2774,9 @@ async function runAIAssignment() {
         for (const req of pendingRequests) {
             if (req.details && req.details.includes('[AI_ROTATION_COMPLETED]')) continue;
 
+            const historyRows = await all(`SELECT DISTINCT rescuer_id FROM sos_assignment_history WHERE rescue_req_id = ? AND action IN ('ignored', 'declined')`, [req.id]);
+            const attemptedRescuers = new Set(historyRows.map(r => r.rescuer_id));
+
             let bestUser = null;
             let shortestDistance = Infinity;
 
@@ -2728,6 +2786,7 @@ async function runAIAssignment() {
                 if (busyUserIds.has(user.id)) continue;
 
                 // 1.5. Skip if rescuer has already declined or ignored this task
+                if (attemptedRescuers.has(user.id)) continue;
                 if (req.details && (req.details.includes(`[Declined by Rescuer ID: ${user.id}]`) || req.details.includes(`[Ignored by Rescuer ID: ${user.id}]`))) continue;
 
                 // 2. Find location (Prioritize logged-in/available rescuers)
@@ -2762,9 +2821,11 @@ async function runAIAssignment() {
                 const assignedName = bestUser.name;
                 const assignedPhone = bestUser.phone || bestUser.device_id || bestUser.id.toString();
 
+                const nextVersion = (req.assignment_version || 0) + 1;
+
                 // Atomic Check: Ensure it wasn't manually handled during buffer
-                const updateRes = await run(`UPDATE rescue_requests SET status = 'assigned', assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND (status = 'pending' OR status = 'partially_declined')`,
-                    [assignedUserId, req.id]);
+                const updateRes = await run(`UPDATE rescue_requests SET status = 'assigned', assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ? AND (status = 'pending' OR status = 'partially_declined')`,
+                    [assignedUserId, nextVersion, req.id]);
 
                 if (updateRes.changes === 0) {
                     continue; // Skip: Another admin manually handled it while buffer was running!
@@ -2797,7 +2858,8 @@ async function runAIAssignment() {
                     requester_name: req.name || 'Citizen',
                     requester_phone: req.phone || 'Unknown',
                     details: req.details || '',
-                    assigned_by: 'AI'
+                    assigned_by: 'AI',
+                    assignment_version: nextVersion
                 });
 
                 // ─── DUPLICATE PREVENTION: UPSERT COMMAND QUEUE ───────────────────
@@ -2805,23 +2867,23 @@ async function runAIAssignment() {
                 const existingCommand = await get(`SELECT * FROM command_queue WHERE command_payload LIKE ? OR command_payload LIKE ?`, [`%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`]);
                 
                 if (existingCommand) {
-                    await run(`UPDATE command_queue SET target_phone = ?, command_payload = ?, status = 'assigned', priority = ?, assigned_by = 'AI', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-                        [assignedPhone, cmdPayload, commandType, existingCommand.id]);
+                    await run(`UPDATE command_queue SET target_phone = ?, command_payload = ?, status = 'assigned', priority = ?, assigned_by = 'AI', updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`,
+                        [assignedPhone, cmdPayload, commandType, nextVersion, existingCommand.id]);
                     // Cancel any other active commands for the same request to prevent duplicates
                     await run(`UPDATE command_queue SET status = 'cancelled' WHERE id != ? AND (command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled', 'declined')`, [existingCommand.id, `%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`]);
                     // CRITICAL FIX: Ensure the core database request points to the new AI rescuer so the previous rescuer's combined-history clears out the task!
-                    await run(`UPDATE rescue_requests SET assigned_user_id = ?, status = 'assigned', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [assignedUserId, req.id]);
+                    await run(`UPDATE rescue_requests SET assigned_user_id = ?, status = 'assigned', updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [assignedUserId, nextVersion, req.id]);
                     const updatedCmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [existingCommand.id]);
                     broadcastToAdminAndTarget('NEW_COMMAND', updatedCmdData, bestUser.device_id); // Target specifically
                 } else {
-                    await run(`INSERT INTO command_queue (target_phone, command_type, command_payload, status, priority, assigned_by) VALUES (?, ?, ?, 'assigned', ?, 'AI')`,
-                        [assignedPhone, commandType, cmdPayload, commandType]);
+                    await run(`INSERT INTO command_queue (target_phone, command_type, command_payload, status, priority, assigned_by, assignment_version, assignment_timestamp) VALUES (?, ?, ?, 'assigned', ?, 'AI', ?, CURRENT_TIMESTAMP)`,
+                        [assignedPhone, commandType, cmdPayload, commandType, nextVersion]);
                     const newCmdId = await get('SELECT last_insert_rowid() as id');
                     if (newCmdId) {
                         // Cancel any other active commands for the same request to prevent duplicates
                         await run(`UPDATE command_queue SET status = 'cancelled' WHERE id != ? AND (command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled', 'declined')`, [newCmdId.id, `%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`]);
                         // CRITICAL FIX
-                        await run(`UPDATE rescue_requests SET assigned_user_id = ?, status = 'assigned', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [assignedUserId, req.id]);
+                        await run(`UPDATE rescue_requests SET assigned_user_id = ?, status = 'assigned', updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [assignedUserId, nextVersion, req.id]);
                         const newCmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [newCmdId.id]);
                         broadcastToAdminAndTarget('NEW_COMMAND', newCmdData, bestUser.device_id);
                     }
