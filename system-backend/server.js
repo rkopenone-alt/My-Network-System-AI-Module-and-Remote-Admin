@@ -2634,6 +2634,24 @@ async function runAIAssignment() {
         const setting = await get(`SELECT value FROM settings WHERE key = 'ai_enabled'`);
         if (!setting || setting.value !== 'true') return;
 
+        // ─── DATABASE INTEGRITY RECONCILIATION ────────────────────────────────────
+        // Auto-detect and resolve any "dangling assigned" rescue requests that have no active command queue items.
+        const assignedReqs = await all(`SELECT id FROM rescue_requests WHERE status = 'assigned'`);
+        for (const req of assignedReqs) {
+            const activeCmd = await get(`
+                SELECT id FROM command_queue 
+                WHERE status IN ('assigned', 'pending', 'accepted', 'in_progress')
+                AND (command_payload LIKE '%"rescue_req_id":' || ? || '%' OR command_payload LIKE '%"rescue_req_id":"' || ? || '"%')
+            `, [req.id, req.id]);
+            
+            if (!activeCmd) {
+                console.log(`[Reconciliation] Found dangling assigned rescue request #${req.id}. Resetting to pending.`);
+                await run(`UPDATE rescue_requests SET status = 'pending', assigned_user_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [req.id]);
+                await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [req.id]);
+            }
+        }
+        // ──────────────────────────────────────────────────────────────────────────
+
         const valSet = await get(`SELECT value FROM settings WHERE key = 'ai_interval_val'`);
         const unitSet = await get(`SELECT value FROM settings WHERE key = 'ai_interval_unit'`);
         const val = valSet ? parseInt(valSet.value) || 5 : 5;
