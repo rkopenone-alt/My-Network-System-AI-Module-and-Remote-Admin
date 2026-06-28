@@ -5591,7 +5591,9 @@ function toggleGlobalMute(muted) {
                         groupDetails = parsed.missions || c.details;
                     } catch (e) {
                         groupDetails = c.details;
-                                    const s = (c.status || '').toLowerCase();
+                    }
+                }
+                const s = (c.status || '').toLowerCase();
                 const isOngoing = ['assigned', 'accepted', 'in_progress', 'pending', 'acknowledged'].includes(s);
                 
                 let closureThumb = '-';
