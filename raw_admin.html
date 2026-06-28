@@ -3482,15 +3482,16 @@
     </div>
 
     <script>
+        const PROTOCOL = (window.location.protocol === 'http:' || window.location.protocol === 'https:') ? window.location.protocol : 'http:';
         const manualIp = localStorage.getItem('manualServerIp');
         const SERVER_IP = manualIp ? manualIp : ((window.location.protocol === 'http:' || window.location.protocol === 'https:') ? window.location.hostname : '127.0.0.1');
-        const API_BASE = \`http://\${SERVER_IP}:3001/api\`;
+        const API_BASE = `\${PROTOCOL}//\${SERVER_IP}:3001/api`;
 
         function formatMediaUrl(url) {
             if (!url) return '';
             if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
-            const base = \`http://\${SERVER_IP}:3001\`;
-            return \`\${base}\${url}\`;
+            const base = `\${PROTOCOL}//\${SERVER_IP}:3001`;
+            return `\${base}\${url}`;
         }
 
         // Timezone conversion helpers
@@ -3574,8 +3575,9 @@
         let heartbeatInterval = null;
 
         function initWebSocket() {
-            const wsUrl = `ws://${SERVER_IP}:3001`;
-            console.log(`[Admin] Connecting to WebSocket: ${wsUrl}`);
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `\${wsProtocol}//\${SERVER_IP}:3001`;
+            console.log(`[Admin] Connecting to WebSocket: \${wsUrl}`);
             try {
                 if (socket) {
                     socket.onclose = null;
@@ -7767,14 +7769,14 @@ function toggleGlobalMute(muted) {
         async function checkDetectedIp() {
             let detectedIp = null;
             try {
-                const res = await fetch(\`http://\${window.location.hostname || 'localhost'}:3001/api/server-ip\`);
+                const res = await fetch(`\${PROTOCOL}//\${window.location.hostname || 'localhost'}:3001/api/server-ip`);
                 if (res.ok) {
                     const data = await res.json();
                     detectedIp = data.ip;
                 }
             } catch (e) {
                 try {
-                    const res = await fetch(\`\${API_BASE}/server-ip\`);
+                    const res = await fetch(`\${API_BASE}/server-ip`);
                     if (res.ok) {
                         const data = await res.json();
                         detectedIp = data.ip;
@@ -9680,7 +9682,7 @@ function toggleGlobalMute(muted) {
 
 <script>
 function toggleGlobalAI(enabled) {
-    fetch(\`\${API_BASE}/api/ai/toggle\`, {
+    fetch(`\${API_BASE}/ai/toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: enabled })
@@ -9698,17 +9700,17 @@ function toggleGlobalAI(enabled) {
 function saveAIInterval() {
     const val = document.getElementById('aiIntervalVal').value;
     const unit = document.getElementById('aiIntervalUnit').value;
-    fetch(\`\${API_BASE}/api/ai/interval\`, {
+    fetch(`\${API_BASE}/ai/interval`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: val, unit: unit })
     }).then(r => r.json()).then(data => {
-        if (typeof showAdminToast === "function") showAdminToast(\`AI Interval set to \${val} \${unit}\`, 'success');
+        if (typeof showAdminToast === "function") showAdminToast(`AI Interval set to \${val} \${unit}`, 'success');
     }).catch(e => console.error(e));
 }
 
 function loadAIInterval() {
-    fetch(\`\${API_BASE}/api/ai/interval\`)
+    fetch(`\${API_BASE}/ai/interval`)
     .then(r => r.json())
     .then(data => {
         if (data && data.value) document.getElementById('aiIntervalVal').value = data.value;
