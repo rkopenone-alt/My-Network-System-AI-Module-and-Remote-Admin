@@ -65,6 +65,13 @@ The Rescue Operations System is divided into four highly-optimized, interconnect
 * **Offline Caching:** Full `localStorage` mirroring displays the rescue logs even if the app is launched in completely dead network zones.
 * **Session Preservation:** Modified clean routines safeguard `rescue_user_v3` details to avoid lockouts under harsh field environments.
 
+### 1.5. Autonomous Task Management (AI & Buffer System)
+* **AI Auto-Assignment Module:** An automated background process powered by **Google Gemini 1.5 Pro AI**. It intelligently processes live situational data, interpreting JSON telemetry payloads to assign new incoming SOS requests to the most appropriate rescuer. **The AI enforces a 50-meter GPS radius proximity constraint for assignments. It evaluates the exact coordinates of active rescuers to route the task to the nearest, most available rescuer.**
+* **Reassignment Buffer System:** Implements a dynamic fail-safe timeout logic. If an assigned rescuer goes offline, ignores the task beyond the configured buffer interval, or explicitly declines the mission, the system instantly revokes the assignment and autonomously triggers the AI to re-evaluate. **Crucially, the backend automatically clears any previous 'declined' or 'ignored' history for that specific task to ensure the AI does not falsely skip valid rescuers during reassignment loops.**
+* **Rescuer Task Siren System:** Field units receive an intrusive audio alert (siren) whenever a critical task is assigned. **To prevent phantom sirens, all dispatch commands are sent via strictly targeted WebSocket `send(deviceId)` calls, ensuring only the exact authorized rescuer receives the assignment trigger.**
+* **WebView Cache Evasion:** Prevents React Native WebView from aggressively caching mission data by implementing timestamp-based cache-busters on fetch endpoints (e.g., `?_t=${Date.now()}`), guaranteeing field units always see the exact, real-time status of reassigned or completed tasks.
+* **Web Admin UX Integrity:** Enforces visual CSS rules (like `flex-wrap` and scrollable overflow containers) across the dashboard to ensure dense tactical data and action buttons don't break the layout on smaller command screens.
+
 ---
 
 ## 2. Deployment Guide
@@ -87,7 +94,7 @@ This is the standard approach using a local Wi-Fi router or mobile hotspot.
    python sync_apps.py
    ```
 5. **Start Server:** Navigate to `system-backend` and run `npm start`.
-6. **Install APKs:** Copy files from `Output_APKs/` to your Android devices and install them.
+6. **Install APKs & Connect via Manual IP Feeding:** Copy files from `Output_APKs/` to your Android devices and install them. **Note: Because the mobile apps support manual IP configuration, rebuilding the APKs is NOT required when changing Wi-Fi networks. Simply launch the app, type the PC's new local LAN IP (e.g., `192.168.1.4`) into the connection interface, and it will connect seamlessly.**
 
 ### 2.2. Private Cellular Connection Setup
 If a Wi-Fi router is unavailable, range requirements extend across miles, or standard commercial infrastructure has collapsed, you can establish a private cellular-to-server connection using four distinct techniques.
