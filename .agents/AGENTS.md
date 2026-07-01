@@ -34,3 +34,10 @@ After completing UI changes, fixes, or modifying workflows:
 - **WebSocket Broadcasts**: Do not use generic `broadcast()` for `NEW_COMMAND`. Use `socketManager.send(deviceId, ...)` or `broadcastToAdminAndTarget()` to ensure only the assigned rescuer gets the task and siren popup.
 - **Proximity AI**: The assignment system prioritizes rescuers within a 50m radius of the emergency. If multiple rescuers are within that radius, they can be processed based on distance or assigned concurrently depending on the strategy.
 - **App IP Configurations**: Mobile APKs use a manual IP entry system to connect to the backend. Rebuilding the APKs is NOT required when changing Wi-Fi networks; the user only needs to type the new IP address into the app interface.
+
+## Future Restorations & New Laptops
+If you are operating on a newly set up laptop or a fresh clone of this repository in the future:
+1. Always read `PROJECT_WORKFLOW.md` first to understand the full operational and agentic flow.
+2. The rules in this `AGENTS.md` remain valid and will automatically guide Antigravity behavior.
+3. Ensure the environment has Node.js (v18+), Python, and JDK 17 before attempting to run the build commands (`python sync_apps.py` etc.).
+4. Treat modifications the exact same way as currently documented.
