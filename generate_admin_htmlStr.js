@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const webAdminPath = path.join(__dirname, 'system-backend', 'public', 'Web ADMIN.html');
+const webAdminPath = path.join(__dirname, 'raw_admin.html');
 const outPath = path.join(__dirname, 'admin-app', 'htmlStr.js');
 
 let htmlContent = fs.readFileSync(webAdminPath, 'utf8');

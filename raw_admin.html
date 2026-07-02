@@ -7423,7 +7423,7 @@ function toggleGlobalMute(muted) {
                         <img src="\${m.photo_url || 'official_rescuer_icon.png'}" 
                              style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid var(--border);" />
                     </td>
-                    <td style="font-weight:700; color:var(--accent); font-family: monospace;">\${m.device_id || m.serial_number || 'N/A'}</td>
+                    <td style="font-weight:700; color:var(--accent); font-family: monospace;">\${m.serial_number || m.device_id || 'N/A'}</td>
                     <td><div style="font-weight:600;">\${m.name}</div></td>
                     <td><code style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:700; color:#1e293b; border:1px solid #cbd5e1;">\${m.password || '123456'}</code></td>
                     <td>
@@ -7619,7 +7619,7 @@ function toggleGlobalMute(muted) {
                 await fetch(\`\${API_BASE}/users\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, role, phone, device_id: id, group_ids: groupIds, photo_url: photoUrl, password, ai_managed })
+                    body: JSON.stringify({ name, role, phone, serial_number: id, group_ids: groupIds, photo_url: photoUrl, password, ai_managed })
                 });
                 closeModal('addMemberModal');
                 photoInput.value = ''; // Reset file input
@@ -7636,7 +7636,7 @@ function toggleGlobalMute(muted) {
 
             document.getElementById('editMemDbId').value = user.id;
             document.getElementById('editMemName').value = user.name;
-            document.getElementById('editMemId').value = user.device_id;
+            document.getElementById('editMemId').value = user.serial_number || user.device_id || '';
             document.getElementById('editMemRole').value = user.role;
             document.getElementById('editMemPhone').value = user.phone || '';
             document.getElementById('editMemPassword').value = user.password || '';
@@ -7669,7 +7669,7 @@ function toggleGlobalMute(muted) {
                 await fetch(\`\${API_BASE}/users/\${dbId}\`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, role, phone, device_id: id, status: 'active', group_ids: groupIds, photo_url: photoUrl, password, ai_managed })
+                    body: JSON.stringify({ name, role, phone, serial_number: id, status: 'active', group_ids: groupIds, photo_url: photoUrl, password, ai_managed })
                 });
                 closeModal('editMemberModal');
                 photoInput.value = ''; // Reset file input

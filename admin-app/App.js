@@ -210,19 +210,7 @@ export default function App() {
     initializeApp();
   }, []);
 
-  useEffect(() => {
-    if (webViewRef.current && serverIp) {
-      const code = `
-        window.__SERVER_IP__ = '${serverIp}';
-        window.__API_BASE__ = 'http://${serverIp}:${SERVER_PORT}/api';
-        window.__WS_URL__ = 'ws://${serverIp}:${SERVER_PORT}';
-        localStorage.setItem('manualServerIp', '${serverIp}');
-        window.location.reload();
-        true;
-      `;
-      webViewRef.current.injectJavaScript(code);
-    }
-  }, [serverIp]);
+
 
   // Custom Camera States
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -460,6 +448,7 @@ export default function App() {
     <View style={{ flex: 1 }}>
       {!isCameraActive && <NetworkStatusIndicator isConnected={isConnected} />}
       <WebView
+        key={serverIp}
         mediaPlaybackRequiresUserAction={false}
         ref={webViewRef}
         source={{ html: htmlString, baseUrl: `http://${serverIp}:${SERVER_PORT}` }}

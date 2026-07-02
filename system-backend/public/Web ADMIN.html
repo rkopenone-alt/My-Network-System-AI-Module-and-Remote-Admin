@@ -7299,8 +7299,8 @@ function toggleGlobalMute(muted) {
                 renderGroupSidebar();
                 updateModalGroupLists();
 
-                if (!selectedGroupId && currentGroups.length > 0) {
-                    switchGroup(currentGroups[0].id);
+                if (!selectedGroupId) {
+                    switchGroup('all');
                 }
             } catch (e) { console.error("Error fetching groups", e); }
         }
@@ -7320,6 +7320,7 @@ function toggleGlobalMute(muted) {
             const tbody = document.getElementById('publicTableBody');
             if (!tbody) return;
             const publicUsers = currentUsers.filter(u => u.role === 'public');
+            publicUsers.sort((a, b) => (a.serial_number || '').localeCompare(b.serial_number || '', undefined, {numeric: true}));
             tbody.innerHTML = publicUsers.map((m, index) => `
                 <tr>
                     <td style="font-weight: 800; color: var(--text-muted);">${String(index + 1).padStart(2, '0')}</td>
@@ -7404,13 +7405,17 @@ function toggleGlobalMute(muted) {
 
             if (el) el.classList.add('active');
 
+            const btnAssignExisting = document.querySelector('button[onclick="openAssignExistingModal()"]');
+
             if (groupId === 'all') {
                 document.getElementById('currentGroupName').innerText = 'All Members';
+                if (btnAssignExisting) btnAssignExisting.style.display = 'none';
                 renderMembers('all');
             } else {
                 const group = currentGroups.find(g => g.id === groupId);
                 if (group) {
                     document.getElementById('currentGroupName').innerText = group.group_name;
+                    if (btnAssignExisting) btnAssignExisting.style.display = 'inline-flex';
                     renderMembers(groupId);
                 }
             }
@@ -7427,6 +7432,8 @@ function toggleGlobalMute(muted) {
                 members = currentUsers.filter(u => u.groups && u.groups.some(g => g.id === groupId));
             }
 
+            members.sort((a, b) => (a.serial_number || '').localeCompare(b.serial_number || '', undefined, {numeric: true}));
+
             tbody.innerHTML = members.map((m, index) => {
                 const groupTags = m.groups && m.groups.length > 0
                     ? m.groups.map(g => `<span class="tag tag-blue" style="font-size:10px; padding:2px 6px; background:#eff6ff; color:#2563eb; border:1px solid #dbeafe;">${g.group_name}</span>`).join('')
@@ -7439,7 +7446,7 @@ function toggleGlobalMute(muted) {
                         <img src="${m.photo_url || 'official_rescuer_icon.png'}" 
                              style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid var(--border);" />
                     </td>
-                    <td style="font-weight:700; color:var(--accent); font-family: monospace;">${m.device_id || m.serial_number || 'N/A'}</td>
+                    <td style="font-weight:700; color:var(--accent); font-family: monospace;">${m.serial_number || m.device_id || 'N/A'}</td>
                     <td><div style="font-weight:600;">${m.name}</div></td>
                     <td><div style="font-weight:600; font-family: monospace;">${m.phone || 'N/A'}</div></td>
                     <td><code style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:700; color:#1e293b; border:1px solid #cbd5e1;">${m.password || '123456'}</code></td>
@@ -7548,24 +7555,25 @@ function toggleGlobalMute(muted) {
         }
 
         function openAiAssignModal() {
+            let members = [];
             if (selectedGroupId === 'all') {
-                alert("Please select a specific group from the left sidebar first.");
-                return;
+                document.getElementById('aiAssignTargetGroupName').innerText = 'All Members';
+                members = currentUsers.filter(u => u.role !== 'public');
+            } else {
+                const group = currentGroups.find(g => g.id === selectedGroupId);
+                if (!group) return;
+                document.getElementById('aiAssignTargetGroupName').innerText = group.group_name;
+                members = currentUsers.filter(u => u.groups && u.groups.some(g => g.id === selectedGroupId));
             }
-            const group = currentGroups.find(g => g.id === selectedGroupId);
-            if (!group) return;
 
-            document.getElementById('aiAssignTargetGroupName').innerText = group.group_name;
             const list = document.getElementById('aiMembersList');
-
-            const members = currentUsers.filter(u => u.groups && u.groups.some(g => g.id === selectedGroupId));
 
             list.innerHTML = members.map(m => `
                 <label style="display:flex; gap:10px; align-items:center; padding:8px; border-bottom:1px solid var(--border); cursor:pointer;">
                     <input type="checkbox" name="aiUserSelect" value="${m.id}" ${m.ai_managed === 1 || m.ai_managed === true ? 'checked' : ''}>
                     <div style="flex:1;">
                         <div style="font-weight:600; font-size:14px;">${m.name}</div>
-                        <div style="font-size:12px; color:var(--text-muted);">${m.role} • ${m.device_id || m.serial_number || 'N/A'}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">${m.role} • ${m.serial_number || m.device_id || 'N/A'}</div>
                     </div>
                 </label>
             `).join('');
@@ -7609,6 +7617,11 @@ function toggleGlobalMute(muted) {
         }
 
         function openMemberModal() {
+            document.getElementById('newMemName').value = '';
+            document.getElementById('newMemId').value = 'MEM-' + String(currentUsers.filter(u => u.role !== 'public').length + 1).padStart(2, '0');
+            document.getElementById('newMemPhone').value = '';
+            document.getElementById('newMemPassword').value = '';
+            
             document.getElementById('addMemberModal').style.display = 'flex';
             document.getElementById('newMemAiManaged').checked = false;
             const checks = document.querySelectorAll('#addMemberGroupsList input[name="groupSelect"]');
@@ -7633,11 +7646,15 @@ function toggleGlobalMute(muted) {
             }
 
             try {
-                await fetch(`${API_BASE}/users`, {
+                const res = await fetch(`${API_BASE}/users`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, role, phone, device_id: id, group_ids: groupIds, photo_url: photoUrl, password, ai_managed })
+                    body: JSON.stringify({ name, role, phone, serial_number: id, group_ids: groupIds, photo_url: photoUrl, password, ai_managed })
                 });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    return alert("Error saving member: " + (err.error || res.statusText));
+                }
                 closeModal('addMemberModal');
                 photoInput.value = ''; // Reset file input
                 document.getElementById('newMemPassword').value = '';
@@ -7653,7 +7670,7 @@ function toggleGlobalMute(muted) {
 
             document.getElementById('editMemDbId').value = user.id;
             document.getElementById('editMemName').value = user.name;
-            document.getElementById('editMemId').value = user.device_id;
+            document.getElementById('editMemId').value = user.serial_number || user.device_id || '';
             document.getElementById('editMemRole').value = user.role;
             document.getElementById('editMemPhone').value = user.phone || '';
             document.getElementById('editMemPassword').value = user.password || '';
@@ -7683,11 +7700,15 @@ function toggleGlobalMute(muted) {
             }
 
             try {
-                await fetch(`${API_BASE}/users/${dbId}`, {
+                const res = await fetch(`${API_BASE}/users/${dbId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, role, phone, device_id: id, status: 'active', group_ids: groupIds, photo_url: photoUrl, password, ai_managed })
+                    body: JSON.stringify({ name, role, phone, serial_number: id, status: 'active', group_ids: groupIds, photo_url: photoUrl, password, ai_managed })
                 });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    return alert("Error updating member: " + (err.error || res.statusText));
+                }
                 closeModal('editMemberModal');
                 photoInput.value = ''; // Reset file input
                 document.getElementById('editMemAiManaged').checked = false;
@@ -7730,11 +7751,15 @@ function toggleGlobalMute(muted) {
             }
 
             try {
-                await fetch(`${API_BASE}/users`, {
+                const res = await fetch(`${API_BASE}/users`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, role: 'public', phone, device_id: phone, photo_url: photoUrl, password, serial_number })
                 });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    return alert("Error saving public user: " + (err.error || res.statusText));
+                }
                 closeModal('addPublicModal');
                 fetchUsers();
             } catch (e) { console.error(e); }
@@ -7768,12 +7793,16 @@ function toggleGlobalMute(muted) {
             }
 
             try {
-                await fetch(`${API_BASE}/users/${dbId}`, {
+                const res = await fetch(`${API_BASE}/users/${dbId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     // Keeping device_id as phone for public users to maintain sync flow
                     body: JSON.stringify({ name, role: 'public', phone, device_id: phone, status: 'active', photo_url: photoUrl, password, serial_number })
                 });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    return alert("Error updating public user: " + (err.error || res.statusText));
+                }
                 closeModal('editPublicModal');
                 fetchUsers();
             } catch (e) { console.error(e); }

@@ -46,7 +46,7 @@ const wss = new WebSocketServer({ server });
 const JWT_SECRET = 'rescue_secret_key_2026';
 
 // ─── Database Setup ──────────────────────────────────────────────────────────
-const db = new sqlite3.Database('./rescue.db', (err) => {
+const db = new sqlite3.Database(path.join(__dirname, 'rescue.db'), (err) => {
     if (err) {
         console.error('DB Error:', err);
     } else {
@@ -1129,7 +1129,8 @@ app.get('/api/users/:id', async (req, res) => {
 });
 
 app.post('/api/users', async (req, res) => {
-    const { name, role, phone, device_id, group_ids, photo_url, password, serial_number, ai_managed } = req.body;
+    let { name, role, phone, device_id, group_ids, photo_url, password, serial_number, ai_managed } = req.body;
+    phone = phone || null;
     try {
         const result = await run(`INSERT INTO users (name, role, phone, device_id, photo_url, password, serial_number, ai_managed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [name, role, phone, device_id, photo_url, password, serial_number, ai_managed ? 1 : 0]);
         const userId = result.lastID;
@@ -1150,7 +1151,7 @@ app.post('/api/users', async (req, res) => {
 });
 
 app.put('/api/users/:id', async (req, res) => {
-    const { name, role, phone, device_id, status, group_ids, photo_url, password, serial_number, ai_managed } = req.body;
+    let { name, role, phone, device_id, status, group_ids, photo_url, password, serial_number, ai_managed } = req.body;
     const userId = req.params.id;
     try {
         const oldUser = await get(`SELECT * FROM users WHERE id = ?`, [userId]);
@@ -1158,7 +1159,7 @@ app.put('/api/users/:id', async (req, res) => {
 
         const safeName = name !== undefined ? name : oldUser.name;
         const safeRole = role !== undefined ? role : oldUser.role;
-        const safePhone = phone !== undefined ? phone : oldUser.phone;
+        const safePhone = (phone !== undefined && phone !== "") ? phone : (phone === "" ? null : oldUser.phone);
         const safeDeviceId = device_id !== undefined ? device_id : oldUser.device_id;
         const safeStatus = status !== undefined ? status : oldUser.status;
         const safePhotoUrl = photo_url !== undefined ? photo_url : oldUser.photo_url;
