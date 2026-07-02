@@ -41,3 +41,6 @@ If you are operating on a newly set up laptop or a fresh clone of this repositor
 2. The rules in this `AGENTS.md` remain valid and will automatically guide Antigravity behavior.
 3. Ensure the environment has Node.js (v18+), Python, and JDK 17 before attempting to run the build commands (`python sync_apps.py` etc.).
 4. Treat modifications the exact same way as currently documented.
+
+## Agent Guidelines
+- **Always Check Files**: The AI agent must always check and verify all files thoroughly whenever needed before making assumptions or modifying logic.
