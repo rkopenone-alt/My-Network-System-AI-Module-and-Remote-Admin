@@ -1934,7 +1934,7 @@
 
                     if (res.ok) {
                         const data = await res.json();
-                        if (!data.user || data.user.role !== 'public') {
+                        if (!data.user || (data.user.role || '').toLowerCase() !== 'public') {
                             err.innerText = "ACCESS DENIED - CITIZENS ONLY";
                             err.style.display = 'block';
                             this.showLoader(false);

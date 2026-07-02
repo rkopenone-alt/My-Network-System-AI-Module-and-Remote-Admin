@@ -1332,7 +1332,7 @@
 
                     if (res.ok) {
                         const data = await res.json();
-                        if (data.user.role !== 'rescuer') {
+                        if (!data.user || (data.user.role || '').toLowerCase() === 'public') {
                             err.innerText = "ACCESS DENIED - OFFICERS ONLY";
                             err.style.display = 'block';
                             this.showLoader(false);
