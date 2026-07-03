@@ -2634,6 +2634,21 @@
                             if (this.navPolyline && this.activeMission) {
                                 this.navPolyline.setLatLngs([[this.pos.lat, this.pos.lng], [this.activeMission.lat, this.activeMission.lng]]);
                             }
+                            
+                            // Push live location update instantly via WebSocket for low-latency synchronization (Simulation mode)
+                            if (this.ws && this.ws.readyState === WebSocket.OPEN && this.user) {
+                                this.ws.send(JSON.stringify({
+                                    type: 'LIVE_LOCATION_UPDATE',
+                                    deviceId: this.user.device_id || this.user.serial_number || 'MEM-01',
+                                    name: this.user.name,
+                                    lat: this.pos.lat,
+                                    lng: this.pos.lng,
+                                    speed: 0,
+                                    heading: 0,
+                                    accuracy: 10,
+                                    status: this.activeMission ? 'assigned' : 'available'
+                                }));
+                            }
                         }, 2000);
                     }
                 };
@@ -2647,6 +2662,21 @@
                         if (this.rescuerMarker) this.rescuerMarker.setLatLng([this.pos.lat, this.pos.lng]);
                         if (this.navPolyline && this.activeMission) {
                             this.navPolyline.setLatLngs([[this.pos.lat, this.pos.lng], [this.activeMission.lat, this.activeMission.lng]]);
+                        }
+                        
+                        // Push live location update instantly via WebSocket for low-latency synchronization
+                        if (this.ws && this.ws.readyState === WebSocket.OPEN && this.user) {
+                            this.ws.send(JSON.stringify({
+                                type: 'LIVE_LOCATION_UPDATE',
+                                deviceId: this.user.device_id || this.user.serial_number || 'MEM-01',
+                                name: this.user.name,
+                                lat: this.pos.lat,
+                                lng: this.pos.lng,
+                                speed: position.coords.speed || 0,
+                                heading: position.coords.heading || 0,
+                                accuracy: position.coords.accuracy || 0,
+                                status: this.activeMission ? 'assigned' : 'available'
+                            }));
                         }
                     }, (err) => {
                         console.warn("Rescuer GPS error, falling back to simulation:", err);

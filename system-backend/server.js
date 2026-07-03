@@ -532,6 +532,13 @@ wss.on('connection', (ws) => {
                     [deviceId, group_id, name, lat, lng]);
                 socketManager.broadcast('LIVE_LOCATION_UPDATE', { deviceId, name, lat, lng, group_id });
             }
+
+            if (type === 'LIVE_LOCATION_UPDATE') {
+                const parsedMsg = JSON.parse(message);
+                await run(`INSERT OR REPLACE INTO rescuer_locations (device_id, group_id, name, lat, lng, last_updated) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                    [deviceId, 1, parsedMsg.name || 'Rescuer', parsedMsg.lat, parsedMsg.lng]);
+                socketManager.broadcast('LIVE_LOCATION_UPDATE', parsedMsg);
+            }
         } catch (e) { console.error('WS Message Error:', e); }
     });
 
@@ -1345,7 +1352,7 @@ app.post('/api/sync', async (req, res) => {
     if (location) {
         db.run(`INSERT OR REPLACE INTO rescuer_locations (device_id, group_id, name, lat, lng, last_updated) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
             [effectiveDeviceId, location.groupId, location.name || (user ? user.name : null), location.lat, location.lng]);
-        broadcast('RESCUER_UPDATE', { deviceId: effectiveDeviceId, ...location });
+        broadcast('LIVE_LOCATION_UPDATE', { deviceId: effectiveDeviceId, ...location });
     }
 
     if (sosAlert) {
