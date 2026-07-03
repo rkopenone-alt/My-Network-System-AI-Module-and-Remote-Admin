@@ -3690,7 +3690,7 @@ export const htmlString = `<!DOCTYPE html>
                         const updateTypes = [
                             'NEW_RESCUE_REQUEST', 'RESCUE_REQUEST_ACCEPTED', 'RESCUE_REQUEST_DECLINED',
                             'RESCUE_REQUEST_UPDATE', 'COMMAND_STATUS_UPDATE', 'RESCUE_REQUEST_COMPLETED',
-                            'SOS_ALERT', 'RESCUER_UPDATE', 'NEW_COMMAND', 'AI_STATUS_UPDATE',
+                            'SOS_ALERT', 'NEW_COMMAND', 'AI_STATUS_UPDATE',
                             'RESCUE_REQUEST_IGNORED_REASSIGN', 'COMMAND_REASSIGNED', 'RESCUE_REQUEST_DECLINED_REASSIGN',
                             'RESCUER_STATUS_CHANGE'
                         ];
@@ -4755,14 +4755,21 @@ function toggleGlobalMute(muted) {
                         const assignedCmd = activeCmds.find(c => c.status === 'accepted' && c.target_phone === r.phone);
                         const missionInfo = assignedTask ? assignedTask.type.toUpperCase() : (assignedCmd ? 'HQ DIRECTIVE' : 'AVAILABLE');
 
-                        const rescuerIconHtml = \\\`<div style="background:url('official_rescuer_icon.png'); background-size:cover; width:100%; height:100%; border-radius:50%;"></div>\\\`;
                         let statusText = 'online';
                         let isOffline = false;
+                        let ringColor = '#3b82f6'; // Blue: Online & Available
+                        
                         if (r.status === 'offline' || r.live_connected === false) {
                             statusText = '⚠️ Signal Lost / Offline';
                             isOffline = true;
+                            ringColor = '#9ca3af'; // Grey: Offline
+                        } else if (assignedTask || assignedCmd) {
+                            ringColor = '#ef4444'; // Red: Online & Assigned
                         }
-                        const m = addMarker(r.lat, r.lng, 'rescuer', rescuerIconHtml, \\\`Rescuer: \\\${r.name}\\\`, r.name, false, false, r.id, false, statusText, null, r.serial_number || r.phone, missionInfo);
+
+                        const rescuerIconHtml = \`<div style="background:url('official_rescuer_icon.png') center/cover; width:100%; height:100%; border-radius:50%; border: 3px solid \${ringColor}; box-shadow: 0 0 6px \${ringColor}; box-sizing: border-box;"></div>\`;
+
+                        const m = addMarker(r.lat, r.lng, 'rescuer', rescuerIconHtml, \`Rescuer: \${r.name}\`, r.name, false, false, r.id, false, statusText, null, r.serial_number || r.phone, missionInfo);
 
                         if (isOffline) {
                             m.setOpacity(0.6); // Gray out slightly if offline

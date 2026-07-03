@@ -210,7 +210,19 @@ export default function App() {
     initializeApp();
   }, []);
 
-
+  useEffect(() => {
+    if (webViewRef.current && serverIp) {
+      const code = `
+        window.__SERVER_IP__ = '${serverIp}';
+        window.__API_BASE__ = 'http://${serverIp}:${SERVER_PORT}/api';
+        window.__WS_URL__ = 'ws://${serverIp}:${SERVER_PORT}';
+        localStorage.setItem('manualServerIp', '${serverIp}');
+        window.location.reload();
+        true;
+      `;
+      webViewRef.current.injectJavaScript(code);
+    }
+  }, [serverIp]);
 
   // Custom Camera States
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -342,6 +354,12 @@ export default function App() {
     true;
   `;
 
+  // Dynamically inject the serverIp into the compiled HTML string before rendering
+  const processedHtml = htmlString.replace(
+    /const SERVER_IP = manualIp \? manualIp : \(\(window\.location\.protocol === ['"]http:['"] \|\| window\.location\.protocol === ['"]https:['"]\) \? window\.location\.hostname : ['"]127\.0\.0\.1['"]\);/,
+    `const SERVER_IP = '${serverIp}';`
+  );
+
   if (hasPermission === null && appState === 'DASHBOARD') {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' }}>
@@ -451,7 +469,7 @@ export default function App() {
         key={serverIp}
         mediaPlaybackRequiresUserAction={false}
         ref={webViewRef}
-        source={{ html: htmlString, baseUrl: `http://${serverIp}:${SERVER_PORT}` }}
+        source={{ html: processedHtml, baseUrl: `http://${serverIp}:${SERVER_PORT}` }}
         style={{ flex: 1 }}
         originWhitelist={['*']}
         javaScriptEnabled={true}
