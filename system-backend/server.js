@@ -1794,7 +1794,7 @@ app.put('/api/rescue-requests/:id/decline', async (req, res) => {
         const targetStatus = rescuer ? 'partially_declined' : 'declined';
 
         await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [targetStatus, descAppend, nextVersion, req.params.id]);
-        await run(`UPDATE command_queue SET status = 'declined', updated_at = CURRENT_TIMESTAMP, assignment_version = ? WHERE (command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled')`, [nextVersion, `%"rescue_req_id":${req.params.id}%`, `%"rescue_req_id":"${req.params.id}"%`]);
+        await run(`UPDATE command_queue SET status = 'declined', updated_at = CURRENT_TIMESTAMP, assignment_version = ? WHERE (command_payload LIKE ? OR command_payload LIKE ? OR command_payload LIKE ?) AND status NOT IN ('completed', 'cancelled')`, [nextVersion, `%"rescue_req_id":${req.params.id},%`, `%"rescue_req_id":${req.params.id}}%`, `%"rescue_req_id":"${req.params.id}"%`]);
         if (rescuer) {
             await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'declined')`, [req.params.id, rescuer.id]);
             broadcastToAdminAndTarget('TASK_REVOKED', { task_id: req.params.id, old_rescuer_id: rescuer.id, new_assignment_version: nextVersion }, rescuer.device_id);
@@ -1864,7 +1864,7 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
             compImageUrl = saveCompletionImage(completion_image);
         }
 
-        const existingCommand = await get(`SELECT * FROM command_queue WHERE command_payload LIKE ? OR command_payload LIKE ?`, [`%"rescue_req_id":${req.params.id}%`, `%"rescue_req_id":"${req.params.id}"%`]);
+        const existingCommand = await get(`SELECT * FROM command_queue WHERE command_payload LIKE ? OR command_payload LIKE ? OR command_payload LIKE ?`, [`%"rescue_req_id":${req.params.id},%`, `%"rescue_req_id":${req.params.id}}%`, `%"rescue_req_id":"${req.params.id}"%`]);
 
         if (compImageUrl) {
             if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
@@ -2202,7 +2202,7 @@ app.put('/api/commands/:id/status', async (req, res) => {
             rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
         }
         if (!cmdData) return res.status(404).json({ error: 'Command not found' });
-        if (['ignored', 'cancelled', 'reassigned'].includes(cmdData.status) && status !== 'declined') {
+        if (['ignored', 'cancelled', 'reassigned', 'closed', 'completed'].includes(cmdData.status) && status !== 'declined') {
             return res.status(403).json({ error: 'Command is no longer active or has been revoked.' });
         }
         if (rescuer && !cmdData.group_id) {
@@ -2277,22 +2277,22 @@ app.put('/api/commands/:id/status', async (req, res) => {
 
                     if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
                         if (compImageUrl) {
-                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [reqFinalStatus, compImageUrl, rescuer.id, payload.rescue_req_id]);
+                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status NOT IN ('closed', 'completed', 'finished', 'cancelled')`, [reqFinalStatus, compImageUrl, rescuer.id, payload.rescue_req_id]);
                         } else {
-                            await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [reqFinalStatus, rescuer.id, payload.rescue_req_id]);
+                            await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status NOT IN ('closed', 'completed', 'finished', 'cancelled')`, [reqFinalStatus, rescuer.id, payload.rescue_req_id]);
                         }
                     } else {
                         if (setAssignedNull) {
                             if (compImageUrl) {
-                                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [reqFinalStatus, compImageUrl, descAppend, payload.rescue_req_id]);
+                                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status NOT IN ('closed', 'completed', 'finished', 'cancelled')`, [reqFinalStatus, compImageUrl, descAppend, payload.rescue_req_id]);
                             } else {
-                                await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [reqFinalStatus, descAppend, payload.rescue_req_id]);
+                                await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status NOT IN ('closed', 'completed', 'finished', 'cancelled')`, [reqFinalStatus, descAppend, payload.rescue_req_id]);
                             }
                         } else {
                             if (compImageUrl) {
-                                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [reqFinalStatus, compImageUrl, payload.rescue_req_id]);
+                                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status NOT IN ('closed', 'completed', 'finished', 'cancelled')`, [reqFinalStatus, compImageUrl, payload.rescue_req_id]);
                             } else {
-                                await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [reqFinalStatus, payload.rescue_req_id]);
+                                await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status NOT IN ('closed', 'completed', 'finished', 'cancelled')`, [reqFinalStatus, payload.rescue_req_id]);
                             }
                         }
                     }
@@ -2328,22 +2328,22 @@ app.put('/api/commands/:id/status', async (req, res) => {
 
                     if (['accepted', 'in_progress', 'completed'].includes(status) && rescuer) {
                         if (compImageUrl) {
-                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, compImageUrl, rescuer.id, ...ids]);
+                            await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders}) AND status NOT IN ('closed', 'completed', 'finished', 'cancelled')`, [reqFinalStatus, compImageUrl, rescuer.id, ...ids]);
                         } else {
-                            await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, rescuer.id, ...ids]);
+                            await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders}) AND status NOT IN ('closed', 'completed', 'finished', 'cancelled')`, [reqFinalStatus, rescuer.id, ...ids]);
                         }
                     } else {
                         if (setAssignedNull) {
                             if (compImageUrl) {
-                                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, compImageUrl, descAppend, ...ids]);
+                                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders}) AND status NOT IN ('closed', 'completed', 'finished', 'cancelled')`, [reqFinalStatus, compImageUrl, descAppend, ...ids]);
                             } else {
-                                await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, descAppend, ...ids]);
+                                await run(`UPDATE rescue_requests SET status = ?, assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders}) AND status NOT IN ('closed', 'completed', 'finished', 'cancelled')`, [reqFinalStatus, descAppend, ...ids]);
                             }
                         } else {
                             if (compImageUrl) {
-                                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, compImageUrl, ...ids]);
+                                await run(`UPDATE rescue_requests SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders}) AND status NOT IN ('closed', 'completed', 'finished', 'cancelled')`, [reqFinalStatus, compImageUrl, ...ids]);
                             } else {
-                                await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [reqFinalStatus, ...ids]);
+                                await run(`UPDATE rescue_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders}) AND status NOT IN ('closed', 'completed', 'finished', 'cancelled')`, [reqFinalStatus, ...ids]);
                             }
                         }
                     }
@@ -2717,8 +2717,8 @@ async function runAIAssignment() {
             const activeCmd = await get(`
                 SELECT id FROM command_queue 
                 WHERE status IN ('assigned', 'pending', 'accepted', 'in_progress')
-                AND (command_payload LIKE '%"rescue_req_id":' || ? || '%' OR command_payload LIKE '%"rescue_req_id":"' || ? || '"%')
-            `, [req.id, req.id]);
+                AND (command_payload LIKE '%"rescue_req_id":' || ? || ',%' OR command_payload LIKE '%"rescue_req_id":' || ? || '}%' OR command_payload LIKE '%"rescue_req_id":"' || ? || '"%')
+            `, [req.id, req.id, req.id]);
             
             if (!activeCmd) {
                 console.log(`[Reconciliation] Found dangling assigned rescue request #${req.id}. Resetting to pending.`);
@@ -2752,7 +2752,7 @@ async function runAIAssignment() {
         const timedOutCommands = await all(`
             SELECT cq.*, rr.id as req_id, rr.details as req_details
             FROM command_queue cq
-            JOIN rescue_requests rr ON cq.command_payload LIKE '%"rescue_req_id":' || rr.id || '%' OR cq.command_payload LIKE '%"rescue_req_id":"' || rr.id || '"%'
+            JOIN rescue_requests rr ON (cq.command_payload LIKE '%"rescue_req_id":' || rr.id || ',%' OR cq.command_payload LIKE '%"rescue_req_id":' || rr.id || '}%' OR cq.command_payload LIKE '%"rescue_req_id":"' || rr.id || '"%')
             WHERE cq.status = 'assigned' AND cq.assigned_by = 'AI'
             AND (strftime('%s', 'now') - strftime('%s', COALESCE(cq.updated_at, cq.created_at))) >= ?
             AND rr.status = 'assigned'
@@ -2769,7 +2769,7 @@ async function runAIAssignment() {
                 const reqObj = await get(`SELECT assignment_version FROM rescue_requests WHERE id = ?`, [cmd.req_id]);
                 const nextVersion = (reqObj ? reqObj.assignment_version || 0 : 0) + 1;
 
-                await run(`UPDATE rescue_requests SET status = 'pending', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [descAppend, nextVersion, cmd.req_id]);
+                await run(`UPDATE rescue_requests SET status = 'pending', assigned_user_id = NULL, details = coalesce(details, '') || ?, updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ? AND status NOT IN ('completed', 'closed', 'finished', 'cancelled')`, [descAppend, nextVersion, cmd.req_id]);
                 await run(`UPDATE command_queue SET status = 'ignored', updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`, [nextVersion, cmd.id]);
                 await run(`INSERT INTO sos_assignment_history (rescue_req_id, rescuer_id, action) VALUES (?, ?, 'ignored')`, [cmd.req_id, rescuer ? rescuer.id : null]);
                 await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [cmd.req_id]);
@@ -2811,7 +2811,7 @@ async function runAIAssignment() {
         for (const req of pendingRequests) {
 
             const historyRows = await all(`SELECT DISTINCT rescuer_id FROM sos_assignment_history WHERE rescue_req_id = ? AND action IN ('ignored', 'declined')`, [req.id]);
-            const attemptedRescuers = new Set(historyRows.map(r => r.rescuer_id));
+            const attemptedRescuers = new Set(historyRows.map(r => String(r.rescuer_id)));
 
             let eligibleUsers = [];
 
@@ -2821,7 +2821,7 @@ async function runAIAssignment() {
                 if (busyUserIds.has(user.id)) continue;
 
                 // 1.5. Skip if rescuer has already declined or ignored this task
-                if (attemptedRescuers.has(user.id)) continue;
+                if (attemptedRescuers.has(String(user.id))) continue;
                 if (req.details && (req.details.includes(`[Declined by Rescuer ID: ${user.id}]`) || req.details.includes(`[Ignored by Rescuer ID: ${user.id}]`))) continue;
 
                 // 2. Find location (Prioritize logged-in/available rescuers)
@@ -2910,7 +2910,7 @@ async function runAIAssignment() {
                 });
 
                 // ─── DUPLICATE PREVENTION: UPSERT COMMAND QUEUE FOR THIS SPECIFIC TARGET ───
-                const existingCommand = await get(`SELECT * FROM command_queue WHERE (command_payload LIKE ? OR command_payload LIKE ?) AND target_phone = ?`, [`%"rescue_req_id":${req.id}%`, `%"rescue_req_id":"${req.id}"%`, assignedPhone]);
+                const existingCommand = await get(`SELECT * FROM command_queue WHERE (command_payload LIKE ? OR command_payload LIKE ? OR command_payload LIKE ?) AND target_phone = ?`, [`%"rescue_req_id":${req.id},%`, `%"rescue_req_id":${req.id}}%`, `%"rescue_req_id":"${req.id}"%`, assignedPhone]);
                 
                 if (existingCommand) {
                     await run(`UPDATE command_queue SET target_phone = ?, command_payload = ?, status = 'assigned', priority = ?, assigned_by = 'AI', updated_at = CURRENT_TIMESTAMP, assignment_version = ?, assignment_timestamp = CURRENT_TIMESTAMP WHERE id = ?`,
