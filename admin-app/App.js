@@ -354,11 +354,8 @@ export default function App() {
     true;
   `;
 
-  // Dynamically inject the serverIp into the compiled HTML string before rendering
-  const processedHtml = htmlString.replace(
-    /const SERVER_IP = manualIp \? manualIp : \(\(window\.location\.protocol === ['"]http:['"] \|\| window\.location\.protocol === ['"]https:['"]\) \? window\.location\.hostname : ['"]127\.0\.0\.1['"]\);/,
-    `const SERVER_IP = '${serverIp}';`
-  );
+  // Dynamically inject the serverIp into the compiled HTML string before rendering (legacy comment)
+  const processedHtml = htmlString;
 
   if (hasPermission === null && appState === 'DASHBOARD') {
     return (

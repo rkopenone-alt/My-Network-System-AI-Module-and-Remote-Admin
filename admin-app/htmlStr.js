@@ -599,6 +599,7 @@ export const htmlString = `<!DOCTYPE html>
 
         .actionable-actions {
             display: flex;
+            flex-wrap: wrap;
             gap: 6px;
             margin-top: 8px;
         }
@@ -1195,7 +1196,7 @@ export const htmlString = `<!DOCTYPE html>
                 const queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
                 if (queue.length === 0) return;
                 
-                console.log(\\\`[Sync Engine] Processing \\\${queue.length} queued requests...\\\`);
+                console.log(\`[Sync Engine] Processing \${queue.length} queued requests...\`);
                 
                 let successCount = 0;
                 let newQueue = [...queue];
@@ -1221,7 +1222,7 @@ export const htmlString = `<!DOCTYPE html>
                 
                 localStorage.setItem(QUEUE_KEY, JSON.stringify(newQueue));
                 if (successCount > 0 && typeof showAdminToast === 'function') {
-                    showAdminToast(\\\`Reconnected: Synced \\\${successCount} offline command(s) to Web Admin server\\\`, 'success');
+                    showAdminToast(\`Reconnected: Synced \${successCount} offline command(s) to Web Admin server\`, 'success');
                 }
             }
 
@@ -1283,74 +1284,6 @@ export const htmlString = `<!DOCTYPE html>
 
         })();
     </script>
-
-<script>
-// --- OFFLINE SYNC WRAPPER ---
-(function() {
-    const originalFetch = window.fetch;
-    window.offlineQueue = JSON.parse(localStorage.getItem('adminOfflineQueue') || '[]');
-
-    function saveQueue() {
-        localStorage.setItem('adminOfflineQueue', JSON.stringify(window.offlineQueue));
-    }
-
-    async function processQueue() {
-        if (window.offlineQueue.length === 0) return;
-        console.log('[Offline Sync] Processing queue...', window.offlineQueue.length);
-        const queueToProcess = [...window.offlineQueue];
-        window.offlineQueue = [];
-        saveQueue();
-
-        let syncedCount = 0;
-        for (const item of queueToProcess) {
-            try {
-                await originalFetch(item.url, item.options);
-                console.log('[Offline Sync] Synced:', item.url);
-                syncedCount++;
-            } catch (e) {
-                console.error('[Offline Sync] Failed to sync, requeueing:', item.url);
-                window.offlineQueue.push(item);
-                saveQueue();
-            }
-        }
-        if (syncedCount > 0 && window.ReactNativeWebView) {
-             window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'OFFLINE_SYNCED', count: syncedCount }));
-        }
-    }
-
-    window.fetch = async function(url, options) {
-        // Only intercept modifying requests
-        if (options && ['POST', 'PUT', 'DELETE'].includes(options.method)) {
-            try {
-                const response = await originalFetch(url, options);
-                // If successful, try processing anything that was queued
-                processQueue();
-                return response;
-            } catch (error) {
-                console.warn('[Offline Sync] Network failed. Queuing request:', url);
-                window.offlineQueue.push({ url, options });
-                saveQueue();
-                if (window.ReactNativeWebView) {
-                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'OFFLINE_QUEUED', length: window.offlineQueue.length }));
-                }
-                // Return a mock successful response so the UI doesn't break
-                return new Response(JSON.stringify({ success: true, queued: true }), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
-        }
-        return originalFetch(url, options);
-    };
-
-    // Listen for online events
-    window.addEventListener('online', processQueue);
-    
-    // Also try processing queue on load
-    setTimeout(processQueue, 2000);
-})();
-</script>
-
 
 <script>
 // --- OFFLINE SYNC WRAPPER ---
@@ -1620,12 +1553,9 @@ export const htmlString = `<!DOCTYPE html>
             </div>
         </div>
         
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; margin-right: 16px;">
+        <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; margin-right: 16px;">
             <button id="globalAiBtn" onclick="toggleGlobalAI(this.dataset.enabled !== 'true')" data-enabled="false" style="display: flex; align-items: center; justify-content: center; padding: 6px 16px; border-radius: 8px; font-weight: 900; font-size: 14px; border: none; cursor: pointer; transition: 0.3s; background-color: #ef4444; color: white; min-width: 140px;">
                 <i data-lucide="cpu" style="width:18px; margin-right:6px;"></i> AI OFFLINE
-            </button>
-            <button id="globalMuteBtn" onclick="toggleGlobalMute(this.dataset.muted === 'true')" data-muted="false" style="display: flex; align-items: center; justify-content: center; padding: 6px 16px; border-radius: 8px; font-weight: 900; font-size: 14px; border: none; cursor: pointer; transition: 0.3s; background-color: #22c55e; color: white; min-width: 140px;">
-                <i data-lucide="volume-2" style="width:18px; margin-right:6px;"></i> SOUND ON
             </button>
         </div>
 
@@ -1683,10 +1613,10 @@ export const htmlString = `<!DOCTYPE html>
                         <label class="input-label">Task Priority</label>
                         <div style="display:flex;gap:8px;margin-bottom:2px;">
                             <button id="btnNormal" onclick="setTaskPriority('normal')" class="btn btn-outline"
-                                style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">📋
+                                style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">
                                 Normal</button>
                             <button id="btnCritical" onclick="setTaskPriority('critical')" class="btn btn-outline"
-                                style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">🚨
+                                style="flex:1;font-size:12px;padding:8px 4px;font-weight:700;transition:all 0.2s;">
                                 Critical Response</button>
                         </div>
                     </div>
@@ -1694,7 +1624,7 @@ export const htmlString = `<!DOCTYPE html>
                     <!-- Critical warning banner (hidden by default) -->
                     <div id="criticalWarningBanner"
                         style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#b91c1c;line-height:1.5;">
-                        ⚠️ <strong>HIGH PRIORITY ALERT:</strong> This will trigger an urgent approval popup on the
+                        ⚠️ <strong>HIGH PRIORITY ALERT:</strong> This will trigger an urgent approval popup on the
                         rescuer's device requiring immediate Accept or Decline response.
                     </div>
 
@@ -1706,16 +1636,16 @@ export const htmlString = `<!DOCTYPE html>
                             <option value="medical">Medical Supply</option>
                             <option value="pregnancy">Pregnancy Evac</option>
                             <option value="rescue">Rescue Operation</option>
-                            <option value="critical">🚨 Critical Response</option>
+                            <option value="critical"> Critical Response</option>
                         </select>
                     </div>
                     <div class="input-group">
                         <label class="input-label">Assign To</label>
                         <div style="display:flex;gap:8px;margin-bottom:8px;">
                             <button id="btnTargetGroup" onclick="setTargetType('group')" class="btn btn-outline"
-                                style="flex:1;font-size:11px;padding:6px;font-weight:700;">👥 Group</button>
+                                style="flex:1;font-size:11px;padding:6px;font-weight:700;"> Group</button>
                             <button id="btnTargetIndividual" onclick="setTargetType('individual')"
-                                class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;font-weight:700;">👤
+                                class="btn btn-outline" style="flex:1;font-size:11px;padding:6px;font-weight:700;">
                                 Individual</button>
                         </div>
 
@@ -1834,11 +1764,11 @@ export const htmlString = `<!DOCTYPE html>
                                 </div>
                                 <div id="tdEvidenceAudioContainer"
                                     style="width:100%; padding:10px; background:#dbeafe; border-radius:6px; overflow:hidden; margin-bottom:8px; display:none; flex-direction:column; align-items:center; justify-content:center; border:1px solid #bfdbfe; gap:8px;">
-                                    <b style="color:#1d4ed8; font-size:10px; text-transform:uppercase; display:flex; align-items:center; gap:4px;">🔊 REQUEST AUDIO MESSAGE</b>
+                                    <b style="color:#1d4ed8; font-size:10px; text-transform:uppercase; display:flex; align-items:center; gap:4px;"> REQUEST AUDIO MESSAGE</b>
                                     <audio id="tdEvidenceAudioPlayer" controls style="width:100%;">
                                         Your browser does not support the audio element.
                                     </audio>
-                                    <a id="btnDownloadAudio" href="#" target="_blank" style="font-size:10px; font-weight:800; color:#1d4ed8; text-decoration:none;">📥 DOWNLOAD AUDIO FILE</a>
+                                    <a id="btnDownloadAudio" href="#" target="_blank" style="font-size:10px; font-weight:800; color:#1d4ed8; text-decoration:none;"> DOWNLOAD AUDIO FILE</a>
                                 </div>
                                 <div id="tdRequesterComments"
                                     style="font-size: 11px; color: #1e3a8a; font-style: italic; background: white; padding: 8px; border-radius: 4px; border: 1px solid #dbeafe; margin-bottom: 8px;">
@@ -2162,6 +2092,7 @@ export const htmlString = `<!DOCTYPE html>
                                         <th>Photo</th>
                                         <th>Member ID</th>
                                         <th>Username</th>
+                                        <th>Mobile Number</th>
                                         <th>Password</th>
                                         <th>Role</th>
                                         <th>AI Status</th>
@@ -2247,10 +2178,27 @@ export const htmlString = `<!DOCTYPE html>
 
             <div style="margin-bottom: 16px;">
                 <h3
+                    style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: #f59e0b; font-size: 16px;">
+                    <i data-lucide="clock" style="width:20px;"></i> Pending SOS Requests
+                </h3>
+                <div class="card table-responsive" style="padding:0; overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <!-- Populated by JS -->
+                        </thead>
+                        <tbody id="historyTbodyPending">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <h3
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--critical); font-size: 16px;">
                     <i data-lucide="alert-circle" style="width:20px;"></i> Critical Task History
                 </h3>
-                <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card table-responsive" style="padding:0; overflow-x:auto;">
                     <table>
                         <thead>
                             <tr>
@@ -2279,7 +2227,7 @@ export const htmlString = `<!DOCTYPE html>
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--accent); font-size: 16px;">
                     <i data-lucide="box" style="width:20px;"></i> Normal Task History
                 </h3>
-                <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card table-responsive" style="padding:0; overflow-x:auto;">
                     <table>
                         <thead>
                             <!-- Populated by JS -->
@@ -2296,7 +2244,7 @@ export const htmlString = `<!DOCTYPE html>
                     style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--special); font-size: 16px;">
                     <i data-lucide="layers" style="width:20px;"></i> Tactical Group Mission History
                 </h3>
-                <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card table-responsive" style="padding:0; overflow-x:auto;">
                     <table>
                         <thead>
                             <!-- Populated by JS -->
@@ -2340,7 +2288,7 @@ export const htmlString = `<!DOCTYPE html>
                             style="padding:15px; border-bottom:1px solid rgba(220, 38, 38, 0.1); background:rgba(220, 38, 38, 0.02); display:flex; justify-content:space-between; align-items:center;">
                             <h4
                                 style="margin:0; font-size:12px; font-weight:800; color:var(--critical); text-transform:uppercase; letter-spacing:1px;">
-                                🔴 CRITICAL MISSIONS</h4>
+                                 CRITICAL MISSIONS</h4>
                             <span id="mgmtCountCritical" class="tag tag-red">0</span>
                         </div>
                         <div id="mgmtListCritical"
@@ -2355,7 +2303,7 @@ export const htmlString = `<!DOCTYPE html>
                             style="padding:15px; border-bottom:1px solid rgba(37, 99, 235, 0.1); background:rgba(37, 99, 235, 0.02); display:flex; justify-content:space-between; align-items:center;">
                             <h4
                                 style="margin:0; font-size:12px; font-weight:800; color:var(--accent); text-transform:uppercase; letter-spacing:1px;">
-                                🔵 NORMAL LOGISTICS</h4>
+                                 NORMAL LOGISTICS</h4>
                             <span id="mgmtCountNormal" class="tag tag-purple">0</span>
                         </div>
                         <div id="mgmtListNormal"
@@ -2370,7 +2318,7 @@ export const htmlString = `<!DOCTYPE html>
                             style="padding:15px; border-bottom:1px solid rgba(168, 85, 247, 0.1); background:rgba(168, 85, 247, 0.02); display:flex; justify-content:space-between; align-items:center;">
                             <h4
                                 style="margin:0; font-size:12px; font-weight:800; color:var(--special); text-transform:uppercase; letter-spacing:1px;">
-                                🟣 TEMPORARY TACTICAL GROUPED TASK CLUSTER</h4>
+                                 TEMPORARY TACTICAL GROUPED TASK CLUSTER</h4>
                             <span id="mgmtCountGrouped" class="tag tag-purple" style="background:var(--special); color:white;">0</span>
                         </div>
                         <div id="mgmtListGrouped"
@@ -2599,6 +2547,43 @@ export const htmlString = `<!DOCTYPE html>
                                 <button class="btn btn-primary"
                                     onclick="updateAIIntervalSetting()"
                                     style="height: 36px; padding: 0 14px; font-size: 12px; white-space: nowrap; border-radius: 6px; background-color: #a855f7;">
+                                    <i data-lucide="save" style="width:14px;"></i> Set
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Box 3.6: AI Reassignment Interval Setting -->
+                <div class="card"
+                    style="margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <h3 style="margin: 0;">AI Reassignment Buffer</h3>
+                            <div id="aiReassignIntervalBadge"
+                                style="background: rgba(234, 88, 12, 0.1); color: #ea580c; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; border: 1.5px solid #ea580c; box-shadow: 0 2px 5px rgba(234, 88, 12, 0.05);">
+                                <i data-lucide="timer" style="width: 10px; height: 10px;"></i>
+                                Current Setting: <span id="activeAiReassignIntervalValue">10 Seconds</span>
+                            </div>
+                        </div>
+                        <p style="color:var(--text-muted);font-size:12px; margin-bottom: 16px;">Configure how long AI waits for a rescuer to respond before timing out and reassigning the SOS task.</p>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <label class="input-label"
+                            style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Run Interval</label>
+                        <div style="display:flex; gap:10px; align-items: center; flex-wrap: wrap;">
+                            <div style="display:flex; gap:6px; flex: 1; min-width: 200px;">
+                                <input type="number" id="aiReassignIntervalVal" class="form-control"
+                                    placeholder="e.g. 10" value="10"
+                                    style="width: 80px; height: 36px; font-size: 12px; border-radius: 6px;">
+                                <select id="aiReassignIntervalUnit" class="form-control" style="flex:1; height: 36px; font-size: 12px; border-radius: 6px;">
+                                    <option value="Seconds" selected>Seconds</option>
+                                    <option value="Minutes">Minutes</option>
+                                    <option value="Hours">Hours</option>
+                                </select>
+                                <button class="btn btn-primary"
+                                    onclick="updateAIReassignIntervalSetting()"
+                                    style="height: 36px; padding: 0 14px; font-size: 12px; white-space: nowrap; border-radius: 6px; background-color: #ea580c;">
                                     <i data-lucide="save" style="width:14px;"></i> Set
                                 </button>
                             </div>
@@ -3552,14 +3537,14 @@ export const htmlString = `<!DOCTYPE html>
     <script>
         const PROTOCOL = (window.location.protocol === 'http:' || window.location.protocol === 'https:') ? window.location.protocol : 'http:';
         const manualIp = localStorage.getItem('manualServerIp');
-        const SERVER_IP = manualIp ? manualIp : ((window.location.protocol === 'http:' || window.location.protocol === 'https:') ? window.location.hostname : '127.0.0.1');
-        const API_BASE = \`\\\${PROTOCOL}//\\\${SERVER_IP}:3001/api\`;
+        const SERVER_IP = window.__SERVER_IP__ || (manualIp ? manualIp : ((window.location.protocol === 'http:' || window.location.protocol === 'https:') ? window.location.hostname : '127.0.0.1'));
+        const API_BASE = \`\${PROTOCOL}//\${SERVER_IP}:3001/api\`;
 
         function formatMediaUrl(url) {
             if (!url) return '';
             if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
-            const base = \`\\\${PROTOCOL}//\\\${SERVER_IP}:3001\`;
-            return \`\\\${base}\\\${url}\`;
+            const base = \`\${PROTOCOL}//\${SERVER_IP}:3001\`;
+            return \`\${base}\${url}\`;
         }
 
         // Timezone conversion helpers
@@ -3620,8 +3605,7 @@ export const htmlString = `<!DOCTYPE html>
             const text3 = document.getElementById('headerConnectionText');
             const color = connected ? '#10b981' : '#ef4444';
             const text = connected ? 'CONNECTED' : 'DISCONNECTED';
-            if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'WS_STATUS', connected: connected })); }
-            const html = \\\`<span style="width:6px; height:6px; background:\\\${color}; border-radius:50%; display:inline-block;"></span> \\\${text}\\\`;
+            const html = \`<span style="width:6px; height:6px; background:\${color}; border-radius:50%; display:inline-block;"></span> \${text}\`;
             if (badge1) {
                 badge1.innerHTML = html;
                 badge1.style.color = color;
@@ -3641,11 +3625,10 @@ export const htmlString = `<!DOCTYPE html>
         }
         let reconnectDelay = 1000;
         let heartbeatInterval = null;
-
         function initWebSocket() {
             const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = \`\\\${wsProtocol}//\\\${SERVER_IP}:3001\`;
-            console.log(\`[Admin] Connecting to WebSocket: \\\${wsUrl}\`);
+            const wsUrl = \`\${wsProtocol}//\${SERVER_IP}:3001\`;
+            console.log(\`[Admin] Connecting to WebSocket: \${wsUrl}\`);
             try {
                 if (socket) {
                     socket.onclose = null;
@@ -3669,7 +3652,6 @@ export const htmlString = `<!DOCTYPE html>
                             console.warn("[Admin] Heartbeat detected socket is not OPEN. Badge set to offline.");
                             updateBadge(false);
                         } else {
-                            // Send a quick ping
                             try { socket.send(JSON.stringify({ type: 'PING' })); } catch(e) { updateBadge(false); }
                         }
                     }, 2000);
@@ -3700,13 +3682,6 @@ export const htmlString = `<!DOCTYPE html>
                             return; // Only update UI, avoid full refresh
                         }
                         if (data.type === 'AI_ASSIGNED') {
-                            Swal.fire({
-                                icon: 'info',
-                                title: '🤖 AI Task Reassignment',
-                                text: data.message,
-                                timer: 5000,
-                                timerProgressBar: true
-                            });
                             if (window.currentSosAudio) { window.currentSosAudio.pause(); window.currentSosAudio.currentTime = 0; }
                             closeModal('sosAlertModal');
                             if (data.type === 'RESCUE_REQUEST_UPDATE' && data.data && data.data.status && data.data.status !== 'pending') {
@@ -3716,14 +3691,23 @@ export const htmlString = `<!DOCTYPE html>
                             refreshAllModules(); // Refresh tasks
                             return;
                         }
+
+function toggleGlobalMute(muted) {
+    window.isMuted = muted;
+    const btn = document.getElementById('globalMuteBtn');
+    if (btn) {
+        btn.dataset.muted = window.isMuted.toString();
+        if (window.isMuted) {
+            btn.style.backgroundColor = "#ef4444"; // red
+            btn.innerHTML = '<i data-lucide="volume-x" style="width:18px; margin-right:6px;"></i> SOUND OFF';
+        } else {
+            btn.style.backgroundColor = "#22c55e"; // green
+            btn.innerHTML = '<i data-lucide="volume-2" style="width:18px; margin-right:6px;"></i> SOUND ON';
+        }
+        if (window.lucide) window.lucide.createIcons();
+    }
+}
                         if (data.type === 'RESCUE_REQUEST_DECLINED_REASSIGN') {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Rescuer Declined Task',
-                                text: 'A rescuer has declined the task. The AI Engine is now searching for the next nearest available unit...',
-                                timer: 4000,
-                                timerProgressBar: true
-                            });
                         }
                         if (updateTypes.includes(data.type)) {
                             if (['RESCUE_REQUEST_ACCEPTED', 'RESCUE_REQUEST_COMPLETED', 'RESCUE_REQUEST_IN_PROGRESS', 'RESCUE_REQUEST_IGNORED_REASSIGN', 'COMMAND_REASSIGNED', 'RESCUE_REQUEST_DECLINED_REASSIGN'].includes(data.type)) {
@@ -3737,7 +3721,7 @@ export const htmlString = `<!DOCTYPE html>
                                 if (document.getElementById('criticalApprovalOverlay')) document.getElementById('criticalApprovalOverlay').remove();
                             }
                             if (data.type === 'NEW_RESCUE_REQUEST' || data.type === 'SOS_ALERT') {
-                                showAdminToast(\`🚨 SOS/Emergency Alert from \${data.data?.sector || 'field'}!\`, 'error');
+                                showAdminToast(\` SOS/Emergency Alert from \${data.data?.sector || 'field'}!\`, 'error');
                                 showSosAlertModal(data.data);
                                 // Play standard HTML5 beep/siren sound and loop it
                                 if (window.currentSosAudio) { window.currentSosAudio.pause(); }
@@ -3745,7 +3729,7 @@ export const htmlString = `<!DOCTYPE html>
                                 window.currentSosAudio.loop = true;
                                 window.currentSosAudio.play().catch(e => console.log('Audio play failed: ', e));
                             } else if (data.type === 'RESCUE_REQUEST_COMPLETED') {
-                                showAdminToast(\\\`✅ Mission complete: \\\${data.data?.sector || 'request'} marked done\\\`);
+                                showAdminToast(\`✅ Mission complete: \${data.data?.sector || 'request'} marked done\`);
                             }
 
                             refreshAllModules();
@@ -3774,22 +3758,6 @@ export const htmlString = `<!DOCTYPE html>
             }
         }
 
-function toggleGlobalMute(muted) {
-    window.isMuted = muted;
-    const btn = document.getElementById('globalMuteBtn');
-    if (btn) {
-        btn.dataset.muted = window.isMuted.toString();
-        if (window.isMuted) {
-            btn.style.backgroundColor = "#ef4444"; // red
-            btn.innerHTML = '<i data-lucide="volume-x" style="width:18px; margin-right:6px;"></i> SOUND OFF';
-        } else {
-            btn.style.backgroundColor = "#22c55e"; // green
-            btn.innerHTML = '<i data-lucide="volume-2" style="width:18px; margin-right:6px;"></i> SOUND ON';
-        }
-        if (window.lucide) window.lucide.createIcons();
-    }
-}
-
         // --- GLOBAL REFRESH & SYNC HUB ---
         function refreshAllModules() {
             console.log("[SYSTEM] Executing Global Sync...");
@@ -3801,7 +3769,6 @@ function toggleGlobalMute(muted) {
             if (typeof updateNotifBadges === 'function') updateNotifBadges();
             if (typeof fetchUsers === 'function') fetchUsers();
             if (typeof fetchGroups === 'function') fetchGroups();
-            if (typeof fetchOperations === 'function') fetchOperations();
         }
 
         function showAdminToast(msg, type = 'info') {
@@ -3833,7 +3800,7 @@ function toggleGlobalMute(muted) {
         // 0. Landing Page Logic (Consolidated)
         async function fetchOperations() {
             try {
-                const res = await fetch(\\\`\\\${API_BASE}/operations\\\`);
+                const res = await fetch(\`\${API_BASE}/operations\`);
                 operations = await res.json();
                 renderOpsList();
 
@@ -3850,15 +3817,15 @@ function toggleGlobalMute(muted) {
                 console.error("Error fetching operations", e);
                 const body = document.getElementById('opsListBody');
                 if (body) {
-                    body.innerHTML = \\\`<tr><td colspan="5" style="padding:40px; text-align:center; color:var(--danger); font-size:14px; font-weight:800; line-height:1.6;">
-                        ⚠️ CONNECTION FAILED to backend server at \\\${API_BASE}.<br>
+                    body.innerHTML = \`<tr><td colspan="5" style="padding:40px; text-align:center; color:var(--danger); font-size:14px; font-weight:800; line-height:1.6;">
+                        ⚠️ CONNECTION FAILED to backend server at \${API_BASE}.<br>
                         <span style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-top:8px;">
                             Please verify the backend is running. If you are running the system on this laptop, reset connection settings to Localhost.
                         </span>
                         <a href="#" onclick="resetAdminServerIp(); return false;" style="display:inline-block; margin-top:12px; background:var(--accent); color:white; padding:8px 16px; border-radius:8px; text-decoration:none; font-family:sans-serif; font-size:13px; font-weight:700;">
-                            ← Reset Connection to Localhost
+                            ← Reset Connection to Localhost
                         </a>
-                    </td></tr>\\\`;
+                    </td></tr>\`;
                 }
             }
         }
@@ -3868,7 +3835,7 @@ function toggleGlobalMute(muted) {
             if (!body) return;
             body.innerHTML = '';
             if (!operations || operations.length === 0) {
-                body.innerHTML = \\\`<tr><td colspan="5" style="padding:40px; text-align:center; color:var(--text-muted); font-size:14px; font-weight:600;">No active operations found. Create your first operation to begin.</td></tr>\\\`;
+                body.innerHTML = \`<tr><td colspan="5" style="padding:40px; text-align:center; color:var(--text-muted); font-size:14px; font-weight:600;">No active operations found. Create your first operation to begin.</td></tr>\`;
                 return;
             }
             operations.forEach(op => {
@@ -3876,28 +3843,28 @@ function toggleGlobalMute(muted) {
                 row.style.borderBottom = '1px solid var(--border)';
                 row.style.cursor = 'pointer';
                 row.onclick = () => enterDashboard(op.id);
-                row.innerHTML = \\\`
-                    <td style="padding: 20px 24px; font-size: 14px; font-weight: 700; color: var(--text-muted);">\\\${op.id}</td>
-                    <td style="padding: 20px 24px; font-size: 15px; font-weight: 800; color: var(--text-main);">\\\${op.name}</td>
-                    <td style="padding: 20px 24px; font-size: 14px; font-weight: 600; color: var(--text-muted);">\\\${op.date}</td>
+                row.innerHTML = \`
+                    <td style="padding: 20px 24px; font-size: 14px; font-weight: 700; color: var(--text-muted);">\${op.id}</td>
+                    <td style="padding: 20px 24px; font-size: 15px; font-weight: 800; color: var(--text-main);">\${op.name}</td>
+                    <td style="padding: 20px 24px; font-size: 14px; font-weight: 600; color: var(--text-muted);">\${op.date}</td>
                     <td style="padding: 20px 24px;">
                         <span class="status-badge" style="background: rgba(34,197,94,0.1); color: #16a34a; font-weight: 800; padding: 6px 12px; border-radius: 20px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
                             <span style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; display: block;"></span>
-                            \\\${op.status || 'Active'}
+                            \${op.status || 'Active'}
                         </span>
                     </td>
                     <td style="padding: 20px 24px; text-align: right; display: flex; justify-content: flex-end; gap: 8px;">
                         <button class="btn btn-primary" style="padding: 8px 12px; border-radius: 10px; font-weight: 700; font-size:12px;">
                             DASHBOARD
                         </button>
-                        <button class="btn" onclick="event.stopPropagation(); openEditOpModal('\\\${op.id}')" style="background:rgba(37,99,235,0.1); color:var(--accent); border:none; padding:8px 12px; border-radius:10px; font-weight:800; font-size:12px;">
+                        <button class="btn" onclick="event.stopPropagation(); openEditOpModal('\${op.id}')" style="background:rgba(37,99,235,0.1); color:var(--accent); border:none; padding:8px 12px; border-radius:10px; font-weight:800; font-size:12px;">
                             EDIT
                         </button>
-                        <button class="btn" onclick="event.stopPropagation(); deleteOperation('\\\${op.id}')" style="background:rgba(239,68,68,0.1); color:var(--danger); border:none; padding:8px 12px; border-radius:10px; font-weight:800; font-size:12px;">
+                        <button class="btn" onclick="event.stopPropagation(); deleteOperation('\${op.id}')" style="background:rgba(239,68,68,0.1); color:var(--danger); border:none; padding:8px 12px; border-radius:10px; font-weight:800; font-size:12px;">
                             DELETE
                         </button>
                     </td>
-                \\\`;
+                \`;
                 body.appendChild(row);
             });
             lucide.createIcons();
@@ -3920,39 +3887,39 @@ function toggleGlobalMute(muted) {
 
             try {
                 if (isEditingOp) {
-                    await fetch(\\\`\\\${API_BASE}/operations/\\\${editingOpId}\\\`, {
+                    await fetch(\`\${API_BASE}/operations/\${editingOpId}\`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: name, zoneData: zoneData })
                     });
-                    showAdminToast(\\\`Operation \\\${editingOpId} updated successfully\\\`);
+                    showAdminToast(\`Operation \${editingOpId} updated successfully\`);
                 } else {
                     let d = new Date();
                     let ds = d.toISOString().split('T')[0];
                     let newId = document.getElementById('opSerial').value;
-                    await fetch(\\\`\\\${API_BASE}/operations\\\`, {
+                    await fetch(\`\${API_BASE}/operations\`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ id: newId, name: name, date: ds, zoneData: zoneData })
                     });
-                    showAdminToast(\\\`Operation \\\${newId} created successfully\\\`);
+                    showAdminToast(\`Operation \${newId} created successfully\`);
                 }
                 fetchOperations();
                 closeModal('createOpModal');
-            } catch (e) { alert(\\\`Failed to save operation: \\\${e.message}\\\\nIs the backend running at \\\${API_BASE}?\\\`); }
+            } catch (e) { alert(\`Failed to save operation: \${e.message}\\nIs the backend running at \${API_BASE}?\`); }
         }
 
         async function deleteOperation(opId) {
-            if (!confirm(\\\`Are you sure you want to delete Operation \\\${opId}?\\\`)) return;
+            if (!confirm(\`Are you sure you want to delete Operation \${opId}?\`)) return;
             try {
-                await fetch(\\\`\\\${API_BASE}/operations/\\\${opId}\\\`, { method: 'DELETE' });
+                await fetch(\`\${API_BASE}/operations/\${opId}\`, { method: 'DELETE' });
                 if (currentActiveOp && currentActiveOp.id === opId) {
                     sessionStorage.removeItem('active_op_id');
                     location.reload();
                 } else {
                     fetchOperations();
                 }
-                showAdminToast(\\\`Operation \\\${opId} deleted\\\`);
+                showAdminToast(\`Operation \${opId} deleted\`);
             } catch (e) { console.error("Delete failed", e); }
         }
 
@@ -4001,15 +3968,15 @@ function toggleGlobalMute(muted) {
 
             try {
                 if (newName) {
-                    await fetch(\\\`\\\${API_BASE}/settings\\\`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'system_name', value: newName }) });
+                    await fetch(\`\${API_BASE}/settings\`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'system_name', value: newName }) });
                     document.getElementById('landingTitle').innerHTML = newName.replace(' ', '<br>');
                     document.getElementById('navBrandTitle').innerText = newName.toUpperCase();
                 }
                 if (newCommander) {
-                    await fetch(\\\`\\\${API_BASE}/settings\\\`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'commander_name', value: newCommander }) });
+                    await fetch(\`\${API_BASE}/settings\`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'commander_name', value: newCommander }) });
                 }
                 if (newLogo) {
-                    await fetch(\\\`\\\${API_BASE}/settings\\\`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'system_logo', value: newLogo }) });
+                    await fetch(\`\${API_BASE}/settings\`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'system_logo', value: newLogo }) });
                     document.getElementById('landingLogoImg').src = newLogo;
                     document.getElementById('landingLogoImg').style.display = 'block';
                     document.getElementById('landingLogoIcon').style.display = 'none';
@@ -4036,7 +4003,7 @@ function toggleGlobalMute(muted) {
             document.getElementById('opZoneText').value = '';
 
             // Generate Serial and Time
-            let newId = \\\`OP-\\\${String(operations.length + 1).padStart(2, '0')}\\\`;
+            let newId = \`OP-\${String(operations.length + 1).padStart(2, '0')}\`;
             let d = new Date();
             document.getElementById('opSerial').value = newId;
             document.getElementById('opTime').value = d.toLocaleString();
@@ -4074,7 +4041,7 @@ function toggleGlobalMute(muted) {
                     if (op.zoneData.type === 'radius') {
                         setOpDrawMode('radius');
                         opDrawnLayer = L.circle(op.zoneData.latlng, { radius: op.zoneData.radius, color: '#2563eb' }).addTo(opMapInstance);
-                        document.getElementById('opZoneText').value = \\\`Radius: \\\${Math.round(op.zoneData.radius)}m at \\\${op.zoneData.latlng.lat.toFixed(4)}, \\\${op.zoneData.latlng.lng.toFixed(4)}\\\`;
+                        document.getElementById('opZoneText').value = \`Radius: \${Math.round(op.zoneData.radius)}m at \${op.zoneData.latlng.lat.toFixed(4)}, \${op.zoneData.latlng.lng.toFixed(4)}\`;
                     } else if (op.zoneData.type === 'area') {
                         setOpDrawMode('area');
                         opDrawnLayer = L.rectangle(op.zoneData.bounds, { color: '#2563eb' }).addTo(opMapInstance);
@@ -4130,8 +4097,8 @@ function toggleGlobalMute(muted) {
             if (opDrawnLayer) {
                 let bounds = opDrawnLayer.getBounds();
                 let center = bounds.getCenter();
-                let radStr = opDrawMode === 'radius' ? \\\` (Radius: \\\${(opDrawnLayer.getRadius() / 1000).toFixed(2)}km)\\\` : '';
-                document.getElementById('opZoneText').value = \\\`Center: Lat \\\${center.lat.toFixed(4)}, Lng \\\${center.lng.toFixed(4)}\\\${radStr}\\\`;
+                let radStr = opDrawMode === 'radius' ? \` (Radius: \${(opDrawnLayer.getRadius() / 1000).toFixed(2)}km)\` : '';
+                document.getElementById('opZoneText').value = \`Center: Lat \${center.lat.toFixed(4)}, Lng \${center.lng.toFixed(4)}\${radStr}\`;
             }
         }
 
@@ -4160,7 +4127,7 @@ function toggleGlobalMute(muted) {
                     } else {
                         activeMacroZoneLayer = L.rectangle(op.zoneData.bounds, style).addTo(map);
                     }
-                    activeMacroZoneLayer.bindTooltip(\\\`Operation Zone: \\\${op.name}\\\`, { permanent: true, direction: "center", className: 'op-zone-tooltip' }).openTooltip();
+                    activeMacroZoneLayer.bindTooltip(\`Operation Zone: \${op.name}\`, { permanent: true, direction: "center", className: 'op-zone-tooltip' }).openTooltip();
                     map.flyToBounds(activeMacroZoneLayer.getBounds(), { padding: [50, 50], duration: 1 });
                 }
             }, 200);
@@ -4204,7 +4171,7 @@ function toggleGlobalMute(muted) {
             dlMapInstance.off('mouseup', onDlMapUp);
             if (dlDrawnLayer) {
                 let bounds = dlDrawnLayer.getBounds();
-                document.getElementById('dlMapCoords').value = \\\`NE: \\\${bounds.getNorthEast().lat.toFixed(4)}, \\\${bounds.getNorthEast().lng.toFixed(4)} | SW: \\\${bounds.getSouthWest().lat.toFixed(4)}, \\\${bounds.getSouthWest().lng.toFixed(4)}\\\`;
+                document.getElementById('dlMapCoords').value = \`NE: \${bounds.getNorthEast().lat.toFixed(4)}, \${bounds.getNorthEast().lng.toFixed(4)} | SW: \${bounds.getSouthWest().lat.toFixed(4)}, \${bounds.getSouthWest().lng.toFixed(4)}\`;
             }
         }
 
@@ -4274,7 +4241,7 @@ function toggleGlobalMute(muted) {
 
             // Fetch all requests to show a full breakdown
             try {
-                const res = await fetch(\\\`\\\${API_BASE}/rescue-requests\\\`);
+                const res = await fetch(\`\${API_BASE}/rescue-requests\`);
                 const allReqs = await res.json();
 
                 let filtered = [];
@@ -4301,31 +4268,31 @@ function toggleGlobalMute(muted) {
                         try {
                             const d = typeof r.details === 'string' ? JSON.parse(r.details) : r.details;
                             const items = [];
-                            if (d.food) items.push(\\\`🍞 Food: <b>\\\${d.food}</b>\\\`);
-                            if (d.med) items.push(\\\`💊 Medicine: <b>\\\${d.med}</b>\\\`);
-                            if (d.sanitary) items.push(\\\`🧻 Sanitary: <b>\\\${d.sanitary}</b>\\\`);
-                            if (d.persons) items.push(\\\`👥 Persons: <b>\\\${d.persons}</b>\\\`);
+                            if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
+                            if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
+                            if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
+                            if (d.persons) items.push(\` Persons: <b>\${d.persons}</b>\`);
 
                             if (items.length > 0) {
-                                itemsHtml = \\\`<div style="margin-top:6px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px; line-height: 1.5;">
-                                    \\\${items.join('<br>')}
-                                </div>\\\`;
+                                itemsHtml = \`<div style="margin-top:6px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px; line-height: 1.5;">
+                                    \${items.join('<br>')}
+                                </div>\`;
                             }
                         } catch (e) { }
                     }
 
-                    tbody.innerHTML += \\\`
+                    tbody.innerHTML += \`
                         <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 8px; font-weight: 800; color: var(--text-muted);">\\\${String(idx + 1).padStart(2, '0')}</td>
+                            <td style="padding: 8px; font-weight: 800; color: var(--text-muted);">\${String(idx + 1).padStart(2, '0')}</td>
                             <td style="padding: 8px; font-weight:600;">
-                                \\\${r.type.toUpperCase()} @ \\\${r.sector}
-                                \\\${itemsHtml}
+                                \${r.type.toUpperCase()} @ \${r.sector}
+                                \${itemsHtml}
                             </td>
-                            <td style="padding: 8px; font-size: 12px; color: var(--text-muted);">\\\${time}</td>
-                            <td style="padding: 8px; font-size: 12px; color: var(--text-muted);">\\\${updateTime}</td>
-                            <td style="padding: 8px; text-align: right;"><span class="tag \\\${statusTag}">\\\${r.status.toUpperCase()}</span></td>
+                            <td style="padding: 8px; font-size: 12px; color: var(--text-muted);">\${time}</td>
+                            <td style="padding: 8px; font-size: 12px; color: var(--text-muted);">\${updateTime}</td>
+                            <td style="padding: 8px; text-align: right;"><span class="tag \${statusTag}">\${r.status.toUpperCase()}</span></td>
                         </tr>
-                    \\\`;
+                    \`;
                 });
 
                 // Update summary stats in modal
@@ -4334,22 +4301,22 @@ function toggleGlobalMute(muted) {
                 const pending = filtered.filter(f => f.status === 'pending').length;
 
                 // Simple distribution logic for the UI cards in modal
-                document.querySelector('#opDetailsModal .grid-2').innerHTML = \\\`
+                document.querySelector('#opDetailsModal .grid-2').innerHTML = \`
                     <div>
                         <div class="input-label">Current Status</div>
                         <div class="card" style="padding:12px; font-weight:600; font-size:13px; display:flex; gap:10px;">
-                            <span style="color:var(--pending)">\\\${pending} Pending</span>
-                            <span style="color:var(--accent)">\\\${accepted} Ongoing</span>
-                            <span style="color:var(--secondary)">\\\${completed} Done</span>
+                            <span style="color:var(--pending)">\${pending} Pending</span>
+                            <span style="color:var(--accent)">\${accepted} Ongoing</span>
+                            <span style="color:var(--secondary)">\${completed} Done</span>
                         </div>
                     </div>
                     <div>
                         <div class="input-label">Zone Load</div>
                         <div class="card" style="padding:12px; font-weight:600; font-size:13px;">
-                            \\\${filtered.length > 0 ? 'Active in ' + [...new Set(filtered.map(f => f.sector))].join(', ') : 'No Active Zones'}
+                            \${filtered.length > 0 ? 'Active in ' + [...new Set(filtered.map(f => f.sector))].join(', ') : 'No Active Zones'}
                         </div>
                     </div>
-                \\\`;
+                \`;
 
             } catch (e) {
                 console.error("Error loading op details", e);
@@ -4414,7 +4381,7 @@ function toggleGlobalMute(muted) {
 
             mapMarkersData.forEach(m => {
                 let isHex = m.type === 'rescue';
-                addMarker(m.lat, m.lng, m.type, \\\`<i data-lucide="\\\${m.icon}" style="width:16px;height:16px;\\\${isHex ? 'fill:white' : ''}"></i>\\\`, m.details, null, false, false, m.id, false, m.status);
+                addMarker(m.lat, m.lng, m.type, \`<i data-lucide="\${m.icon}" style="width:16px;height:16px;\${isHex ? 'fill:white' : ''}"></i>\`, m.details, null, false, false, m.id, false, m.status);
             });
 
             // Map interaction for drawing
@@ -4441,26 +4408,26 @@ function toggleGlobalMute(muted) {
 
             const areaInput = document.getElementById('cmdAreaName');
             if (areaInput) {
-                const areaMatch = details && details.match(/Area:\\\\s*(.*)/);
-                areaInput.value = areaMatch ? areaMatch[1].replace(/<[^>]*>?/gm, '') : \\\`Location near \\\${parseFloat(lat).toFixed(4)}, \\\${parseFloat(lng).toFixed(4)}\\\`;
+                const areaMatch = details && details.match(/Area:\\s*(.*)/);
+                areaInput.value = areaMatch ? areaMatch[1].replace(/<[^>]*>?/gm, '') : \`Location near \${parseFloat(lat).toFixed(4)}, \${parseFloat(lng).toFixed(4)}\`;
             }
 
             const coordInput = document.getElementById('cmdCoords');
             if (coordInput) {
-                coordInput.value = \\\`\\\${parseFloat(lat).toFixed(6)}, \\\${parseFloat(lng).toFixed(6)}\\\`;
+                coordInput.value = \`\${parseFloat(lat).toFixed(6)}, \${parseFloat(lng).toFixed(6)}\`;
                 coordInput.dataset.reqId = dbId;
             }
 
             const detailsInput = document.getElementById('cmdDetails');
             if (detailsInput) {
-                const textDetails = details ? details.replace(/<br\\\\s*[\\\\/]?>/gi, '\\\\n').replace(/<[^>]*>?/gm, '') : '';
-                detailsInput.value = \\\`[Auto-Assigned \\\${type.toUpperCase()} Request #\\\${dbId}]\\\\n\\\${textDetails}\\\`;
+                const textDetails = details ? details.replace(/<br\\s*[\\/]?>/gi, '\\n').replace(/<[^>]*>?/gm, '') : '';
+                detailsInput.value = \`[Auto-Assigned \${type.toUpperCase()} Request #\${dbId}]\\n\${textDetails}\`;
             }
 
             document.querySelector('.sidebar.left').scrollIntoView({ behavior: 'smooth' });
 
             if (typeof showAdminToast === 'function') {
-                showAdminToast(\\\`Selected \\\${type.toUpperCase()} Request #\\\${dbId} for Assignment\\\`);
+                showAdminToast(\`Selected \${type.toUpperCase()} Request #\${dbId} for Assignment\`);
             }
 
             const formPanel = document.querySelector('.sidebar.left');
@@ -4474,19 +4441,19 @@ function toggleGlobalMute(muted) {
         function addMarker(lat, lng, type, iconHtml, details, label, isCriticalMovement = false, isGrouped = false, dbId = null, isCommand = false, status = null, timestamp = null, userId = null, currentMission = null) {
             // Priority check for pulsing
             const isPriority = isCriticalMovement || ['sos', 'medical', 'pregnancy', 'command', 'critical'].includes(type.toLowerCase());
-            const markerClass = \\\`marker-\\\${type.toLowerCase()} \\\${isGrouped ? 'marker-grouped' : ''}\\\`;
+            const markerClass = \`marker-\${type.toLowerCase()} \${isGrouped ? 'marker-grouped' : ''}\`;
 
             const icon = L.divIcon({
-                className: \\\`custom-marker \\\${markerClass}\\\`,
-                html: \\\`
+                className: \`custom-marker \${markerClass}\`,
+                html: \`
                     <div style="position:relative; width:34px; height:34px; display:flex; align-items:center; justify-content:center;">
-                        \\\${isPriority ? \\\`<div class="marker-pulse" style="background:\\\${['command', 'sos', 'critical'].includes(type.toLowerCase()) ? '#ef4444' : '#3b82f6'}"></div>\\\` : ''}
-                        <div class="marker-inner" style="\\\${isGrouped ? 'border-style: dashed !important;' : ''}">
-                            \\\${iconHtml}
+                        \${isPriority ? \`<div class="marker-pulse" style="background:\${['command', 'sos', 'critical'].includes(type.toLowerCase()) ? '#ef4444' : '#3b82f6'}"></div>\` : ''}
+                        <div class="marker-inner" style="\${isGrouped ? 'border-style: dashed !important;' : ''}">
+                            \${iconHtml}
                         </div>
-                        \\\${label ? \\\`<div class="marker-label">\\\${label}</div>\\\` : ''}
+                        \${label ? \`<div class="marker-label">\${label}</div>\` : ''}
                     </div>
-                \\\`,
+                \`,
                 iconSize: [34, 34],
                 iconAnchor: [17, 17]
             });
@@ -4504,7 +4471,7 @@ function toggleGlobalMute(muted) {
             marker.on('click', () => {
                 const coordInput = document.getElementById('cmdCoords');
                 if (coordInput) {
-                    coordInput.value = \\\`\\\${parseFloat(lat).toFixed(6)}, \\\${parseFloat(lng).toFixed(6)}\\\`;
+                    coordInput.value = \`\${parseFloat(lat).toFixed(6)}, \${parseFloat(lng).toFixed(6)}\`;
                     if (dbId) coordInput.dataset.reqId = dbId;
                 }
             });
@@ -4512,7 +4479,7 @@ function toggleGlobalMute(muted) {
             if (draggable) {
                 marker.on('dragend', async function (e) {
                     const newPos = e.target.getLatLng();
-                    const endpoint = isCommand ? \\\`\\\${API_BASE}/commands/\\\${dbId}/location\\\` : \\\`\\\${API_BASE}/rescue-requests/\\\${dbId}/location\\\`;
+                    const endpoint = isCommand ? \`\${API_BASE}/commands/\${dbId}/location\` : \`\${API_BASE}/rescue-requests/\${dbId}/location\`;
 
                     try {
                         const res = await fetch(endpoint, {
@@ -4522,7 +4489,7 @@ function toggleGlobalMute(muted) {
                         });
 
                         if (res.ok) {
-                            showAdminToast(\\\`\\\${isCommand ? 'Command' : 'Rescue'} location updated successfully\\\`);
+                            showAdminToast(\`\${isCommand ? 'Command' : 'Rescue'} location updated successfully\`);
                             // Refresh map to sync all layers (like dotted lines)
                             updateTacticalMap();
                         } else {
@@ -4542,62 +4509,62 @@ function toggleGlobalMute(muted) {
                 let metaHtml = '';
 
                 if (userId || label) {
-                    metaHtml += \\\`<div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:2px;">User ID: \\\${userId || label}</div>\\\`;
+                    metaHtml += \`<div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:2px;">User ID: \${userId || label}</div>\`;
                 }
                 if (currentMission) {
-                    metaHtml += \\\`<div style="font-size:11px; font-weight:700; color:#3b82f6; margin-bottom:2px;">Current Mission: \\\${currentMission}</div>\\\`;
+                    metaHtml += \`<div style="font-size:11px; font-weight:700; color:#3b82f6; margin-bottom:2px;">Current Mission: \${currentMission}</div>\`;
                 }
                 if (timestamp) {
-                    metaHtml += \\\`<div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:2px;">Created: \\\${formatLocalDate(timestamp)}</div>\\\`;
+                    metaHtml += \`<div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:2px;">Created: \${formatLocalDate(timestamp)}</div>\`;
                 }
 
                 if (dbId) {
                     if (status) {
                         let badgeClass = status === 'pending' ? 'tag-yellow' : (status === 'completed' ? 'tag-green' : (status === 'declined' ? 'tag-red' : 'tag-purple'));
-                        statusHtml = \\\`<div style="margin-top:8px; margin-bottom:4px;"><span class="tag \\\${badgeClass}">\\\${status.toUpperCase()}</span></div>\\\`;
+                        statusHtml = \`<div style="margin-top:8px; margin-bottom:4px;"><span class="tag \${badgeClass}">\${status.toUpperCase()}</span></div>\`;
                     }
 
                     if (status !== 'completed' && status !== 'declined') {
-                        const safeDetails = details.replace(/'/g, "\\\\\\\\'").replace(/"/g, "&quot;");
+                        const safeDetails = details.replace(/'/g, "\\\\'").replace(/"/g, "&quot;");
 
                         if (isCommand) {
                             // For commands, show Re-assign and Close
-                            actionHtml = \\\`
+                            actionHtml = \`
                                 <div style="margin-top:10px; display: flex; flex-direction: column; gap: 6px;">
                                     <button class="btn btn-primary" style="width:100%; font-size:11px; padding:6px; cursor: pointer;" 
-                                        onclick="window.openReassignModal('\\\${dbId}')">
+                                        onclick="window.openReassignModal('\${dbId}')">
                                         <i data-lucide="refresh-cw" style="width:12px; margin-right:4px;"></i> Re-assign Task
                                     </button>
                                     <button class="btn btn-danger" style="width:100%; font-size:11px; padding:6px; cursor: pointer; background: #ef4444; color: white; border: none; border-radius: 4px;" 
-                                        onclick="window.closeTaskByAdmin('\\\${dbId}')">
+                                        onclick="window.closeTaskByAdmin('\${dbId}')">
                                         <i data-lucide="check-circle" style="width:12px; margin-right:4px;"></i> Close Task
                                     </button>
-                                </div>\\\`;
+                                </div>\`;
                         } else {
                             // For rescue requests, show Assign (if pending) and Close
-                            actionHtml = \\\`
+                            actionHtml = \`
                                 <div style="margin-top:10px; display: flex; flex-direction: column; gap: 6px;">
-                                    \\\${status === 'pending' ? \\\`
+                                    \${status === 'pending' ? \`
                                     <button class="btn btn-primary" style="width:100%; font-size:11px; padding:6px; cursor: pointer;" 
-                                        onclick="window.populateCommandForm(\\\${dbId}, '\\\${type}', \\\${lat}, \\\${lng}, '\\\${safeDetails}')">
+                                        onclick="window.populateCommandForm(\${dbId}, '\${type}', \${lat}, \${lng}, '\${safeDetails}')">
                                         <i data-lucide="plus-circle" style="width:12px; margin-right:4px;"></i> Assign Task
-                                    </button>\\\` : ''}
+                                    </button>\` : ''}
                                     <button class="btn btn-danger" style="width:100%; font-size:11px; padding:6px; cursor: pointer; background: #ef4444; color: white; border: none; border-radius: 4px;" 
-                                        onclick="window.closeRescueRequest(\\\${dbId})">
+                                        onclick="window.closeRescueRequest(\${dbId})">
                                         <i data-lucide="check-circle" style="width:12px; margin-right:4px;"></i> Close Request
                                     </button>
-                                </div>\\\`;
+                                </div>\`;
                         }
                     }
                 }
 
-                marker.bindPopup(\\\`<div style="font-family:'Inter'; font-size:13px; padding:4px; min-width:180px;">
-                    <div style="font-weight:900; text-transform:uppercase; margin-bottom:4px; color:var(--primary);">\\\${type} Mission</div>
-                    \\\${metaHtml}
-                    <div style="line-height:1.4; color:var(--text-muted); margin-top:4px;">\\\${details}</div>
-                    \\\${statusHtml}
-                    \\\${actionHtml}
-                </div>\\\`);
+                marker.bindPopup(\`<div style="font-family:'Inter'; font-size:13px; padding:4px; min-width:180px;">
+                    <div style="font-weight:900; text-transform:uppercase; margin-bottom:4px; color:var(--primary);">\${type} Mission</div>
+                    \${metaHtml}
+                    <div style="line-height:1.4; color:var(--text-muted); margin-top:4px;">\${details}</div>
+                    \${statusHtml}
+                    \${actionHtml}
+                </div>\`);
 
                 marker.on('popupopen', () => {
                     if (window.lucide) lucide.createIcons();
@@ -4615,11 +4582,11 @@ function toggleGlobalMute(muted) {
 
                 if (forceFetch || globalZones.length === 0 || globalRescuers.length === 0) {
                     const [zonesRes, rescuersRes, tasksRes, cmdsRes, groupsRes] = await Promise.all([
-                        fetch(\\\`\\\${API_BASE}/zones\\\`),
-                        fetch(\\\`\\\${API_BASE}/users?role=rescuer\\\`),
-                        fetch(\\\`\\\${API_BASE}/rescue-requests?status=active\\\`),
-                        fetch(\\\`\\\${API_BASE}/commands\\\`),
-                        fetch(\\\`\\\${API_BASE}/groups\\\`)
+                        fetch(\`\${API_BASE}/zones\`),
+                        fetch(\`\${API_BASE}/users?role=rescuer\`),
+                        fetch(\`\${API_BASE}/rescue-requests?status=active\`),
+                        fetch(\`\${API_BASE}/commands\`),
+                        fetch(\`\${API_BASE}/groups\`)
                     ]);
 
                     zones = await zonesRes.json();
@@ -4760,7 +4727,7 @@ function toggleGlobalMute(muted) {
                         let ringColor = '#3b82f6'; // Blue: Online & Available
                         
                         if (r.status === 'offline' || r.live_connected === false) {
-                            statusText = '⚠️ Signal Lost / Offline';
+                            statusText = '⚠️  Signal Lost / Offline';
                             isOffline = true;
                             ringColor = '#9ca3af'; // Grey: Offline
                         } else if (assignedTask || assignedCmd) {
@@ -4768,7 +4735,6 @@ function toggleGlobalMute(muted) {
                         }
 
                         const rescuerIconHtml = \`<div style="background:url('official_rescuer_icon.png') center/cover; width:100%; height:100%; border-radius:50%; border: 3px solid \${ringColor}; box-shadow: 0 0 6px \${ringColor}; box-sizing: border-box;"></div>\`;
-
                         const m = addMarker(r.lat, r.lng, 'rescuer', rescuerIconHtml, \`Rescuer: \${r.name}\`, r.name, false, false, r.id, false, statusText, null, r.serial_number || r.phone, missionInfo);
 
                         if (isOffline) {
@@ -4785,7 +4751,7 @@ function toggleGlobalMute(muted) {
                         activeCmds.forEach(c => {
                             const isCriticalCmd = c.command_type === 'critical' || c.priority === 'critical' || c.command_type === 'sos';
                             const isSelected = (window.selectedTrackingCmdId == c.id) ||
-                                               (window.selectedTrackingCmdId === \\\`CMD-\\\${c.id}\\\`) ||
+                                               (window.selectedTrackingCmdId === \`CMD-\${c.id}\`) ||
                                                (typeof window.selectedTrackingCmdId === 'string' && window.selectedTrackingCmdId.replace('CMD-', '') == c.id);
 
                             if ((isCriticalCmd || isSelected) && (c.status !== 'completed' || isSelected) && (c.target_phone == r.phone || c.target_phone == r.device_id || (r.id && c.target_phone == r.id) || isInGroup(c.group_id))) {
@@ -4885,21 +4851,21 @@ function toggleGlobalMute(muted) {
                     mapLayers.push(poly);
 
                     let assignedTo = g.assigned_to || 'Assigned';
-                    poly.bindPopup(\\\`
+                    poly.bindPopup(\`
                         <div style="font-family:'Inter'; padding:5px; text-align:center;">
-                            <b style="color:var(--special); font-size:14px;">\\\${g.name}</b><br>
-                            <span style="font-size:11px; color:var(--text-muted);">\\\${g.requests.length} Requests Clustered</span><br>
-                            <span style="font-size:11px; color:var(--text-main); font-weight:600;">Status: \\\${g.status}</span><br>
-                            <span style="font-size:11px; color:var(--primary); font-weight:600;">Team: \\\${assignedTo}</span><br>
+                            <b style="color:var(--special); font-size:14px;">\${g.name}</b><br>
+                            <span style="font-size:11px; color:var(--text-muted);">\${g.requests.length} Requests Clustered</span><br>
+                            <span style="font-size:11px; color:var(--text-main); font-weight:600;">Status: \${g.status}</span><br>
+                            <span style="font-size:11px; color:var(--primary); font-weight:600;">Team: \${assignedTo}</span><br>
                         </div>
-                    \\\`);
+                    \`);
                 });
 
                 // 3. Render Active Tasks (with Grouped styling)
                 tasks.filter(t => {
                     if (!t.lat || !t.lng || !t.status) return false;
                     const s = t.status.toLowerCase();
-                    return s !== 'completed' && s !== 'declined' && s !== 'finished' && s !== 'closed';
+                    return !['completed', 'declined', 'finished', 'closed', 'cancelled', 'ignored'].includes(s);
                 }).forEach(t => {
                     const activeZones = zones.filter(z => z.status === 'active');
                     const isInZone = activeZones.some(z => {
@@ -4932,9 +4898,9 @@ function toggleGlobalMute(muted) {
                     const typeStr = t.type ? t.type.toLowerCase() : 'emergency';
                     const icon = getTaskIconByType(typeStr);
                     const label = t.serial_number || t.phone || t.device_id;
-                    let detailsHtml = \\\`Request: \\\${typeStr}<br>Area: \\\${t.sector}\\\`;
+                    let detailsHtml = \`Request: \${typeStr}<br>Area: \${t.sector}\`;
                     if (t.image_url) {
-                        detailsHtml += \\\`<br><div style="margin-top:8px; border-radius:6px; overflow:hidden; border:1px solid var(--border);"><img src="\\\${formatMediaUrl(t.image_url)}" style="width:100%; max-height:140px; object-fit:cover; cursor:pointer;" onclick="event.stopPropagation(); window.open(this.src, '_blank')"></div>\\\`;
+                        detailsHtml += \`<br><div style="margin-top:8px; border-radius:6px; overflow:hidden; border:1px solid var(--border);"><img src="\${formatMediaUrl(t.image_url)}" style="width:100%; max-height:140px; object-fit:cover; cursor:pointer;" onclick="event.stopPropagation(); window.open(this.src, '_blank')"></div>\`;
                     }
                     const m = addMarker(t.lat, t.lng, typeStr, icon, detailsHtml, label, false, isInZone, t.id, false, t.status, t.created_at, label);
                     window.markerClusterGroup.addLayer(m);
@@ -4943,7 +4909,7 @@ function toggleGlobalMute(muted) {
 
                 // 4. Render Active Commands (Crosshair markers)
                 activeCmds.forEach(c => {
-                    if (c.status === 'completed' || c.status === 'declined' || c.status === 'finished') return;
+                    if (['completed', 'declined', 'finished', 'closed', 'cancelled', 'ignored'].includes(c.status)) return;
 
                     let cLat, cLng;
                     // Check if command has explicit coordinates in payload
@@ -4959,9 +4925,9 @@ function toggleGlobalMute(muted) {
                     } catch (e) { }
 
                     if (cLat && cLng) {
-                        const icon = \\\`<i data-lucide="crosshair" style="width:16px; color:#ef4444;"></i>\\\`;
+                        const icon = \`<i data-lucide="crosshair" style="width:16px; color:#ef4444;"></i>\`;
                         const dbId = c.id;
-                        const m = addMarker(cLat, cLng, 'command', icon, \\\`Command: \\\${c.desc || 'Direct Order'}<br>Status: \\\${c.status}\\\`, \\\`CMD-\\\${c.id}\\\`, false, false, dbId, true, c.status, c.timestamp, c.target_phone || c.id);
+                        const m = addMarker(cLat, cLng, 'command', icon, \`Command: \${c.desc || 'Direct Order'}<br>Status: \${c.status}\`, \`CMD-\${c.id}\`, false, false, dbId, true, c.status, c.timestamp, c.target_phone || c.id);
                         window.markerClusterGroup.addLayer(m);
                         mapLayers.push(m);
                     }
@@ -5038,7 +5004,7 @@ function toggleGlobalMute(muted) {
             if (drawnLayer) {
                 let bounds = drawnLayer.getBounds();
                 let center = bounds.getCenter();
-                document.getElementById('cmdCoords').value = \\\`Lat: \\\${center.lat.toFixed(3)}, Lng: \\\${center.lng.toFixed(3)}\\\`;
+                document.getElementById('cmdCoords').value = \`Lat: \${center.lat.toFixed(3)}, Lng: \${center.lng.toFixed(3)}\`;
             }
 
             // Keep draw mode active so subsequent clicks draw a new zone
@@ -5106,12 +5072,12 @@ function toggleGlobalMute(muted) {
                 updateMgmtSelection();
                 const detailPanel = document.getElementById('mgmtDetailPanel');
                 if (detailPanel) {
-                    detailPanel.innerHTML = \\\`
+                    detailPanel.innerHTML = \`
                         <div style="flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-muted); flex-direction:column; gap:16px; padding:40px; text-align:center;">
                             <i data-lucide="info" style="width:48px; height:48px; opacity:0.2;"></i>
                             <p style="font-weight:600;">Select a mission from the triage columns to view tactical coordinates and requester profile.</p>
                         </div>
-                    \\\`;
+                    \`;
                     if (window.lucide) lucide.createIcons();
                 }
 
@@ -5155,18 +5121,18 @@ function toggleGlobalMute(muted) {
                 if (req) {
                     let assignedTo = 'Unassigned';
                     if (req.assigned_officer_name) {
-                        assignedTo = \\\`👤 \\\${req.assigned_officer_name}\\\`;
+                        assignedTo = \`\${req.assigned_officer_name}\`;
                     } else if (req.assigned_group_name) {
-                        assignedTo = \\\`👥 \\\${req.assigned_group_name}\\\`;
+                        assignedTo = \`\${req.assigned_group_name}\`;
                     } else if (req.assigned_user_id) {
-                        assignedTo = \\\`Rescuer \\\${req.assigned_user_id}\\\`;
+                        assignedTo = \`Rescuer \${req.assigned_user_id}\`;
                     } else if (req.assigned_group_id) {
-                        assignedTo = \\\`Group \\\${req.assigned_group_id}\\\`;
+                        assignedTo = \`Group \${req.assigned_group_id}\`;
                     }
 
                     cmd = {
                         id: 'REQ-' + req.id,
-                        desc: \\\`\\\${(req.type || 'Request').toUpperCase()} Task\\\`,
+                        desc: \`\${(req.type || 'Request').toUpperCase()} Task\`,
                         type: req.type || 'emergency',
                         priority: req.priority || 'normal',
                         zone: req.sector || 'N/A',
@@ -5197,10 +5163,10 @@ function toggleGlobalMute(muted) {
             document.getElementById('commandFormPanel').style.display = 'none';
             document.getElementById('commandDetailsPanel').style.display = 'flex';
 
-            document.getElementById('tdId').innerText = \\\`\\\${cmd.id} • \\\${cmd.type.toUpperCase()}\\\`;
+            document.getElementById('tdId').innerText = \`\${cmd.id} • \${cmd.type.toUpperCase()}\`;
             document.getElementById('tdDesc').innerText = cmd.desc;
-            document.getElementById('tdMeta').innerHTML = \\\`<b>Assigned To:</b> \\\${cmd.team} <br><br> <b>Target Zone:</b><br> \\\${cmd.zone}\\\`;
-            document.getElementById('tdStatus').innerHTML = \\\`<span class="tag \\\${getTagForStatus(cmd.status)}">\\\${cmd.status}</span>\\\`;
+            document.getElementById('tdMeta').innerHTML = \`<b>Assigned To:</b> \${cmd.team} <br><br> <b>Target Zone:</b><br> \${cmd.zone}\`;
+            document.getElementById('tdStatus').innerHTML = \`<span class="tag \${getTagForStatus(cmd.status)}">\${cmd.status}</span>\`;
 
             // Public / Requester Details
             const reqSection = document.getElementById('tdRequesterSection');
@@ -5214,16 +5180,16 @@ function toggleGlobalMute(muted) {
                 reqName.innerText = cmd.requesterName || 'Public Requester';
                 reqPhone.innerText = cmd.requesterPhone || 'Phone Not Available';
 
-                document.getElementById('tdRequesterId').innerText = cmd.rescueReqId ? \\\`PUB-\\\${cmd.rescueReqId}\\\` : 'N/A';
+                document.getElementById('tdRequesterId').innerText = cmd.rescueReqId ? \`PUB-\${cmd.rescueReqId}\` : 'N/A';
                 document.getElementById('tdRequesterType').innerText = (cmd.requesterType || cmd.type || 'Emergency').toUpperCase();
                 document.getElementById('tdRequesterTime').innerText = cmd.reqTime || cmd.time;
                 document.getElementById('tdRequesterStatus').innerText = cmd.status || 'Active';
                 const locEl = document.getElementById('tdRequesterLoc');
                 if (cmd.requesterLat && cmd.requesterLng) {
-                    locEl.innerHTML = \\\`<button class="btn btn-primary" style="width:100%; padding:10px; font-weight:900; background:#1d4ed8; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="map.flyTo([\\\${cmd.requesterLat}, \\\${cmd.requesterLng}], 18); window.open('https://www.google.com/maps/dir/?api=1&destination=\\\${cmd.requesterLat},\\\${cmd.requesterLng}', '_blank');">
-                        <span>📍 NAVIGATE TO LOCATION</span>
-                        <small style="font-size:10px; opacity:0.8;">(\\\${parseFloat(cmd.requesterLat).toFixed(5)}, \\\${parseFloat(cmd.requesterLng).toFixed(5)})</small>
-                    </button>\\\`;
+                    locEl.innerHTML = \`<button class="btn btn-primary" style="width:100%; padding:10px; font-weight:900; background:#1d4ed8; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="map.flyTo([\${cmd.requesterLat}, \${cmd.requesterLng}], 18); window.open('https://www.google.com/maps/dir/?api=1&destination=\${cmd.requesterLat},\${cmd.requesterLng}', '_blank');">
+                        <span> NAVIGATE TO LOCATION</span>
+                        <small style="font-size:10px; opacity:0.8;">(\${parseFloat(cmd.requesterLat).toFixed(5)}, \${parseFloat(cmd.requesterLng).toFixed(5)})</small>
+                    </button>\`;
                 } else {
                     locEl.innerHTML = '<span style="color:var(--text-muted)">Coordinates Not Available</span>';
                 }
@@ -5233,9 +5199,9 @@ function toggleGlobalMute(muted) {
                     try {
                         const d = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
                         const items = [];
-                        if (d.food) items.push(\\\`🍞 Food: <b>\\\${d.food}</b>\\\`);
-                        if (d.med) items.push(\\\`💊 Medicine: <b>\\\${d.med}</b>\\\`);
-                        if (d.sanitary) items.push(\\\`🧻 Sanitary: <b>\\\${d.sanitary}</b>\\\`);
+                        if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
+                        if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
+                        if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
                         if (items.length > 0) itemsHtml = items.join(' • ');
                     } catch (e) { }
                 }
@@ -5249,16 +5215,16 @@ function toggleGlobalMute(muted) {
 
                 if (cmd.requesterImageUrl) {
                     const fullUrl = formatMediaUrl(cmd.requesterImageUrl);
-                    imgContainer.innerHTML = \\\`<img src="\\\${fullUrl}" style="width:100%; height:100%; object-fit:cover;">\\\`;
+                    imgContainer.innerHTML = \`<img src="\${fullUrl}" style="width:100%; height:100%; object-fit:cover;">\`;
                     downloadBtn.style.display = 'block';
                     window.downloadEvidence = () => {
                         const link = document.createElement('a');
                         link.href = fullUrl;
-                        link.download = \\\`Evidence_REQ_\\\${cmd.rescueReqId}.jpg\\\`;
+                        link.download = \`Evidence_REQ_\${cmd.rescueReqId}.jpg\`;
                         link.click();
                     };
                 } else {
-                    imgContainer.innerHTML = \\\`<span style="color:#1d4ed8; font-size:10px;">No Image Provided</span>\\\`;
+                    imgContainer.innerHTML = \`<span style="color:#1d4ed8; font-size:10px;">No Image Provided</span>\`;
                     downloadBtn.style.display = 'none';
                 }
 
@@ -5270,7 +5236,7 @@ function toggleGlobalMute(muted) {
                         const audioFullUrl = formatMediaUrl(cmd.requesterAudioUrl);
                         audioPlayer.src = audioFullUrl;
                         downloadAudioLink.href = audioFullUrl;
-                        downloadAudioLink.download = \\\`Audio_REQ_\\\${cmd.rescueReqId || 'N_A'}.wav\\\`;
+                        downloadAudioLink.download = \`Audio_REQ_\${cmd.rescueReqId || 'N_A'}.wav\`;
                         audioContainer.style.display = 'flex';
                     } else {
                         audioPlayer.src = '';
@@ -5282,7 +5248,7 @@ function toggleGlobalMute(muted) {
                     try {
                         const d = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
                         if (d.comments) {
-                            commentBox.innerText = \\\`"\\\${d.comments}"\\\`;
+                            commentBox.innerText = \`"\${d.comments}"\`;
                         } else {
                             commentBox.innerText = "No additional comments provided by citizen.";
                         }
@@ -5420,52 +5386,48 @@ function toggleGlobalMute(muted) {
                 let evidenceThumb = '-';
                 if (c.requesterImageUrl) {
                     const thumbUrl = formatMediaUrl(c.requesterImageUrl);
-                    evidenceThumb = \\\`<img src="\\\${thumbUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid \\\${isCrit ? '#ef4444' : 'var(--border)'};" onclick="event.stopPropagation(); window.open('\\\${thumbUrl}', '_blank');">\\\`;
+                    evidenceThumb = \`<img src="\${thumbUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid \${isCrit ? '#ef4444' : 'var(--border)'};" onclick="event.stopPropagation(); window.open('\${thumbUrl}', '_blank');">\`;
                 }
 
                 let evidenceAudio = '-';
                 if (c.requesterAudioUrl) {
                     const audioUrl = formatMediaUrl(c.requesterAudioUrl);
-                    evidenceAudio = \\\`<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 140px;">
-                        <audio controls style="width:130px; height:24px;" onclick="event.stopPropagation();">
-                            <source src="\\\${audioUrl}" type="audio/wav">
-                            <source src="\\\${audioUrl}" type="audio/mpeg">
-                            Your browser does not support audio.
-                        </audio>
-                        <a href="\\\${audioUrl}" target="_blank" onclick="event.stopPropagation();" style="font-size:10px; font-weight:800; color:var(--primary); text-decoration:none;">📥 Download</a>
-                    </div>\\\`;
+                    evidenceAudio = \`<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 200px;" onmousedown="event.stopPropagation();" onclick="event.stopPropagation();">
+                        <audio controls src="\${audioUrl}" style="width:200px; height:32px; margin-bottom:4px;" onclick="event.stopPropagation();" onmousedown="event.stopPropagation();" preload="metadata"></audio>
+                        <a href="\${audioUrl}" target="_blank" style="font-size:10px; font-weight:800; color:#1d4ed8; text-decoration:none; border:1px solid #1d4ed8; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;" onclick="event.stopPropagation();">DOWNLOAD</a>
+                    </div>\`;
                 }
 
                 let closureThumb = '-';
                 if (c.completion_image_url) {
                     const closureUrl = formatMediaUrl(c.completion_image_url);
-                    closureThumb = \\\`<img src="\\\${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('\\\${closureUrl}', '_blank');">\\\`;
+                    closureThumb = \`<img src="\${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('\${closureUrl}', '_blank');">\`;
                 }
 
-                let row = \\\`<tr onclick="\\\${isOngoing ? \\\`selectTask('\\\${c.id}')\\\` : \\\`openCompletedTaskDetailModal('\\\${c.id}')\\\`}" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                let row = \`<tr onclick="\${isOngoing ? \`selectTask('\${c.id}')\` : \`openCompletedTaskDetailModal('\${c.id}')\`}" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                     <td style="font-weight: 800; color: var(--text-muted);">{SNO}</td>
-                    <td style="font-weight:700;">\\\${c.id}</td>
-                    <td>\\\${c.desc}</td>
-                    <td style="font-size:11px; color:var(--text-muted);">\\\${infoText}</td>
-                    <td>\\\${evidenceThumb}</td>
-                    <td>\\\${evidenceAudio}</td>
+                    <td style="font-weight:700;">\${c.id}</td>
+                    <td>\${c.desc}</td>
+                    <td style="font-size:11px; color:var(--text-muted);">\${infoText}</td>
+                    <td>\${evidenceThumb}</td>
+                    <td>\${evidenceAudio}</td>
                     <td>
-                        <span class="tag \\\${getTagForType(c.type)}">\\\${(c.type || 'N/A').toUpperCase()}</span>
+                        <span class="tag \${getTagForType(c.type)}">\${(c.type || 'N/A').toUpperCase()}</span>
                     </td>
-                    <td>\\\${c.zone}</td>
-                    <td>\\\${c.team}</td>
-                    <td style="color:var(--text-muted); font-size: 12px;">\\\${c.reqTime || c.time}</td>
-                    <td style="color:var(--text-muted); font-size: 12px;">\\\${c.cmdTime || c.time}</td>
-                    <td><span class="tag \\\${getTagForStatus(c.status)}">\\\${c.status}</span></td>
-                    <td>\\\${closureThumb}</td>
+                    <td>\${c.zone}</td>
+                    <td>\${c.team}</td>
+                    <td style="color:var(--text-muted); font-size: 12px;">\${c.reqTime || c.time}</td>
+                    <td style="color:var(--text-muted); font-size: 12px;">\${c.cmdTime || c.time}</td>
+                    <td><span class="tag \${getTagForStatus(c.status)}">\${c.status}</span></td>
+                    <td>\${closureThumb}</td>
                     <td>
                         <div style="display:flex; gap:4px;">
-                            \\\${isOngoing ? \\\`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\\\${c.id}')">✅ Close</button>\\\` : ''}
-                            \\\${isReassignable ? \\\`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\\\${c.id}')">🔄 Re-Assign</button>\\\` : ''}
-                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \\\${isOngoing ? \\\`selectTask('\\\${c.id}')\\\` : \\\`openCompletedTaskDetailModal('\\\${c.id}')\\\`}">👁️ View</button>
+                            \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${c.id}')">✅ Close</button>\` : ''}
+                            \${isReassignable ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\${c.id}')"> Re-Assign</button>\` : ''}
+                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \${isOngoing ? \`selectTask('\${c.id}')\` : \`openCompletedTaskDetailModal('\${c.id}')\`}">ï¸  View</button>
                         </div>
                     </td>
-                </tr>\\\`;
+                </tr>\`;
 
                 if (isOngoing) {
                     if ((c.type || '').toLowerCase() === 'group') {
@@ -5484,57 +5446,61 @@ function toggleGlobalMute(muted) {
                     compHtml += row.replace('{SNO}', String(compCount).padStart(2, '0'));
                 }
 
-                let historyRow = \\\`\\\`; // Deprecated, we render history lists from rescueRequests below
+                let historyRow = \`\`; // Deprecated, we render history lists from rescueRequests below
             });
 
             // POPULATE CRITICAL AND NORMAL HISTORY LOGS FROM rescueRequests
             histCriticalHtml = '';
             histNormalHtml = '';
+            histPendingHtml = '';
             critHistCount = 0;
             normHistCount = 0;
+            pendingHistCount = 0;
 
             rescueRequests.forEach((r) => {
                 const s = (r.status || 'pending').toLowerCase();
-                if (s === 'pending' || s === 'declined') {
+                if (s === 'declined') {
                     return;
                 }
 
                 const isOngoing = ['assigned', 'accepted', 'acknowledged', 'in_progress'].includes(s);
+                const isPending = s === 'pending';
 
                 // Apply historyStatusFilter
-                if (historyStatusFilter === 'ongoing' && !isOngoing) return;
-                if (historyStatusFilter === 'completed' && isOngoing) return;
+                if (historyStatusFilter === 'ongoing' && !isOngoing && !isPending) return;
+                if (historyStatusFilter === 'completed' && (isOngoing || isPending)) return;
 
                 const isCrit = (r.priority || '').toLowerCase() === 'critical' || 
                                (r.urgency || '').toLowerCase() === 'critical' || 
                                ['sos', 'medical', 'pregnancy', 'critical', 'rescue'].includes((r.type || '').toLowerCase());
 
+                let publicInfo = '';
+                if (r.name || r.phone) {
+                    publicInfo = \`<div style="margin-bottom:4px; font-size:11px;"><b style="color:var(--text);">\${r.name || 'Unknown'}</b><br><span style="color:var(--accent);">\${r.phone || 'No Phone'}</span></div>\`;
+                }
                 let infoText = r.details || '-';
-                if (infoText.length > 30) infoText = infoText.substring(0, 30) + '...';
+                if (infoText.length > 50) infoText = infoText.substring(0, 50) + '...';
+                infoText = publicInfo + infoText;
 
                 let evidenceThumb = '-';
                 if (r.image_url) {
                     const thumbUrl = formatMediaUrl(r.image_url);
-                    evidenceThumb = \\\`<img src="\\\${thumbUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid \\\${isCrit ? '#ef4444' : 'var(--border)'};" onclick="event.stopPropagation(); window.open('\\\${thumbUrl}', '_blank');">\\\`;
+                    evidenceThumb = \`<img src="\${thumbUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid \${isCrit ? '#ef4444' : 'var(--border)'};" onclick="event.stopPropagation(); window.open('\${thumbUrl}', '_blank');">\`;
                 }
 
                 let evidenceAudio = '-';
                 if (r.audio_url) {
                     const audioUrl = formatMediaUrl(r.audio_url);
-                    evidenceAudio = \\\`<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 140px;">
-                        <audio controls style="width:130px; height:24px;" onclick="event.stopPropagation();">
-                            <source src="\\\${audioUrl}" type="audio/wav">
-                            <source src="\\\${audioUrl}" type="audio/mpeg">
-                            Your browser does not support audio.
-                        </audio>
-                        <a href="\\\${audioUrl}" target="_blank" onclick="event.stopPropagation();" style="font-size:10px; font-weight:800; color:var(--primary); text-decoration:none;">📥 Download</a>
-                    </div>\\\`;
+                    evidenceAudio = \`<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 200px;" onmousedown="event.stopPropagation();" onclick="event.stopPropagation();">
+                        <audio controls src="\${audioUrl}" style="width:200px; height:32px; margin-bottom:4px;" onclick="event.stopPropagation();" onmousedown="event.stopPropagation();" preload="metadata"></audio>
+                        <a href="\${audioUrl}" target="_blank" style="font-size:10px; font-weight:800; color:#1d4ed8; text-decoration:none; border:1px solid #1d4ed8; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;" onclick="event.stopPropagation();">DOWNLOAD</a>
+                    </div>\`;
                 }
 
                 let closureThumb = '-';
                 if (r.completion_image_url) {
                     const closureUrl = formatMediaUrl(r.completion_image_url);
-                    closureThumb = \\\`<img src="\\\${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('\\\${closureUrl}', '_blank');">\\\`;
+                    closureThumb = \`<img src="\${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('\${closureUrl}', '_blank');">\`;
                 }
 
                 let assignedTo = 'Unassigned';
@@ -5551,25 +5517,29 @@ function toggleGlobalMute(muted) {
                 }
 
                 if (r.assigned_officer_name) {
-                    assignedTo = \`👤 \\\${r.assigned_officer_name}\\\${statusIcon}\`;
+                    assignedTo = \`\${r.assigned_officer_name}\${statusIcon}\`;
                 } else if (r.assigned_group_name) {
-                    assignedTo = \`👥 \\\${r.assigned_group_name}\`;
+                    assignedTo = \`\${r.assigned_group_name}\`;
                 } else if (r.assigned_user_id) {
-                    const rescuerName = rescuerUser ? rescuerUser.name : \`Rescuer \\\${r.assigned_user_id}\`;
-                    assignedTo = \`👤 \\\${rescuerName}\\\${statusIcon}\`;
+                    const rescuerName = rescuerUser ? rescuerUser.name : \`Rescuer \${r.assigned_user_id}\`;
+                    assignedTo = \`\${rescuerName}\${statusIcon}\`;
                 } else if (r.assigned_group_id) {
-                    assignedTo = \`Group \\\${r.assigned_group_id}\`;
+                    assignedTo = \`Group \${r.assigned_group_id}\`;
                 }
                 
                 let declinedBy = '-';
-                let declinedMatches = (r.details || '').match(/\\\\[Declined by Rescuer ID: (.*?)\\\\]/g);
+                let declinedMatches = (r.details || '').match(/\\[Declined by Rescuer ID: (.*?)\\]/g);
                 if (declinedMatches) {
-                    declinedBy = declinedMatches.map(m => m.replace(/\\\\[Declined by Rescuer ID: |\\\\]/g, '')).join(', ');
+                    declinedBy = declinedMatches.map(m => {
+                        const idStr = m.replace(/\\[Declined by Rescuer ID: |\\]/g, '');
+                        const u = (window.currentUsers || []).find(x => x.id.toString() === idStr);
+                        return u ? (u.name || \`Rescuer \${idStr}\`) : \`Rescuer \${idStr}\`;
+                    }).join(', ');
                 }
 
-                const displayId = \\\`REQ-\\\${r.id}\\\`;
-                const formattedReqTime = formatLocalTime(r.created_at);
-                const formattedCmdTime = r.updated_at ? formatLocalTime(r.updated_at) : formattedReqTime;
+                const displayId = \`REQ-\${r.id}\`;
+                const formattedReqTime = formatLocalDate(r.created_at) + ' ' + formatLocalTime(r.created_at);
+                const formattedCmdTime = r.updated_at ? formatLocalDate(r.updated_at) + ' ' + formatLocalTime(r.updated_at) : formattedReqTime;
 
                 // Let's link child/grouped tasks to their active command IDs for Close/Reassign actions
                 let actionBtnId = displayId;
@@ -5582,38 +5552,44 @@ function toggleGlobalMute(muted) {
                     actionBtnId = activeCmdForReq.id;
                 }
 
-                let historyRowHtml = \\\`<tr onclick="\\\${isOngoing ? \\\`selectTask('\\\${displayId}')\\\` : \\\`openCompletedTaskDetailModal('\\\${displayId}')\\\`}" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                let sectorHtml = \`<div style="font-weight:600;">\${r.sector || 'N/A'}</div>\`;
+                if (r.lat && r.lng) sectorHtml += \`<div style="font-size:10px; color:var(--text-muted); margin-top:2px;">\${parseFloat(r.lat).toFixed(5)}, \${parseFloat(r.lng).toFixed(5)}</div>\`;
+
+                let historyRowHtml = \`<tr onclick="\${isOngoing ? \`selectTask('\${displayId}')\` : \`openCompletedTaskDetailModal('\${displayId}')\`}" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                     <td style="font-weight: 800; color: var(--text-muted);">{SNO}</td>
-                    <td style="font-weight:700;">\\\${displayId}</td>
-                    <td>\\\${(r.type || 'Request').toUpperCase()} TASK</td>
-                    <td style="font-size:11px; color:var(--text-muted);">\\\${infoText}</td>
-                    <td>\\\${evidenceThumb}</td>
-                    <td>\\\${evidenceAudio}</td>
+                    <td style="font-weight:700;">\${displayId}</td>
+                    <td>\${(r.type || 'Request').toUpperCase()} TASK</td>
+                    <td style="font-size:11px; color:var(--text-muted);">\${infoText}</td>
+                    <td>\${evidenceThumb}</td>
+                    <td>\${evidenceAudio}</td>
                     <td>
-                        <span class="tag \\\${getTagForType(r.type)}">\\\${(r.type || 'N/A').toUpperCase()}</span>
+                        <span class="tag \${getTagForType(r.type)}">\${(r.type || 'N/A').toUpperCase()}</span>
                     </td>
-                    <td>\\\${r.sector || 'N/A'}</td>
-                    <td>\\\${assignedTo}</td>
-                      <td style="color:#ef4444; font-weight:600; font-size:12px;">\\\${declinedBy}</td>
-                      <td style="color:var(--text-muted); font-size: 12px;">\\\${formattedReqTime}</td>
-                    <td style="color:var(--text-muted); font-size: 12px;">\\\${formattedCmdTime}</td>
+                    <td>\${sectorHtml}</td>
+                    <td>\${assignedTo}</td>
+                    <td style="color:#ef4444; font-weight:600; font-size:12px;">\${declinedBy}</td>
+                    <td style="color:var(--text-muted); font-size: 12px;">\${formattedReqTime}</td>
+                    <td style="color:var(--text-muted); font-size: 12px;">\${formattedCmdTime}</td>
                     <td>
-                        <span class="tag" style="background:\\\${r.assigned_by === 'AI' ? '#dcfce7' : '#f1f5f9'}; color:\\\${r.assigned_by === 'AI' ? '#166534' : '#475569'};">
-                            \\\${r.assigned_by === 'AI' ? '🤖 AI' : '👤 Admin'}
+                        <span class="tag" style="background:\${r.assigned_by === 'AI' ? '#dcfce7' : '#f1f5f9'}; color:\${r.assigned_by === 'AI' ? '#166534' : '#475569'};">
+                            \${r.assigned_by === 'AI' ? 'AI-Admin' : 'Admin (Manual)'}
                         </span>
                     </td>
-                    <td><span class="tag \\\${getTagForStatus(r.status)}">\\\${r.status}</span></td>
-                    <td>\\\${closureThumb}</td>
+                    <td><span class="tag \${getTagForStatus(r.status)}">\${r.status}</span></td>
+                    <td>\${closureThumb}</td>
                     <td>
                         <div style="display:flex; gap:4px;">
-                            \\\${isOngoing ? \\\`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\\\${actionBtnId}')">✅ Close</button>\\\` : ''}
-                            \\\${isOngoing ? \\\`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\\\${actionBtnId}')">🔄 Re-Assign</button>\\\` : ''}
-                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \\\${isOngoing ? \\\`selectTask('\\\${displayId}')\\\` : \\\`openCompletedTaskDetailModal('\\\${displayId}')\\\`}">👁️ View</button>
+                            \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${actionBtnId}')">✅ Close</button>\` : ''}
+                            \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\${actionBtnId}')"> Re-Assign</button>\` : ''}
+                            <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \${isOngoing ? \`selectTask('\${displayId}')\` : \`openCompletedTaskDetailModal('\${displayId}')\`}">View</button>
                         </div>
                     </td>
-                </tr>\\\`;
+                </tr>\`;
 
-                if (isCrit) {
+                if (isPending) {
+                    pendingHistCount++;
+                    histPendingHtml += historyRowHtml.replace('{SNO}', String(pendingHistCount).padStart(2, '0'));
+                } else if (isCrit) {
                     critHistCount++;
                     histCriticalHtml += historyRowHtml.replace('{SNO}', String(critHistCount).padStart(2, '0'));
                 } else {
@@ -5622,23 +5598,24 @@ function toggleGlobalMute(muted) {
                 }
             });
 
-            const tableHeader = \\\`<tr>
+            const tableHeader = \`<tr>
                 <th style="width: 50px;">S.NO</th>
                 <th style="width: 90px;">ID</th>
-                <th style="width: 200px;">TASK / DESCRIPTION</th>
-                <th style="width: 150px;">INFORMATION</th>
+                <th style="width: 150px;">TASK</th>
+                <th style="width: 200px;">INFORMATION</th>
                 <th style="width: 80px;">IMAGE</th>
                 <th style="width: 150px;">AUDIO</th>
                 <th style="width: 100px;">TYPE</th>
                 <th style="width: 150px;">ZONE / AREA</th>
                 <th style="width: 150px;">ASSIGNED TO</th>
-                  <th style="width: 150px;">DECLINED BY</th>
-                <th style="width: 80px;">REQ</th>
-                <th style="width: 80px;">CMD</th>
+                <th style="width: 150px;">DECLINED BY</th>
+                <th style="width: 80px;">REQ TIME</th>
+                <th style="width: 80px;">CMD TIME</th>
+                <th style="width: 100px;">ASSIGNED BY</th>
                 <th style="width: 100px;">STATUS</th>
                 <th style="width: 100px;">CLOSURE REPORT</th>
                 <th style="width: 160px;">ACTION</th>
-            </tr>\\\`;
+            </tr>\`;
 
             // Apply headers to all tables
             // Apply headers to all tables (Live, Completed, and History)
@@ -5669,6 +5646,7 @@ function toggleGlobalMute(muted) {
                 el.style.display = liveGroupedCount > 0 ? 'inline-block' : 'none';
             }
 
+            document.getElementById('historyTbodyPending').innerHTML = histPendingHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No pending requests found</td></tr>';
             document.getElementById('historyTbodyCritical').innerHTML = histCriticalHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No critical history found</td></tr>';
             document.getElementById('historyTbodyNormal').innerHTML = histNormalHtml || '<tr><td colspan="14" style="text-align:center;color:var(--text-muted)">No normal history found</td></tr>';
 
@@ -5690,38 +5668,37 @@ function toggleGlobalMute(muted) {
                         groupDetails = c.details;
                     }
                 }
-                
                 const s = (c.status || '').toLowerCase();
                 const isOngoing = ['assigned', 'accepted', 'in_progress', 'pending', 'acknowledged'].includes(s);
                 
                 let closureThumb = '-';
                 if (c.completion_image_url) {
                     const closureUrl = formatMediaUrl(c.completion_image_url);
-                    closureThumb = \\\`<img src="\\\${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('\\\${closureUrl}', '_blank');">\\\`;
+                    closureThumb = \`<img src="\${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('\${closureUrl}', '_blank');">\`;
                 }
 
-                return \\\`
-                <tr onclick="\\\${isOngoing ? \\\`selectTask('\\\${c.id}')\\\` : \\\`openCompletedTaskDetailModal('\\\${c.id}')\\\`}" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
-                    <td style="font-weight: 800; color: var(--text-muted);">\\\${String(i + 1).padStart(2, '0')}</td>
-                    <td style="font-weight:700;">\\\${c.id}</td>
-                    <td style="font-weight:700; color:var(--special);">\\\${c.desc}</td>
-                    <td style="font-size:11px; color:var(--text-muted);">\\\${groupDetails}</td>
+                return \`
+                <tr onclick="\${isOngoing ? \`selectTask('\${c.id}')\` : \`openCompletedTaskDetailModal('\${c.id}')\`}" style="cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                    <td style="font-weight: 800; color: var(--text-muted);">\${String(i + 1).padStart(2, '0')}</td>
+                    <td style="font-weight:700;">\${c.id}</td>
+                    <td style="font-weight:700; color:var(--special);">\${c.desc}</td>
+                    <td style="font-size:11px; color:var(--text-muted);">\${groupDetails}</td>
                     <td>-</td>
                     <td>-</td>
                     <td><span class="tag tag-purple">GROUP</span></td>
-                    <td>\\\${c.zone}</td>
-                    <td>\\\${c.team}</td>
+                    <td>\${c.zone}</td>
+                    <td>\${c.team}</td>
                     <td style="color:var(--text-muted); font-size: 11px;">-</td>
-                    <td style="color:var(--text-muted); font-size: 11px;">\\\${c.time}</td>
-                    <td><span class="tag \\\${getTagForStatus(c.status)}">\\\${c.status}</span></td>
-                    <td>\\\${closureThumb}</td>
+                    <td style="color:var(--text-muted); font-size: 11px;">\${c.time}</td>
+                    <td><span class="tag \${getTagForStatus(c.status)}">\${c.status}</span></td>
+                    <td>\${closureThumb}</td>
                     <td style="display:flex; gap:6px;">
-                        \\\${isOngoing ? \\\`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\\\${c.id}')">✅ CLOSE</button>\\\` : ''}
-                        \\\${isOngoing ? \\\`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\\\${c.id}')">🔄 RE-ASSIGN</button>\\\` : ''}
-                        <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \\\${isOngoing ? \\\`selectTask('\\\${c.id}')\\\` : \\\`openCompletedTaskDetailModal('\\\${c.id}')\\\`}">👁️ VIEW</button>
+                        \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${c.id}')">✅ CLOSE</button>\` : ''}
+                        \${isOngoing ? \`<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('\${c.id}')"> RE-ASSIGN</button>\` : ''}
+                        <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); \${isOngoing ? \`selectTask('\${c.id}')\` : \`openCompletedTaskDetailModal('\${c.id}')\`}">ï¸  VIEW</button>
                     </td>
                 </tr>
-            \\\`;
+            \`;
             }).join('');
 
             const groupTbody = document.getElementById('historyTbodyGrouped');
@@ -5738,26 +5715,26 @@ function toggleGlobalMute(muted) {
 
             if (criticalMissions.length > 0) {
                 hub.style.display = 'block';
-                hubList.innerHTML = criticalMissions.map(m => \\\`
+                hubList.innerHTML = criticalMissions.map(m => \`
                     <div class="card" style="margin:0; border-left: 4px solid var(--critical); background:rgba(239,68,68,0.02); padding:12px;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-                            <div style="font-weight:900; color:var(--critical); font-size:14px;">\\\${m.id}</div>
+                            <div style="font-weight:900; color:var(--critical); font-size:14px;">\${m.id}</div>
                             <span class="tag tag-red" style="font-size:10px;">URGENT</span>
                         </div>
-                        <div style="font-weight:700; font-size:13px; margin-bottom:4px;">\\\${m.desc}</div>
+                        <div style="font-weight:700; font-size:13px; margin-bottom:4px;">\${m.desc}</div>
                         <div style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">
-                            <b>Assigned:</b> \\\${m.team} <br>
-                            <b>Target:</b> \\\${m.zone} <br>
-                            <b>Status:</b> <span class="tag \\\${getTagForStatus(m.status)}" style="font-size:9px; padding:1px 4px;">\\\${m.status}</span>
-                            \\\${m.requesterName ? \\\`<br><span style="display:inline-block; margin-top:4px; color:var(--primary); font-weight:700;">👤 Requester: \\\${m.requesterName}</span>\\\` : ''}
+                            <b>Assigned:</b> \${m.team} <br>
+                            <b>Target:</b> \${m.zone} <br>
+                            <b>Status:</b> <span class="tag \${getTagForStatus(m.status)}" style="font-size:9px; padding:1px 4px;">\${m.status}</span>
+                            \${m.requesterName ? \`<br><span style="display:inline-block; margin-top:4px; color:var(--primary); font-weight:700;"> Requester: \${m.requesterName}</span>\` : ''}
                         </div>
                         <div style="display:flex; gap:8px;">
-                            <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #eab308; border-color: #eab308; color: white;" onclick="openReassignModal('\\\${m.id}')">🔄 RE ASSIGN TASK</button>
-                            <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\\\${m.id}')">✅ CLOSE</button>
-                            <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="selectTask('\\\${m.id}')">👁️ VIEW</button>
+                            <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #eab308; border-color: #eab308; color: white;" onclick="openReassignModal('\${m.id}')"> RE ASSIGN TASK</button>
+                            <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('\${m.id}')">✅ CLOSE</button>
+                            <button class="btn btn-primary" style="flex:1; padding:6px; font-size:10px; font-weight:700; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="selectTask('\${m.id}')">ï¸ VIEW</button>
                         </div>
                     </div>
-                \\\`).join('');
+                \`).join('');
             } else {
                 hub.style.display = 'none';
             }
@@ -5793,7 +5770,7 @@ function toggleGlobalMute(muted) {
                 banner.style.display = 'block';
                 btn.style.background = '#ef4444';
                 btn.style.borderColor = '#ef4444';
-                btn.innerHTML = '<i data-lucide="alert-triangle" style="width:16px;"></i> 🚨 Dispatch Critical Alert';
+                btn.innerHTML = '<i data-lucide="alert-triangle" style="width:16px;"></i>  Dispatch Critical Alert';
                 titleEl.style.color = '#ef4444';
                 btnCritical.style.background = '#ef4444';
                 btnCritical.style.color = '#fff';
@@ -5874,13 +5851,13 @@ function toggleGlobalMute(muted) {
                     if (u.role === 'Rescuer' || u.role === 'Lead Rescuer') {
                         const opt = document.createElement('option');
                         opt.value = u.id;
-                        opt.textContent = \\\`\\\${u.name} (\\\${u.phone})\\\`;
+                        opt.textContent = \`\${u.name} (\${u.phone})\`;
                         select.appendChild(opt);
                     }
                 });
             } else {
                 // Fallback: fetch users
-                fetch(\\\`\\\${API_BASE}/users\\\`).then(r => r.json()).then(users => {
+                fetch(\`\${API_BASE}/users\`).then(r => r.json()).then(users => {
                     window.currentUsers = users;
                     populateIndividualSelect(elementId);
                 });
@@ -5894,8 +5871,8 @@ function toggleGlobalMute(muted) {
             const cmd = cmds.find(c => c.id === id);
             if (!cmd) return;
 
-            document.querySelector('#reassignTaskModal .modal-title').innerText = \\\`Re Assign Task: \\\${id}\\\`;
-            document.getElementById('reassignReqTitle').innerHTML = \\\`<span style="background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; color: var(--text-muted); margin-right: 6px;">REF</span> RE ASSIGN TASK: \\\${cmd.desc}\\\`;
+            document.querySelector('#reassignTaskModal .modal-title').innerText = \`Re Assign Task: \${id}\`;
+            document.getElementById('reassignReqTitle').innerHTML = \`<span style="background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; color: var(--text-muted); margin-right: 6px;">REF</span> RE ASSIGN TASK: \${cmd.desc}\`;
 
             let formattedDetails = cmd.details || 'N/A';
             if (cmd.details) {
@@ -5904,8 +5881,8 @@ function toggleGlobalMute(muted) {
                     if (parsed && typeof parsed === 'object') {
                         if (parsed.needs) {
                             const needsList = [];
-                            if (parsed.needs.people && parsed.needs.people > 0) needsList.push(\\\`\\\${parsed.needs.people} Person(s)\\\`);
-                            if (parsed.needs.food && parsed.needs.food > 0) needsList.push(\\\`\\\${parsed.needs.food} Food packets\\\`);
+                            if (parsed.needs.people && parsed.needs.people > 0) needsList.push(\`\${parsed.needs.people} Person(s)\`);
+                            if (parsed.needs.food && parsed.needs.food > 0) needsList.push(\`\${parsed.needs.food} Food packets\`);
                             if (parsed.needs.med && parsed.needs.med > 0) needsList.push('Medical Kits');
                             if (parsed.needs.sanitary && parsed.needs.sanitary > 0) needsList.push('Sanitary items');
 
@@ -5922,13 +5899,13 @@ function toggleGlobalMute(muted) {
                     // Not valid JSON, keep as is
                 }
             }
-            document.getElementById('reassignReqDetails').innerHTML = \\\`<strong>Requirements / Details:</strong> \\\${formattedDetails}\\\`;
+            document.getElementById('reassignReqDetails').innerHTML = \`<strong>Requirements / Details:</strong> \${formattedDetails}\`;
 
             document.getElementById('reassignReqPublic').innerText = cmd.requesterName || 'Unknown';
             document.getElementById('reassignReqPhone').innerText = cmd.requesterPhone || 'N/A';
             document.getElementById('reassignReqType').innerText = cmd.type ? cmd.type.replace('_', ' ').toUpperCase() : 'N/A';
             document.getElementById('reassignReqLocation').innerText = cmd.zone || 'N/A';
-            document.getElementById('reassignReqStatus').innerText = \\\`Currently assigned to: \\\${cmd.team} (\\\${cmd.status})\\\`;
+            document.getElementById('reassignReqStatus').innerText = \`Currently assigned to: \${cmd.team} (\${cmd.status})\`;
 
             // Clear selections
             document.getElementById('reassignPersonSelect').value = '';
@@ -5972,7 +5949,7 @@ function toggleGlobalMute(muted) {
                         groupTask.requests.forEach(r => {
                             if (!r.lat) return;
                             const m = L.marker([r.lat, r.lng], {
-                                icon: L.divIcon({ className: 'custom-sos-icon', html: '<div style="font-size:16px;">🚨</div>', iconSize: [20, 20], iconAnchor: [10, 10] })
+                                icon: L.divIcon({ className: 'custom-sos-icon', html: '<div style="font-size:16px;"></div>', iconSize: [20, 20], iconAnchor: [10, 10] })
                             }).addTo(window.reassignMapInstance);
                             window.reassignMapLayers.push(m);
                         });
@@ -6009,7 +5986,7 @@ function toggleGlobalMute(muted) {
                 } else if (cmd.requesterLat && cmd.requesterLng) {
                     coords = [[parseFloat(cmd.requesterLat), parseFloat(cmd.requesterLng)]];
                     const m = L.marker(coords[0], {
-                        icon: L.divIcon({ className: 'custom-sos-icon', html: '<div style="font-size:16px;">🚨</div>', iconSize: [20, 20], iconAnchor: [10, 10] })
+                        icon: L.divIcon({ className: 'custom-sos-icon', html: '<div style="font-size:16px;"></div>', iconSize: [20, 20], iconAnchor: [10, 10] })
                     }).addTo(window.reassignMapInstance);
                     window.reassignMapLayers.push(m);
                 }
@@ -6037,13 +6014,10 @@ function toggleGlobalMute(muted) {
         }
 
         async function confirmReassignment() {
-            const btn = document.querySelector('#reassignTaskModal .btn-primary');
-            if (btn) { btn.disabled = true; btn.innerText = 'Re-Assigning...'; }
             const personId = document.getElementById('reassignPersonSelect').value;
             const groupId = document.getElementById('reassignGroupSelect').value;
 
             if (!personId && !groupId) {
-                if (btn) { btn.disabled = false; btn.innerText = 'Re Assign Task'; }
                 alert("Please select either a Person or a Group");
                 return;
             }
@@ -6065,17 +6039,11 @@ function toggleGlobalMute(muted) {
                 });
 
                 if (response.ok) {
-                    if (btn) { btn.disabled = false; btn.innerText = 'Re Assign Task'; }
                     closeModal('reassignTaskModal');
                     showAdminToast(\`Task \${reassigningCmdId} reassigned to \${targetName}\`);
                     refreshAllModules();
-                } else {
-                    if (btn) { btn.disabled = false; btn.innerText = 'Re Assign Task'; }
-                    const err = await response.json();
-                    showAdminToast("Error: " + (err.error || 'Failed to reassign'));
                 }
             } catch (e) {
-                if (btn) { btn.disabled = false; btn.innerText = 'Re Assign Task'; }
                 console.error("Reassign failed", e);
                 showAdminToast("Re-assignment failed. Please try again.");
             }
@@ -6118,45 +6086,71 @@ function toggleGlobalMute(muted) {
             const startY = currentActiveOp ? 48 : 35;
 
             // Filter data based on current view if needed, or export all
-            const tableData = cmds.map((c, index) => {
-                const isCritical = ['sos', 'rescue', 'emergency'].includes(c.type.toLowerCase());
-                const priority = isCritical ? 'CRITICAL' : 'NORMAL';
+            const tableData = rescueRequests.map((r, index) => {
+                let assignedTo = 'Unassigned';
+                if (r.assigned_officer_name) {
+                    assignedTo = \`\${r.assigned_officer_name}\\n(ID: \${r.assigned_user_id || 'N/A'})\`;
+                } else if (r.assigned_group_name) {
+                    assignedTo = \`\${r.assigned_group_name}\\n(Group: \${r.assigned_group_id})\`;
+                } else if (r.assigned_user_id) {
+                    assignedTo = \`Rescuer ID: \${r.assigned_user_id}\`;
+                } else if (r.assigned_group_id) {
+                    assignedTo = \`Group ID: \${r.assigned_group_id}\`;
+                }
 
-                let taskDesc = c.desc;
-                if (c.requesterName) {
-                    taskDesc += \`\\n[Requester: \${c.requesterName}]\`;
+                let declinedBy = '-';
+                let declinedMatches = (r.details || '').match(/\\[Declined by Rescuer ID: (.*?)\\]/g);
+                if (declinedMatches) {
+                    declinedBy = declinedMatches.map(m => {
+                        const idStr = m.replace(/\\[Declined by Rescuer ID: |\\]/g, '');
+                        const u = (window.currentUsers || []).find(x => x.id.toString() === idStr);
+                        return u ? \`\${u.name}\\n(ID: \${idStr})\` : \`ID: \${idStr}\`;
+                    }).join(', ');
+                }
+
+                const formattedReqTime = r.created_at ? new Date(r.created_at).toLocaleString() : '-';
+                const formattedCmdTime = r.updated_at ? new Date(r.updated_at).toLocaleString() : formattedReqTime;
+
+                let publicDetails = '-';
+                if (r.phone || r.name) {
+                    publicDetails = \`Name: \${r.name || 'Public'}\\nContact: \${r.phone || 'N/A'}\`;
+                }
+
+                let locDetails = r.sector || '-';
+                if (r.lat && r.lng) {
+                    locDetails += \`\\n(\${parseFloat(r.lat).toFixed(4)}, \${parseFloat(r.lng).toFixed(4)})\`;
                 }
 
                 return [
                     String(index + 1).padStart(2, '0'),
-                    c.id,
-                    taskDesc,
-                    priority,
-                    c.type.toUpperCase(),
-                    c.zone.replace(/<[^>]*>/g, '').replace(/\\s+/g, ' ').trim(),
-                    c.team,
-                    c.reqTime || '-',
-                    c.status.toUpperCase()
+                    \`REQ-\${r.id}\`,
+                    (r.type || 'Request').toUpperCase(),
+                    publicDetails,
+                    locDetails,
+                    assignedTo,
+                    declinedBy,
+                    \`\${formattedReqTime}\\n-> \${formattedCmdTime}\`,
+                    (r.status || 'Pending').toUpperCase()
                 ];
             });
 
             doc.autoTable({
                 startY: startY,
-                head: [['S.#', 'ID', 'TASK / DESCRIPTION', 'PRIORITY', 'TYPE', 'ZONE / AREA', 'TEAM', 'REQ TIME', 'STATUS']],
+                head: [['S.#', 'ID', 'TYPE', 'PUBLIC INFO', 'LOCATION', 'ASSIGNED TO', 'DECLINED BY', 'TIME (REQ -> CMD)', 'STATUS']],
                 body: tableData,
                 theme: 'grid',
-                styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
-                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold', halign: 'center' },
+                styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold', halign: 'center' },
                 columnStyles: {
-                    0: { cellWidth: 10, halign: 'center' },
-                    1: { cellWidth: 18 },
-                    2: { cellWidth: 55 },
-                    3: { cellWidth: 20, fontStyle: 'bold' },
-                    4: { cellWidth: 18 },
-                    5: { cellWidth: 40 },
-                    6: { cellWidth: 35 },
-                    7: { cellWidth: 20, halign: 'center' },
-                    8: { cellWidth: 20, halign: 'center' }
+                    0: { cellWidth: 8, halign: 'center' },
+                    1: { cellWidth: 16 },
+                    2: { cellWidth: 22, fontStyle: 'bold' },
+                    3: { cellWidth: 38 },
+                    4: { cellWidth: 42 },
+                    5: { cellWidth: 34 },
+                    6: { cellWidth: 34 },
+                    7: { cellWidth: 38, halign: 'center' },
+                    8: { cellWidth: 24, halign: 'center' }
                 },
                 alternateRowStyles: { fillColor: [248, 250, 252] },
                 margin: { top: 35, left: 14, right: 14 },
@@ -6190,7 +6184,7 @@ function toggleGlobalMute(muted) {
                 teamId = teamEl.value;
             } else {
                 let indivEl = document.getElementById('cmdIndividual');
-                team = '👤 ' + indivEl.options[indivEl.selectedIndex].text;
+                team = ' ' + indivEl.options[indivEl.selectedIndex].text;
                 rescuerPhone = indivEl.value;
                 if (!rescuerPhone) { alert('Please select a rescuer'); return; }
             }
@@ -6283,7 +6277,7 @@ function toggleGlobalMute(muted) {
                 <div style="background:#fff;width:480px;max-width:94vw;border-radius:16px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.5);animation:slideUp 0.3s ease;">
                     <!-- Red header bar -->
                     <div style="background:#ef4444;padding:20px 24px;display:flex;align-items:center;gap:14px;">
-                        <span style="font-size:36px;">🚨</span>
+                        <span style="font-size:36px;"></span>
                         <div>
                             <div style="color:#fff;font-size:18px;font-weight:900;letter-spacing:0.5px;">CRITICAL RESPONSE DISPATCH</div>
                             <div style="color:rgba(255,255,255,0.8);font-size:13px;font-weight:600;">HIGH PRIORITY — REQUIRES IMMEDIATE ACTION</div>
@@ -6298,19 +6292,19 @@ function toggleGlobalMute(muted) {
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
                             <div style="background:#f8fafc;border-radius:8px;padding:12px;">
                                 <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px;">ASSIGNED TO</div>
-                                <div style="font-size:14px;font-weight:700;color:#1e293b;">👥 \${params.team}</div>
+                                <div style="font-size:14px;font-weight:700;color:#1e293b;"> \${params.team}</div>
                             </div>
                             <div style="background:#f8fafc;border-radius:8px;padding:12px;">
                                 <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px;">TARGET ZONE</div>
-                                <div style="font-size:14px;font-weight:700;color:#1e293b;">📍 \${params.areaName}</div>
+                                <div style="font-size:14px;font-weight:700;color:#1e293b;"> \${params.areaName}</div>
                             </div>
                         </div>
                         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:20px;font-size:12px;color:#92400e;">
                             ⚡ Dispatching this alert will send an <strong>urgent notification</strong> to all assigned rescuers requiring immediate Accept or Decline. The admin will be notified in real-time.
                         </div>
                         <div style="display:flex;gap:12px;">
-                            <button onclick="document.getElementById('criticalApprovalOverlay').remove();" style="flex:1;padding:14px;background:#f1f5f9;border:2px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:800;color:#64748b;cursor:pointer;">✗ Cancel</button>
-                            <button onclick="confirmCriticalDispatch(\${JSON.stringify(params).replace(/"/g, '&quot;')})" style="flex:1;padding:14px;background:#ef4444;border:none;border-radius:10px;font-size:15px;font-weight:900;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(239,68,68,0.4);">🚨 CONFIRM DISPATCH</button>
+                            <button onclick="document.getElementById('criticalApprovalOverlay').remove();" style="flex:1;padding:14px;background:#f1f5f9;border:2px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:800;color:#64748b;cursor:pointer;">❌ Cancel</button>
+                            <button onclick="confirmCriticalDispatch(\${JSON.stringify(params).replace(/"/g, '&quot;')})" style="flex:1;padding:14px;background:#ef4444;border:none;border-radius:10px;font-size:15px;font-weight:900;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(239,68,68,0.4);"> CONFIRM DISPATCH</button>
                         </div>
                     </div>
                 </div>
@@ -6325,7 +6319,7 @@ function toggleGlobalMute(muted) {
             let t = \`\${String(d.getHours()).padStart(2, '0')}:\${String(d.getMinutes()).padStart(2, '0')}\`;
             const localId = \`CMD-\${100 + cmds.length + 1}\`;
 
-            cmds.unshift({ id: localId, desc: '🚨 ' + params.desc, type: 'critical', zone: params.zoneHtml, team: params.team, time: t, status: 'Critical', layerData: null });
+            cmds.unshift({ id: localId, desc: ' ' + params.desc, type: 'critical', zone: params.zoneHtml, team: params.team, time: t, status: 'Critical', layerData: null });
             renderCmds();
 
             document.getElementById('cmdDetails').value = '';
@@ -6347,7 +6341,7 @@ function toggleGlobalMute(muted) {
                 })
             }).then(() => refreshAllModules()).catch(e => console.warn('Critical dispatch persist failed:', e));
 
-            showAdminToast('🚨 Critical Response dispatched! Rescuers have been alerted.');
+            showAdminToast(' Critical Response dispatched! Rescuers have been alerted.');
         }
 
         // ─── Admin Toast Notification ───────────────────────────────────────────────
@@ -6356,7 +6350,7 @@ function toggleGlobalMute(muted) {
         async function fetchRescueRequests() {
             try {
                 // Fetch all requests to ensure Notification Log has full visibility
-                const res = await fetch(\`\${API_BASE}/rescue-requests?_t=\${Date.now()}\`);
+                const res = await fetch(\`\${API_BASE}/rescue-requests\`);
                 const data = await res.json();
 
                 // Sort by recency
@@ -6447,28 +6441,23 @@ function toggleGlobalMute(muted) {
 
             pendingReqs.forEach((req, index) => {
                 let typeLabel = req.type.charAt(0).toUpperCase() + req.type.slice(1) + ' Rescue';
-                let color = 'var(--special)';
-                let bg = '#f3e8ff';
-                let isCritical = true;
+                
+                // NEW LOGIC: Classification entirely depends on req.priority
+                let isCritical = (req.priority && req.priority.toLowerCase() === 'critical');
+                
+                let color = isCritical ? 'var(--critical)' : 'var(--special)';
+                let bg = isCritical ? 'rgba(239,68,68,0.05)' : '#f3e8ff';
 
                 if (req.type === 'medical') {
-                    color = 'var(--critical)';
-                    bg = '#fee2e2';
-                    typeLabel = '🏥 Medical Rescue';
+                    typeLabel = ' Medical Rescue';
                 } else if (req.type === 'pregnancy') {
-                    color = 'var(--special)';
-                    bg = '#f3e8ff';
-                    typeLabel = '🤰 Pregnancy Rescue';
+                    typeLabel = ' Pregnancy Rescue';
                 } else if (req.type === 'food' || req.type === 'delivery' || req.type === 'medical_delivery') {
                     color = 'var(--pending)';
                     bg = '#fffbeb';
-                    typeLabel = req.type === 'food' ? '📦 Food Delivery' : '💊 Medical Supply';
-                    isCritical = false;
+                    typeLabel = req.type === 'food' ? ' Food Delivery' : ' Medical Supply';
                 } else if (req.type === 'sos') {
-                    color = 'var(--critical)';
-                    bg = 'rgba(239,68,68,0.05)';
-                    typeLabel = '🚨 SOS Alert Response';
-                    isCritical = true;
+                    typeLabel = ' SOS Alert Response';
                 }
 
                 // Parse details for quantities
@@ -6477,9 +6466,9 @@ function toggleGlobalMute(muted) {
                     try {
                         const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
                         const items = [];
-                        if (d.food) items.push(\`🍞 Food: <b>\${d.food}</b>\`);
-                        if (d.med) items.push(\`💊 Medicine: <b>\${d.med}</b>\`);
-                        if (d.sanitary) items.push(\`🧻 Sanitary: <b>\${d.sanitary}</b>\`);
+                        if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
+                        if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
+                        if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
 
                         if (items.length > 0) {
                             detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
@@ -6658,7 +6647,7 @@ function toggleGlobalMute(muted) {
             
             closeModal('sosAlertModal');
             if (id) {
-                openAssignModal(id, \`SOS Emergency Request\`, sector, urgency, '🚨');
+                openAssignModal(id, \`SOS Emergency Request\`, sector, urgency, '');
             }
         }
 
@@ -6706,7 +6695,7 @@ function toggleGlobalMute(muted) {
                     assignMarker = L.marker([req.lat, req.lng], {
                         icon: L.divIcon({
                             className: 'custom-sos-icon',
-                            html: '<div style="font-size:24px;">🚨</div>',
+                            html: '<div style="font-size:24px;"></div>',
                             iconSize: [30, 30],
                             iconAnchor: [15, 15]
                         })
@@ -6731,14 +6720,11 @@ function toggleGlobalMute(muted) {
         }
 
         async function dispatchAssignment() {
-            const btn = document.querySelector('#assignModal .btn-primary');
-            if (btn) { btn.disabled = true; btn.innerText = 'Dispatching...'; }
             const rawId = document.getElementById('assignReqId').value;
             const personId = document.getElementById('assignPersonSelect').value;
             const groupId = document.getElementById('assignGroupSelect').value;
 
             if (!personId && !groupId) {
-                if (btn) { btn.disabled = false; btn.innerText = 'Dispatch'; }
                 alert("Please select either a Person or a Group");
                 return;
             }
@@ -6775,11 +6761,9 @@ function toggleGlobalMute(muted) {
                         throw new Error(err.error || 'Failed to assign task');
                     }
                 }
-                if (btn) { btn.disabled = false; btn.innerText = 'Dispatch'; }
                 closeModal('assignModal');
                 refreshAllModules();
             } catch (e) {
-                if (btn) { btn.disabled = false; btn.innerText = 'Dispatch'; }
                 console.error("Error dispatching assignment", e);
                 showAdminToast("Error: " + e.message);
             }
@@ -6787,7 +6771,7 @@ function toggleGlobalMute(muted) {
 
         async function declineRescueRequest(id) {
             try {
-                await fetch(\\\`\\\${API_BASE}/rescue-requests/\\\${id}/decline\\\`, { method: 'PUT' });
+                await fetch(\`\${API_BASE}/rescue-requests/\${id}/decline\`, { method: 'PUT' });
                 fetchRescueRequests();
             } catch (e) {
                 console.error("Error declining", e);
@@ -6795,15 +6779,15 @@ function toggleGlobalMute(muted) {
         }
 
         async function closeRescueRequest(id) {
-            if (!confirm(\\\`Are you sure you want to manually mark this request as completed?\\\`)) return;
+            if (!confirm(\`Are you sure you want to manually mark this request as closed?\`)) return;
             try {
-                const res = await fetch(\\\`\\\${API_BASE}/rescue-requests/\\\${id}/status\\\`, {
+                const res = await fetch(\`\${API_BASE}/rescue-requests/\${id}/status\`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'completed' })
+                    body: JSON.stringify({ status: 'closed' })
                 });
                 if (res.ok) {
-                    showAdminToast(\\\`Rescue request closed successfully\\\`);
+                    showAdminToast(\`Rescue request closed successfully\`);
                     fetchRescueRequests();
                 } else {
                     alert("Failed to close rescue request");
@@ -6815,7 +6799,7 @@ function toggleGlobalMute(muted) {
 
         function openReplyModal(deviceId, name) {
             document.getElementById('replyDeviceId').value = deviceId;
-            document.getElementById('replyTargetInfo').innerText = \\\`Sending message to: \\\${name} (\\\${deviceId})\\\`;
+            document.getElementById('replyTargetInfo').innerText = \`Sending message to: \${name} (\${deviceId})\`;
             document.getElementById('replyMessage').value = '';
             document.getElementById('replyModal').style.display = 'flex';
         }
@@ -6826,13 +6810,13 @@ function toggleGlobalMute(muted) {
             if (!message) return alert("Please enter a message.");
 
             try {
-                const res = await fetch(\\\`\\\${API_BASE}/messages/send\\\`, {
+                const res = await fetch(\`\${API_BASE}/messages/send\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ deviceId, message })
                 });
                 if (res.ok) {
-                    showAdminToast(\\\`Message sent to \\\${deviceId}\\\`);
+                    showAdminToast(\`Message sent to \${deviceId}\`);
                     closeModal('replyModal');
                 } else {
                     alert("Failed to send message.");
@@ -6843,7 +6827,7 @@ function toggleGlobalMute(muted) {
         async function fetchDashboardStats() {
             try {
                 // 1. Fetch Summary Stats from specialized endpoint
-                const res = await fetch(\\\`\\\${API_BASE}/dashboard-stats\\\`);
+                const res = await fetch(\`\${API_BASE}/dashboard-stats\`);
                 const stats = await res.json();
 
                 if (document.getElementById('opSosCount')) {
@@ -6859,7 +6843,7 @@ function toggleGlobalMute(muted) {
                 }
 
                 // 2. Fetch raw requests for secondary stats
-                const reqRes = await fetch(\\\`\\\${API_BASE}/rescue-requests\\\`);
+                const reqRes = await fetch(\`\${API_BASE}/rescue-requests\`);
                 const data = await reqRes.json();
 
                 const rawStats = {
@@ -6899,6 +6883,7 @@ function toggleGlobalMute(muted) {
                     return;
                 }
             }
+
             const isRequest = fullId.startsWith('REQ-') || (!fullId.startsWith('CMD-') && isNaN(Number(fullId)));
             const endpoint = isRequest ? \`rescue-requests/\${dbId}/status\` : \`commands/\${dbId}/status\`;
 
@@ -6910,7 +6895,7 @@ function toggleGlobalMute(muted) {
                 });
 
                 if (res.ok) {
-                    showAdminToast(\\\`Task \\\${fullId} closed successfully\\\`);
+                    showAdminToast(\`Task \${fullId} closed successfully\`);
                     await fetchCommands();
                     await fetchRescueRequests();
                     closeTaskDetails();
@@ -6927,7 +6912,7 @@ function toggleGlobalMute(muted) {
 
         async function fetchCommands() {
             try {
-                const res = await fetch(\\\`\\\${API_BASE}/commands\\\`);
+                const res = await fetch(\`\${API_BASE}/commands\`);
                 let data = await res.json();
 
                 // Sort so newest commands are on top
@@ -6938,6 +6923,14 @@ function toggleGlobalMute(muted) {
                 // Map the DB commands to the UI format
                 cmds = data.map(c => {
                     let payload = {};
+                    try {
+                        if (typeof c.command_payload === 'string') {
+                            payload = JSON.parse(c.command_payload);
+                        } else {
+                            payload = c.command_payload || {};
+                        }
+                    } catch (e) { }
+
                     let assignedTo = 'Unassigned';
                     let rescuerUser = null;
                     if (window.currentUsers) {
@@ -6959,22 +6952,23 @@ function toggleGlobalMute(muted) {
                     }
 
                     if (c.assigned_officer_name) {
-                        assignedTo = \`👤 \${c.assigned_officer_name}\${statusIcon}\`;
+                        assignedTo = \`\${c.assigned_officer_name}\${statusIcon}\`;
                     } else if (c.assigned_group_name) {
-                        assignedTo = \`👥 \${c.assigned_group_name}\`;
+                        assignedTo = \` \${c.assigned_group_name}\`;
                     } else if (c.target_phone) {
-                        assignedTo = \`👤 \${c.target_phone}\${statusIcon}\`;
+                        assignedTo = \`\${c.target_phone}\${statusIcon}\`;
                     } else if (c.group_id) {
-                        assignedTo = \`Group \\\${c.group_id}\`;
+                        assignedTo = \`Group \${c.group_id}\`;
                     }
+
                     // Special handling for Tactical Groups
                     let description = payload.message || c.command_payload;
                     let detailSummary = c.requester_details || payload.details || null;
 
                     if (c.command_type === 'group') {
-                        description = payload.name || \\\`Tactical Group Cluster\\\`;
+                        description = payload.name || \`Tactical Group Cluster\`;
                         if (payload.serial_numbers) {
-                            detailSummary = \\\`Batch: \\\${payload.serial_numbers.join(', ')}\\\`;
+                            detailSummary = \`Batch: \${payload.serial_numbers.join(', ')}\`;
                         }
                     }
 
@@ -7016,7 +7010,7 @@ function toggleGlobalMute(muted) {
                             name: payload.name || 'Tactical Cluster',
                             requests: (payload.request_ids || []).map(id => rescueRequests.find(r => r.id.toString() === id.toString())).filter(r => !!r),
                             status: (c.status || 'pending').charAt(0).toUpperCase() + (c.status || 'pending').slice(1),
-                            team: c.assigned_officer_name ? \\\`👤 \\\${c.assigned_officer_name}\\\` : (c.assigned_group_name ? \\\`👥 \\\${c.assigned_group_name}\\\` : 'Pending'),
+                            team: c.assigned_officer_name ? \` \${c.assigned_officer_name}\` : (c.assigned_group_name ? \` \${c.assigned_group_name}\` : 'Pending'),
                             priority: c.priority || 'normal',
                             custom_polygon: payload.custom_polygon || null
                         });
@@ -7033,7 +7027,7 @@ function toggleGlobalMute(muted) {
 
         async function fetchRefreshSetting() {
             try {
-                const res = await fetch(\\\`\\\${API_BASE}/settings\\\`);
+                const res = await fetch(\`\${API_BASE}/settings\`);
                 const settings = await res.json();
                 if (settings.refresh_interval) {
                     const interval = parseInt(settings.refresh_interval);
@@ -7107,7 +7101,7 @@ function toggleGlobalMute(muted) {
             console.log("[Admin] Saving retry config:", val);
             if (!val) return;
             try {
-                const response = await fetch(\\\`\\\${API_BASE}/settings\\\`, {
+                const response = await fetch(\`\${API_BASE}/settings\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'retry_intervals', value: val })
@@ -7115,7 +7109,7 @@ function toggleGlobalMute(muted) {
                 if (response.ok) {
                     const displayVal = val.includes(',') ? val : val + 's';
                     document.getElementById('activeRetryValue').innerText = displayVal;
-                    showAdminToast(\\\`Mobile SOS retry intervals updated to: \\\${displayVal}\\\`);
+                    showAdminToast(\`Mobile SOS retry intervals updated to: \${displayVal}\`);
                 } else {
                     console.error("[Admin] Failed to save settings:", response.statusText);
                     alert("Failed to save settings. Please check backend connection.");
@@ -7200,14 +7194,14 @@ function toggleGlobalMute(muted) {
             let finalMins = parseInt(val);
             if (unit === 'hr') finalMins = finalMins * 60;
             try {
-                const response = await fetch(\\\`\\\${API_BASE}/settings\\\`, {
+                const response = await fetch(\`\${API_BASE}/settings\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'sos_buffer_minutes', value: finalMins.toString() })
                 });
                 if (response.ok) {
                     fetchRefreshSetting(); // refresh UI
-                    showAdminToast(\\\`SOS trigger buffer updated to \\\${val} \\\${unit === 'hr' ? 'Hour(s)' : 'Min(s)'}\\\`);
+                    showAdminToast(\`SOS trigger buffer updated to \${val} \${unit === 'hr' ? 'Hour(s)' : 'Min(s)'}\`);
                 } else {
                     alert("Failed to save buffer setting.");
                 }
@@ -7259,65 +7253,86 @@ function toggleGlobalMute(muted) {
         async function setImageCapture(isEnabled) {
             updateImageUI(isEnabled);
             try {
-                await fetch(\\\`\\\${API_BASE}/settings\\\`, {
+                await fetch(\`\${API_BASE}/settings\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'public_image_enabled', value: isEnabled ? 'true' : 'false' })
                 });
-                showAdminToast(\\\`Public image capture is now \\\${isEnabled ? 'ENABLED' : 'DISABLED'}\\\`);
+                showAdminToast(\`Public image capture is now \${isEnabled ? 'ENABLED' : 'DISABLED'}\`);
             } catch (e) { console.error(e); }
         }
 
         async function setMicCapture(isEnabled) {
             updateMicUI(isEnabled);
             try {
-                await fetch(\\\`\\\${API_BASE}/settings\\\`, {
+                await fetch(\`\${API_BASE}/settings\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'public_mic_enabled', value: isEnabled ? 'true' : 'false' })
                 });
-                showAdminToast(\\\`Public microphone recording is now \\\${isEnabled ? 'ENABLED' : 'DISABLED'}\\\`);
+                showAdminToast(\`Public microphone recording is now \${isEnabled ? 'ENABLED' : 'DISABLED'}\`);
             } catch (e) { console.error(e); }
         }
 
         async function updateRefreshSetting(val) {
             if (!val) return;
             try {
-                await fetch(\\\`\\\${API_BASE}/settings\\\`, {
+                await fetch(\`\${API_BASE}/settings\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'refresh_interval', value: val })
                 });
                 document.getElementById('activeRefreshValue').innerText = val + 's';
                 document.getElementById('refreshIntervalInput').value = val;
-                showAdminToast(\\\`Dashboard refresh interval updated to \\\${val} seconds\\\`);
+                showAdminToast(\`Dashboard refresh interval updated to \${val} seconds\`);
                 startAutoRefresh(parseInt(val));
             } catch (e) { console.error(e); }
         }
 
         async function fetchAIInterval() {
             try {
-                const res = await fetch(\\\`\\\${API_BASE}/ai/interval\\\`);
+                const res = await fetch(\`\${API_BASE}/ai/interval\`);
                 const data = await res.json();
                 document.getElementById('aiIntervalVal').value = data.value;
                 document.getElementById('aiIntervalUnit').value = data.unit;
-                document.getElementById('activeAiIntervalValue').innerText = \\\`\\\${data.value} \\\${data.unit}\\\`;
+                document.getElementById('activeAiIntervalValue').innerText = \`\${data.value} \${data.unit}\`;
+                
+                const reRes = await fetch(\`\${API_BASE}/ai/reassign-interval\`);
+                const reData = await reRes.json();
+                document.getElementById('aiReassignIntervalVal').value = reData.value;
+                document.getElementById('aiReassignIntervalUnit').value = reData.unit;
+                document.getElementById('activeAiReassignIntervalValue').innerText = \`\${reData.value} \${reData.unit}\`;
+                
                 if(window.lucide) window.lucide.createIcons();
-            } catch (e) { console.error('Failed to fetch AI interval', e); }
+            } catch (e) { console.error('Failed to fetch AI intervals', e); }
         }
 
         async function updateAIIntervalSetting() {
             const val = document.getElementById('aiIntervalVal').value;
             const unit = document.getElementById('aiIntervalUnit').value;
             try {
-                await fetch(\\\`\\\${API_BASE}/ai/interval\\\`, {
+                await fetch(\`\${API_BASE}/ai/interval\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ value: val, unit: unit })
                 });
-                document.getElementById('activeAiIntervalValue').innerText = \\\`\\\${val} \\\${unit}\\\`;
-                showAdminToast(\\\`AI Engine Interval updated to \\\${val} \\\${unit}\\\`);
+                document.getElementById('activeAiIntervalValue').innerText = \`\${val} \${unit}\`;
+                showAdminToast(\`AI Engine Interval updated to \${val} \${unit}\`);
             } catch (e) { console.error('Failed to update AI interval', e); }
+        }
+
+        async function updateAIReassignIntervalSetting() {
+            const val = document.getElementById('aiReassignIntervalVal').value;
+            const unit = document.getElementById('aiReassignIntervalUnit').value;
+            try {
+                await fetch(\`\${API_BASE}/ai/reassign-interval\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ value: val, unit: unit })
+                });
+                document.getElementById('activeAiReassignIntervalValue').innerText = \`\${val} \${unit}\`;
+                showAdminToast(\`AI Reassignment Buffer updated to \${val} \${unit}\`);
+            } catch (e) { console.error('Failed to update AI reassign interval', e); }
         }
 
 
@@ -7328,9 +7343,9 @@ function toggleGlobalMute(muted) {
                   refreshTimer = setInterval(() => {
                       refreshAllModules();
                   }, seconds * 1000);
-                  console.log(\\\`[Admin] Background polling enabled: \\\${seconds} seconds.\\\`);
+                  console.log(\`[Admin] Background polling enabled: \${seconds} seconds.\`);
               } else {
-                  console.log(\\\`[Admin] Background polling disabled. Relying purely on WebSocket pushes for real-time updates.\\\`);
+                  console.log(\`[Admin] Background polling disabled. Relying purely on WebSocket pushes for real-time updates.\`);
               }
 
             const runAll = () => {
@@ -7353,20 +7368,20 @@ function toggleGlobalMute(muted) {
 
         async function fetchGroups() {
             try {
-                const res = await fetch(\\\`\\\${API_BASE}/groups\\\`);
+                const res = await fetch(\`\${API_BASE}/groups\`);
                 currentGroups = await res.json();
                 renderGroupSidebar();
                 updateModalGroupLists();
 
-                if (!selectedGroupId && currentGroups.length > 0) {
-                    switchGroup(currentGroups[0].id);
+                if (!selectedGroupId) {
+                    switchGroup('all');
                 }
             } catch (e) { console.error("Error fetching groups", e); }
         }
 
         async function fetchUsers() {
             try {
-                const res = await fetch(\\\`\\\${API_BASE}/users\\\`);
+                const res = await fetch(\`\${API_BASE}/users\`);
                 currentUsers = await res.json();
                 if (selectedGroupId) {
                     renderMembers(selectedGroupId);
@@ -7379,24 +7394,25 @@ function toggleGlobalMute(muted) {
             const tbody = document.getElementById('publicTableBody');
             if (!tbody) return;
             const publicUsers = currentUsers.filter(u => u.role === 'public');
-            tbody.innerHTML = publicUsers.map((m, index) => \\\`
+            publicUsers.sort((a, b) => (a.serial_number || '').localeCompare(b.serial_number || '', undefined, {numeric: true}));
+            tbody.innerHTML = publicUsers.map((m, index) => \`
                 <tr>
-                    <td style="font-weight: 800; color: var(--text-muted);">\\\${String(index + 1).padStart(2, '0')}</td>
+                    <td style="font-weight: 800; color: var(--text-muted);">\${String(index + 1).padStart(2, '0')}</td>
                     <td>
-                        <img src="\\\${m.photo_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.name) + '&background=random'}" 
+                        <img src="\${m.photo_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.name) + '&background=random'}" 
                              style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid var(--border);" />
                     </td>
-                    <td style="font-weight:700; color:var(--accent);">\\\${m.serial_number || 'N/A'}</td>
-                    <td><div style="font-weight:600;">\\\${m.name}</div></td>
-                    <td>\\\${m.phone || 'N/A'}</td>
-                    <td>\\\${m.password || '<span style="color:var(--text-muted)">Not set</span>'}</td>
-                    <td><span class="tag \\\${m.status === 'active' ? 'tag-green' : 'tag-gray'}">\\\${m.status}</span></td>
+                    <td style="font-weight:700; color:var(--accent);">\${m.serial_number || 'N/A'}</td>
+                    <td><div style="font-weight:600;">\${m.name}</div></td>
+                    <td>\${m.phone || 'N/A'}</td>
+                    <td>\${m.password || '<span style="color:var(--text-muted)">Not set</span>'}</td>
+                    <td><span class="tag \${m.status === 'active' ? 'tag-green' : 'tag-gray'}">\${m.status}</span></td>
                     <td style="text-align:right;">
-                        <button class="action-icon" onclick="openEditPublicModal(\\\${m.id})" title="Edit"><i data-lucide="edit-2" style="width:14px;"></i></button>
-                        <button class="action-icon danger" onclick="deleteMember(\\\${m.id})" title="Delete"><i data-lucide="trash-2" style="width:14px;"></i></button>
+                        <button class="action-icon" onclick="openEditPublicModal(\${m.id})" title="Edit"><i data-lucide="edit-2" style="width:14px;"></i></button>
+                        <button class="action-icon danger" onclick="deleteMember(\${m.id})" title="Delete"><i data-lucide="trash-2" style="width:14px;"></i></button>
                     </td>
                 </tr>
-            \\\`).join('');
+            \`).join('');
             lucide.createIcons();
         }
 
@@ -7405,31 +7421,31 @@ function toggleGlobalMute(muted) {
             if (!list) return;
 
             const allActive = selectedGroupId === 'all' ? 'active' : '';
-            let html = \\\`
-                <div class="group-tile \\\${allActive}" onclick="switchGroup('all', this)">
+            let html = \`
+                <div class="group-tile \${allActive}" onclick="switchGroup('all', this)">
                     <div class="group-id" style="display:flex;align-items:center;justify-content:center;"><i data-lucide="users" style="width:16px;"></i></div>
                     <div class="group-info">
                         <div class="group-name" style="font-weight:700;">All Members</div>
                         <div class="group-meta">Entire Roster</div>
                     </div>
                 </div>
-            \\\`;
+            \`;
 
             html += currentGroups.map((g, index) => {
                 const sNo = String(index + 1).padStart(2, '0');
                 const isActive = selectedGroupId === g.id ? 'active' : '';
-                return \\\`
-                    <div class="group-tile \\\${isActive}" onclick="switchGroup(\\\${g.id}, this)">
-                        <div class="group-id">\\\${sNo}</div>
+                return \`
+                    <div class="group-tile \${isActive}" onclick="switchGroup(\${g.id}, this)">
+                        <div class="group-id">\${sNo}</div>
                         <div class="group-info">
                             <div class="group-name" style="display:flex; align-items:center; gap:6px;">
-                                \\\${g.group_name}
-                                \\\${g.ai_managed === 1 || g.ai_managed === true ? \\\`<span class="tag tag-green" style="background:#dcfce7; color:#166534; border:1px solid #bbf7d0; font-size:8px; font-weight:900; padding:1px 4px; display:inline-flex; align-items:center; gap:1px; line-height:1;"><i data-lucide="cpu" style="width:8px; height:8px;"></i> AI</span>\\\` : ''}
+                                \${g.group_name}
+                                \${g.ai_managed === 1 || g.ai_managed === true ? \`<span class="tag tag-green" style="background:#dcfce7; color:#166534; border:1px solid #bbf7d0; font-size:8px; font-weight:900; padding:1px 4px; display:inline-flex; align-items:center; gap:1px; line-height:1;"><i data-lucide="cpu" style="width:8px; height:8px;"></i> AI</span>\` : ''}
                             </div>
-                            <div class="group-meta">\\\${g.actual_count || 0} Members • \\\${g.role_type}</div>
+                            <div class="group-meta">\${g.actual_count || 0} Members • \${g.role_type}</div>
                         </div>
                     </div>
-                \\\`;
+                \`;
             }).join('');
 
             list.innerHTML = html;
@@ -7440,11 +7456,11 @@ function toggleGlobalMute(muted) {
             const addList = document.getElementById('addMemberGroupsList');
             const editList = document.getElementById('editMemberGroupsList');
 
-            const html = currentGroups.map(g => \\\`
+            const html = currentGroups.map(g => \`
                 <label style="display:flex; gap:8px; align-items:center; font-size:12px;">
-                    <input type="checkbox" name="groupSelect" value="\\\${g.id}"> \\\${g.group_name}
+                    <input type="checkbox" name="groupSelect" value="\${g.id}"> \${g.group_name}
                 </label>
-            \\\`).join('');
+            \`).join('');
 
             if (addList) addList.innerHTML = html;
             if (editList) editList.innerHTML = html;
@@ -7463,13 +7479,17 @@ function toggleGlobalMute(muted) {
 
             if (el) el.classList.add('active');
 
+            const btnAssignExisting = document.querySelector('button[onclick="openAssignExistingModal()"]');
+
             if (groupId === 'all') {
                 document.getElementById('currentGroupName').innerText = 'All Members';
+                if (btnAssignExisting) btnAssignExisting.style.display = 'none';
                 renderMembers('all');
             } else {
                 const group = currentGroups.find(g => g.id === groupId);
                 if (group) {
                     document.getElementById('currentGroupName').innerText = group.group_name;
+                    if (btnAssignExisting) btnAssignExisting.style.display = 'inline-flex';
                     renderMembers(groupId);
                 }
             }
@@ -7486,49 +7506,52 @@ function toggleGlobalMute(muted) {
                 members = currentUsers.filter(u => u.groups && u.groups.some(g => g.id === groupId));
             }
 
+            members.sort((a, b) => (a.serial_number || '').localeCompare(b.serial_number || '', undefined, {numeric: true}));
+
             tbody.innerHTML = members.map((m, index) => {
                 const groupTags = m.groups && m.groups.length > 0
-                    ? m.groups.map(g => \\\`<span class="tag tag-blue" style="font-size:10px; padding:2px 6px; background:#eff6ff; color:#2563eb; border:1px solid #dbeafe;">\\\${g.group_name}</span>\\\`).join('')
-                    : \\\`<span class="tag tag-gray" style="font-size:10px; padding:2px 6px;">Unassigned</span>\\\`;
+                    ? m.groups.map(g => \`<span class="tag tag-blue" style="font-size:10px; padding:2px 6px; background:#eff6ff; color:#2563eb; border:1px solid #dbeafe;">\${g.group_name}</span>\`).join('')
+                    : \`<span class="tag tag-gray" style="font-size:10px; padding:2px 6px;">Unassigned</span>\`;
 
-                return \\\`
+                return \`
                 <tr>
-                    <td style="font-weight: 800; color: var(--text-muted);">\\\${String(index + 1).padStart(2, '0')}</td>
+                    <td style="font-weight: 800; color: var(--text-muted);">\${String(index + 1).padStart(2, '0')}</td>
                     <td>
-                        <img src="\\\${m.photo_url || 'official_rescuer_icon.png'}" 
+                        <img src="\${m.photo_url || 'official_rescuer_icon.png'}" 
                              style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid var(--border);" />
                     </td>
-                    <td style="font-weight:700; color:var(--accent); font-family: monospace;">\\\${m.serial_number || m.device_id || 'N/A'}</td>
-                    <td><div style="font-weight:600;">\\\${m.name}</div></td>
-                    <td><code style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:700; color:#1e293b; border:1px solid #cbd5e1;">\\\${m.password || '123456'}</code></td>
+                    <td style="font-weight:700; color:var(--accent); font-family: monospace;">\${m.serial_number || m.device_id || 'N/A'}</td>
+                    <td><div style="font-weight:600;">\${m.name}</div></td>
+                    <td><div style="font-weight:600; font-family: monospace;">\${m.phone || 'N/A'}</div></td>
+                    <td><code style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:700; color:#1e293b; border:1px solid #cbd5e1;">\${m.password || '123456'}</code></td>
                     <td>
                         <div style="display:flex; align-items:center; gap:6px;">
-                            <span class="tag tag-gray">\\\${m.role}</span>
+                            <span class="tag tag-gray">\${m.role}</span>
                         </div>
                     </td>
                     <td>
-                        \\\${m.ai_managed === 1 || m.ai_managed === true ? \\\`<span class="tag tag-green" style="background:#dcfce7; color:#166534; border:1px solid #bbf7d0; font-size:10px; font-weight:900; padding:2px 6px; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="cpu" style="width:10px; height:10px;"></i> AI Controlled</span>\\\` : ''}
+                        \${m.ai_managed === 1 || m.ai_managed === true ? \`<span class="tag tag-green" style="background:#dcfce7; color:#166534; border:1px solid #bbf7d0; font-size:10px; font-weight:900; padding:2px 6px; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="cpu" style="width:10px; height:10px;"></i> AI Controlled</span>\` : ''}
                     </td>
                     <td>
                         <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                            \\\${groupTags}
+                            \${groupTags}
                         </div>
                     </td>
                     <td>
                         <span class="tag" style="font-size: 11px; padding: 4px 8px; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;
-                            \\\${m.is_online === 1 || m.status === 'online' 
+                            \${m.is_online === 1 || m.status === 'online' 
                                 ? 'background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;' 
                                 : 'background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;'
                             }">
-                            ● \\\${m.is_online === 1 || m.status === 'online' ? 'ONLINE' : 'OFFLINE'}
+                            ● \${m.is_online === 1 || m.status === 'online' ? 'ONLINE' : 'OFFLINE'}
                         </span>
                     </td>
                     <td style="text-align:right;">
-                        <button class="action-icon" onclick="openEditMemberModal(\\\${m.id})" title="Edit"><i data-lucide="edit-2" style="width:14px;"></i></button>
-                        <button class="action-icon danger" onclick="deleteMember(\\\${m.id})" title="Delete"><i data-lucide="trash-2" style="width:14px;"></i></button>
+                        <button class="action-icon" onclick="openEditMemberModal(\${m.id})" title="Edit"><i data-lucide="edit-2" style="width:14px;"></i></button>
+                        <button class="action-icon danger" onclick="deleteMember(\${m.id})" title="Delete"><i data-lucide="trash-2" style="width:14px;"></i></button>
                     </td>
                 </tr>
-                \\\`;
+                \`;
             }).join('');
             lucide.createIcons();
         }
@@ -7542,7 +7565,7 @@ function toggleGlobalMute(muted) {
             if (!name) return alert("Group name is required");
 
             try {
-                await fetch(\\\`\\\${API_BASE}/groups\\\`, {
+                await fetch(\`\${API_BASE}/groups\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ group_name: name, role_type: role, description: desc, ai_managed })
@@ -7567,15 +7590,15 @@ function toggleGlobalMute(muted) {
             // Show members NOT in this group
             const available = currentUsers.filter(u => !u.groups || !u.groups.some(g => g.id === selectedGroupId));
 
-            list.innerHTML = available.map(m => \\\`
+            list.innerHTML = available.map(m => \`
                 <label style="display:flex; gap:10px; align-items:center; padding:8px; border-bottom:1px solid var(--border); cursor:pointer;">
-                    <input type="checkbox" name="assignUserSelect" value="\\\${m.id}">
+                    <input type="checkbox" name="assignUserSelect" value="\${m.id}">
                     <div style="flex:1;">
-                        <div style="font-weight:600; font-size:14px;">\\\${m.name}</div>
-                        <div style="font-size:12px; color:var(--text-muted);">\\\${m.role} • \\\${m.device_id}</div>
+                        <div style="font-weight:600; font-size:14px;">\${m.name}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">\${m.role} • \${m.device_id}</div>
                     </div>
                 </label>
-            \\\`).join('');
+            \`).join('');
 
             if (available.length === 0) {
                 list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">No unassigned members available</div>';
@@ -7593,7 +7616,7 @@ function toggleGlobalMute(muted) {
 
             try {
                 for (const userId of userIds) {
-                    await fetch(\\\`\\\${API_BASE}/groups/\\\${selectedGroupId}/members\\\`, {
+                    await fetch(\`\${API_BASE}/groups/\${selectedGroupId}/members\`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ user_id: userId })
@@ -7606,27 +7629,28 @@ function toggleGlobalMute(muted) {
         }
 
         function openAiAssignModal() {
+            let members = [];
             if (selectedGroupId === 'all') {
-                alert("Please select a specific group from the left sidebar first.");
-                return;
+                document.getElementById('aiAssignTargetGroupName').innerText = 'All Members';
+                members = currentUsers.filter(u => u.role !== 'public');
+            } else {
+                const group = currentGroups.find(g => g.id === selectedGroupId);
+                if (!group) return;
+                document.getElementById('aiAssignTargetGroupName').innerText = group.group_name;
+                members = currentUsers.filter(u => u.groups && u.groups.some(g => g.id === selectedGroupId));
             }
-            const group = currentGroups.find(g => g.id === selectedGroupId);
-            if (!group) return;
 
-            document.getElementById('aiAssignTargetGroupName').innerText = group.group_name;
             const list = document.getElementById('aiMembersList');
 
-            const members = currentUsers.filter(u => u.groups && u.groups.some(g => g.id === selectedGroupId));
-
-            list.innerHTML = members.map(m => \\\`
+            list.innerHTML = members.map(m => \`
                 <label style="display:flex; gap:10px; align-items:center; padding:8px; border-bottom:1px solid var(--border); cursor:pointer;">
-                    <input type="checkbox" name="aiUserSelect" value="\\\${m.id}" \\\${m.ai_managed === 1 || m.ai_managed === true ? 'checked' : ''}>
+                    <input type="checkbox" name="aiUserSelect" value="\${m.id}" \${m.ai_managed === 1 || m.ai_managed === true ? 'checked' : ''}>
                     <div style="flex:1;">
-                        <div style="font-weight:600; font-size:14px;">\\\${m.name}</div>
-                        <div style="font-size:12px; color:var(--text-muted);">\\\${m.role} • \\\${m.device_id || m.serial_number || 'N/A'}</div>
+                        <div style="font-weight:600; font-size:14px;">\${m.name}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">\${m.role} • \${m.serial_number || m.device_id || 'N/A'}</div>
                     </div>
                 </label>
-            \\\`).join('');
+            \`).join('');
 
             if (members.length === 0) {
                 list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">No members in this group</div>';
@@ -7643,7 +7667,7 @@ function toggleGlobalMute(muted) {
                 const user = currentUsers.find(u => u.id === userId);
                 if (user && !!user.ai_managed !== ai_managed) {
                     try {
-                        await fetch(\\\`\\\${API_BASE}/users/\\\${userId}\\\`, {
+                        await fetch(\`\${API_BASE}/users/\${userId}\`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
@@ -7667,6 +7691,11 @@ function toggleGlobalMute(muted) {
         }
 
         function openMemberModal() {
+            document.getElementById('newMemName').value = '';
+            document.getElementById('newMemId').value = 'MEM-' + String(currentUsers.filter(u => u.role !== 'public').length + 1).padStart(2, '0');
+            document.getElementById('newMemPhone').value = '';
+            document.getElementById('newMemPassword').value = '';
+            
             document.getElementById('addMemberModal').style.display = 'flex';
             document.getElementById('newMemAiManaged').checked = false;
             const checks = document.querySelectorAll('#addMemberGroupsList input[name="groupSelect"]');
@@ -7691,11 +7720,15 @@ function toggleGlobalMute(muted) {
             }
 
             try {
-                await fetch(\\\`\\\${API_BASE}/users\\\`, {
+                const res = await fetch(\`\${API_BASE}/users\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, role, phone, serial_number: id, group_ids: groupIds, photo_url: photoUrl, password, ai_managed })
                 });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    return alert("Error saving member: " + (err.error || res.statusText));
+                }
                 closeModal('addMemberModal');
                 photoInput.value = ''; // Reset file input
                 document.getElementById('newMemPassword').value = '';
@@ -7741,11 +7774,15 @@ function toggleGlobalMute(muted) {
             }
 
             try {
-                await fetch(\\\`\\\${API_BASE}/users/\\\${dbId}\\\`, {
+                const res = await fetch(\`\${API_BASE}/users/\${dbId}\`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, role, phone, serial_number: id, status: 'active', group_ids: groupIds, photo_url: photoUrl, password, ai_managed })
                 });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    return alert("Error updating member: " + (err.error || res.statusText));
+                }
                 closeModal('editMemberModal');
                 photoInput.value = ''; // Reset file input
                 document.getElementById('editMemAiManaged').checked = false;
@@ -7757,7 +7794,7 @@ function toggleGlobalMute(muted) {
         async function deleteMember(id) {
             if (!confirm("Are you sure you want to delete this user?")) return;
             try {
-                await fetch(\\\`\\\${API_BASE}/users/\\\${id}\\\`, { method: 'DELETE' });
+                await fetch(\`\${API_BASE}/users/\${id}\`, { method: 'DELETE' });
                 fetchUsers();
                 fetchGroups();
             } catch (e) { console.error(e); }
@@ -7788,11 +7825,15 @@ function toggleGlobalMute(muted) {
             }
 
             try {
-                await fetch(\\\`\\\${API_BASE}/users\\\`, {
+                const res = await fetch(\`\${API_BASE}/users\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, role: 'public', phone, device_id: phone, photo_url: photoUrl, password, serial_number })
                 });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    return alert("Error saving public user: " + (err.error || res.statusText));
+                }
                 closeModal('addPublicModal');
                 fetchUsers();
             } catch (e) { console.error(e); }
@@ -7826,12 +7867,16 @@ function toggleGlobalMute(muted) {
             }
 
             try {
-                await fetch(\\\`\\\${API_BASE}/users/\\\${dbId}\\\`, {
+                const res = await fetch(\`\${API_BASE}/users/\${dbId}\`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     // Keeping device_id as phone for public users to maintain sync flow
                     body: JSON.stringify({ name, role: 'public', phone, device_id: phone, status: 'active', photo_url: photoUrl, password, serial_number })
                 });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    return alert("Error updating public user: " + (err.error || res.statusText));
+                }
                 closeModal('editPublicModal');
                 fetchUsers();
             } catch (e) { console.error(e); }
@@ -7850,20 +7895,20 @@ function toggleGlobalMute(muted) {
             hours = hours % 12;
             hours = hours ? hours : 12;
             const hoursStr = String(hours).padStart(2, '0');
-            clockEl.innerText = \\\`\\\${hoursStr}:\\\${minutes}:\\\${seconds} \\\${ampm}\\\`;
+            clockEl.innerText = \`\${hoursStr}:\${minutes}:\${seconds} \${ampm}\`;
         }
 
         async function checkDetectedIp() {
             let detectedIp = null;
             try {
-                const res = await fetch(\`\\\${PROTOCOL}//\\\${SERVER_IP}:3001/api/server-ip\`);
+                const res = await fetch(\`\${PROTOCOL}//\${window.location.hostname || 'localhost'}:3001/api/server-ip\`);
                 if (res.ok) {
                     const data = await res.json();
                     detectedIp = data.ip;
                 }
             } catch (e) {
                 try {
-                    const res = await fetch(\`\\\${API_BASE}/server-ip\`);
+                    const res = await fetch(\`\${API_BASE}/server-ip\`);
                     if (res.ok) {
                         const data = await res.json();
                         detectedIp = data.ip;
@@ -7896,7 +7941,6 @@ function toggleGlobalMute(muted) {
             const inputVal = document.getElementById('manualIpInput').value.trim();
             if (!inputVal) {
                 localStorage.removeItem('manualServerIp');
-                if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: '' })); }
                 showAdminToast("Manual IP cleared! Reverting to Auto-Detect...", "success");
                 setTimeout(() => window.location.reload(), 1200);
                 return;
@@ -7905,7 +7949,7 @@ function toggleGlobalMute(muted) {
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 2500);
-                const res = await fetch(\\\`http://\\\${inputVal}:3001/api/health\\\`, {
+                const res = await fetch(\`http://\${inputVal}:3001/api/health\`, {
                     signal: controller.signal,
                     mode: 'cors'
                 });
@@ -7913,7 +7957,6 @@ function toggleGlobalMute(muted) {
 
                 if (res.ok) {
                     localStorage.setItem('manualServerIp', inputVal);
-                    if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: inputVal })); }
                     showAdminToast("Manual IP reachable and saved! Reconnecting...", "success");
                     setTimeout(() => window.location.reload(), 1200);
                 } else {
@@ -7929,14 +7972,12 @@ function toggleGlobalMute(muted) {
         function forceManualIp() {
             const inputVal = document.getElementById('manualIpInput').value.trim();
             localStorage.setItem('manualServerIp', inputVal);
-            if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: inputVal })); }
             showAdminToast("Forcing Manual IP! Reconnecting...", "success");
             setTimeout(() => window.location.reload(), 1200);
         }
 
         function useAutoIp() {
             localStorage.removeItem('manualServerIp');
-            if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: '' })); }
             showAdminToast("Reverting to Auto-Detect! Reconnecting...", "success");
             setTimeout(() => window.location.reload(), 1200);
         }
@@ -7995,17 +8036,17 @@ function toggleGlobalMute(muted) {
                 if (req) {
                     let assignedTo = 'Unassigned';
                     if (req.assigned_officer_name) {
-                        assignedTo = \\\`👤 \\\${req.assigned_officer_name}\\\`;
+                        assignedTo = \`\${req.assigned_officer_name}\`;
                     } else if (req.assigned_group_name) {
-                        assignedTo = \\\`👥 \\\${req.assigned_group_name}\\\`;
+                        assignedTo = \`\${req.assigned_group_name}\`;
                     } else if (req.assigned_user_id) {
-                        assignedTo = \\\`Rescuer \\\${req.assigned_user_id}\\\`;
+                        assignedTo = \`Rescuer \${req.assigned_user_id}\`;
                     } else if (req.assigned_group_id) {
-                        assignedTo = \\\`Group \\\${req.assigned_group_id}\\\`;
+                        assignedTo = \`Group \${req.assigned_group_id}\`;
                     }
                     cmd = {
                         id: 'REQ-' + req.id,
-                        desc: \\\`\\\${(req.type || 'Request').toUpperCase()} Task\\\`,
+                        desc: \`\${(req.type || 'Request').toUpperCase()} Task\`,
                         type: req.type || 'emergency',
                         priority: req.priority || 'normal',
                         zone: req.sector || 'N/A',
@@ -8040,7 +8081,7 @@ function toggleGlobalMute(muted) {
             }
 
             const titleEl = document.getElementById('tdModalTitle');
-            titleEl.innerHTML = \\\`<span style="display:flex; align-items:center; gap:8px;"><i data-lucide="shield-check" style="color:#22c55e;"></i> Task Operational Report: <span style="color:var(--accent);">\\\${cmd.id}</span></span>\\\`;
+            titleEl.innerHTML = \`<span style="display:flex; align-items:center; gap:8px;"><i data-lucide="shield-check" style="color:#22c55e;"></i> Task Operational Report: <span style="color:var(--accent);">\${cmd.id}</span></span>\`;
 
             const contentEl = document.getElementById('tdModalContent');
             
@@ -8053,7 +8094,7 @@ function toggleGlobalMute(muted) {
 
             let evidenceImgHtml = '';
             if (cmd.requesterImageUrl) {
-                const fullUrl = formatMediaUrl(cmd.requesterImageUrl);
+                const fullUrl = cmd.requesterImageUrl.startsWith('http') ? cmd.requesterImageUrl : \`http://\${window.location.hostname || 'localhost'}:3001\${cmd.requesterImageUrl}\`;
                 evidenceImgHtml = \`
                     <div style="flex:1; min-width:240px; display:flex; flex-direction:column; gap:6px;">
                         <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Evidence Photo</span>
@@ -8065,7 +8106,7 @@ function toggleGlobalMute(muted) {
 
             let closureImgHtml = '';
             if (cmd.completion_image_url) {
-                const fullUrl = formatMediaUrl(cmd.completion_image_url);
+                const fullUrl = cmd.completion_image_url.startsWith('http') ? cmd.completion_image_url : \`http://\${window.location.hostname || 'localhost'}:3001\${cmd.completion_image_url}\`;
                 closureImgHtml = \`
                     <div style="flex:1; min-width:240px; display:flex; flex-direction:column; gap:6px;">
                         <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Closure / Proof Photo</span>
@@ -8077,18 +8118,18 @@ function toggleGlobalMute(muted) {
 
             let audioHtml = '';
             if (cmd.requesterAudioUrl) {
-                const audioUrl = formatMediaUrl(cmd.requesterAudioUrl);
-                audioHtml = \\\`
+                const audioUrl = cmd.requesterAudioUrl.startsWith('http') ? cmd.requesterAudioUrl : \`http://\${window.location.hostname || 'localhost'}:3001\${cmd.requesterAudioUrl}\`;
+                audioHtml = \`
                     <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px; margin-top:10px; width:100%;">
                         <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:8px;">Requester Audio Message</span>
                         <div style="display:flex; align-items:center; gap:12px;">
                             <audio controls style="flex:1; height:32px;">
-                                <source src="\\\${audioUrl}" type="audio/wav">
+                                <source src="\${audioUrl}" type="audio/wav">
                                 Your browser does not support audio.
                             </audio>
-                            <a href="\\\${audioUrl}" class="btn btn-outline" target="_blank" style="padding:6px 12px; text-decoration:none; font-weight:800; font-size:11px;">📥 Download</a>
+                            <a href="\${audioUrl}" class="btn btn-outline" target="_blank" style="padding:6px 12px; text-decoration:none; font-weight:800; font-size:11px;"> Download</a>
                         </div>
-                    </div>\\\`;
+                    </div>\`;
             }
 
             let itemsHtml = 'None requested';
@@ -8098,16 +8139,16 @@ function toggleGlobalMute(muted) {
                     const d = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
                     const items = [];
                     // Old format
-                    if (d.food) items.push(\\\`🍞 Food: <b>\\\${d.food}</b>\\\`);
-                    if (d.med) items.push(\\\`💊 Medicine: <b>\\\${d.med}</b>\\\`);
-                    if (d.sanitary) items.push(\\\`🧻 Sanitary: <b>\\\${d.sanitary}</b>\\\`);
+                    if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
+                    if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
+                    if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
                     
                     // New format array parsing
                     if (d.needs && Array.isArray(d.needs)) {
                         const labels = ['Food Rations', 'Medical Tablets', 'Asthma Kit', 'Sanitary Kit'];
                         d.needs.forEach((qty, idx) => {
                             if (qty > 0 && labels[idx]) {
-                                items.push(\\\`📦 \\\${labels[idx]}: <b>\\\${qty}</b>\\\`);
+                                items.push(\` \${labels[idx]}: <b>\${qty}</b>\`);
                             }
                         });
                     }
@@ -8115,12 +8156,12 @@ function toggleGlobalMute(muted) {
                     if (items.length > 0) itemsHtml = items.join(' | ');
 
                     const extraInfo = [];
-                    if (d.transportMode) extraInfo.push(\\\`Transport: <b>\\\${d.transportMode}</b>\\\`);
-                    if (d.peopleCount) extraInfo.push(\\\`Civilians: <b>\\\${d.peopleCount}</b>\\\`);
-                    if (d.address) extraInfo.push(\\\`Landmark/Input: <b>\\\${d.address}</b>\\\`);
+                    if (d.transportMode) extraInfo.push(\`Transport: <b>\${d.transportMode}</b>\`);
+                    if (d.peopleCount) extraInfo.push(\`Civilians: <b>\${d.peopleCount}</b>\`);
+                    if (d.address) extraInfo.push(\`Landmark/Input: <b>\${d.address}</b>\`);
                     
                     if (extraInfo.length > 0) {
-                        extraDetailsHtml = \\\`<div style="margin-top:8px; font-size:12px; font-weight:700; color:var(--text-muted);">ℹ️ \\\${extraInfo.join(' | ')}</div>\\\`;
+                        extraDetailsHtml = \`<div style="margin-top:8px; font-size:12px; font-weight:700; color:var(--text-muted);">ℹ️ \${extraInfo.join(' | ')}</div>\`;
                     }
                 } catch (e) { }
             }
@@ -8133,30 +8174,30 @@ function toggleGlobalMute(muted) {
                 } catch(e){}
 
                 if (parsedDetails && parsedDetails.isGroup && parsedDetails.missions) {
-                    groupMissionsHtml = \\\`
+                    groupMissionsHtml = \`
                         <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px; display:flex; flex-direction:column; gap:10px; margin-top:10px; width:100%;">
-                            <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Clustered Sub-Missions (\\\${parsedDetails.missions.length})</span>
+                            <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Clustered Sub-Missions (\${parsedDetails.missions.length})</span>
                             <div style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto; padding-right:6px;">
-                    \\\`;
+                    \`;
                     parsedDetails.missions.forEach(m => {
                         let mItems = '';
                         if (m.details) {
                             try {
                                 const md = typeof m.details === 'string' ? JSON.parse(m.details) : m.details;
                                 const mdList = [];
-                                if (md.food) mdList.push(\\\`🍞 \\\${md.food}\\\`);
-                                if (md.med) mdList.push(\\\`💊 \\\${md.med}\\\`);
-                                if (md.sanitary) mdList.push(\\\`🧻 \\\${md.sanitary}\\\`);
-                                if (mdList.length > 0) mItems = \\\` - <small style="color:var(--primary); font-weight:700;">Requires: \\\${mdList.join(', ')}</small>\\\`;
+                                if (md.food) mdList.push(\` \${md.food}\`);
+                                if (md.med) mdList.push(\` \${md.med}\`);
+                                if (md.sanitary) mdList.push(\` \${md.sanitary}\`);
+                                if (mdList.length > 0) mItems = \` - <small style="color:var(--primary); font-weight:700;">Requires: \${mdList.join(', ')}</small>\`;
                             } catch(e){}
                         }
-                        groupMissionsHtml += \\\`
+                        groupMissionsHtml += \`
                             <div style="background:white; border:1px solid #e2e8f0; padding:10px 14px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:var(--shadow-sm);">
-                                <span style="font-size:12px; font-weight:800; color:#1e293b;">📌 \\\${m.type.toUpperCase()}\\\${mItems}</span>
-                                <span style="font-size:11px; font-weight:700; color:var(--text-muted);">📍 \\\${m.sector}</span>
-                            </div>\\\`;
+                                <span style="font-size:12px; font-weight:800; color:#1e293b;"> \${m.type.toUpperCase()}\${mItems}</span>
+                                <span style="font-size:11px; font-weight:700; color:var(--text-muted);"> \${m.sector}</span>
+                            </div>\`;
                     });
-                    groupMissionsHtml += \\\`</div></div>\\\`;
+                    groupMissionsHtml += \`</div></div>\`;
                 }
             }
 
@@ -8164,84 +8205,84 @@ function toggleGlobalMute(muted) {
             if (cmd.details) {
                 try {
                     const d = typeof cmd.details === 'string' ? JSON.parse(cmd.details) : cmd.details;
-                    if (d.comments) commentsVal = \\\`"\\\${d.comments}"\\\`;
+                    if (d.comments) commentsVal = \`"\${d.comments}"\`;
                 } catch(e){}
             }
 
-            contentEl.innerHTML = \\\`
+            contentEl.innerHTML = \`
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:16px; width:100%;">
                     <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px;">
                         <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Task Category</span>
-                        <span class="tag \\\${typeClass}" style="font-size:12px; font-weight:800; padding:4px 10px;">\\\${(cmd.type || 'N/A').toUpperCase()}</span>
+                        <span class="tag \${typeClass}" style="font-size:12px; font-weight:800; padding:4px 10px;">\${(cmd.type || 'N/A').toUpperCase()}</span>
                     </div>
                     <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px;">
                         <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Operation Status</span>
-                        <span class="tag \\\${priorityClass}" style="font-size:12px; font-weight:800; padding:4px 10px;">\\\${cmd.status}</span>
+                        <span class="tag \${priorityClass}" style="font-size:12px; font-weight:800; padding:4px 10px;">\${cmd.status}</span>
                     </div>
                     <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px;">
                         <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Assigned Group/Team</span>
-                        <span style="font-size:14px; font-weight:800; color:#1e293b; display:block; margin-top:2px;">\\\${cmd.team}</span>
+                        <span style="font-size:14px; font-weight:800; color:#1e293b; display:block; margin-top:2px;">\${cmd.team}</span>
                     </div>
                     <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px;">
                         <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Deployment Sector</span>
-                        <span style="font-size:14px; font-weight:800; color:#1e293b; display:block; margin-top:2px;">📍 \\\${cmd.zone}</span>
+                        <span style="font-size:14px; font-weight:800; color:#1e293b; display:block; margin-top:2px;"> \${cmd.zone}</span>
                     </div>
                 </div>
 
                 <div style="background:var(--bg); border:1px solid var(--border); padding:20px; border-radius:14px; display:flex; flex-direction:column; gap:8px; width:100%;">
                     <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Task Description</span>
-                    <p style="margin:0; font-size:15px; font-weight:700; color:#1e293b;">\\\${cmd.desc}</p>
+                    <p style="margin:0; font-size:15px; font-weight:700; color:#1e293b;">\${cmd.desc}</p>
                     <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); margin-top:12px; padding-top:12px; font-size:12px; font-weight:700; flex-wrap:wrap; gap:8px;">
-                        <span>🛒 Support Items: <span style="color:var(--primary);">\\\${itemsHtml}</span></span>
-                        \\\${cmd.requesterPhone ? \\\`<span>📞 Contact: <span style="color:var(--accent);">\\\${cmd.requesterPhone}</span></span>\\\` : ''}
+                        <span> Support Items: <span style="color:var(--primary);">\${itemsHtml}</span></span>
+                        \${cmd.requesterPhone ? \`<span> Contact: <span style="color:var(--accent);">\${cmd.requesterPhone}</span></span>\` : ''}
                     </div>
-                    \\\${extraDetailsHtml}
+                    \${extraDetailsHtml}
                 </div>
 
-                \\\${groupMissionsHtml}
+                \${groupMissionsHtml}
 
                 <div style="background:var(--bg); border:1px solid var(--border); padding:20px; border-radius:14px; width:100%;">
                     <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:16px;">Mission Operation Timeline</span>
                     <div style="display:flex; justify-content:space-between; align-items:center; position:relative; padding:0 20px; flex-wrap:nowrap;">
                         <div style="position:absolute; top:24px; left:40px; right:40px; height:4px; background:#e2e8f0; z-index:1;"></div>
-                        <div style="position:absolute; top:24px; left:40px; right:40px; height:4px; background:#22c55e; z-index:2; width:\\\${cmd.status === 'Completed' ? '100%' : '50%'}; transition: width 0.5s;"></div>
+                        <div style="position:absolute; top:24px; left:40px; right:40px; height:4px; background:#22c55e; z-index:2; width:\${cmd.status === 'Completed' ? '100%' : '50%'}; transition: width 0.5s;"></div>
 
                         <div style="display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3; width:80px; text-align:center;">
                             <div style="width:20px; height:20px; border-radius:50%; background:#22c55e; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
                             <span style="font-size:11px; font-weight:800; color:#1e293b;">1. Requested</span>
-                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">\\\${requestTime}</span>
+                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">\${requestTime}</span>
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3; width:80px; text-align:center;">
                             <div style="width:20px; height:20px; border-radius:50%; background:#22c55e; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
                             <span style="font-size:11px; font-weight:800; color:#1e293b;">2. Dispatched</span>
-                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">\\\${dispatchTime}</span>
+                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">\${dispatchTime}</span>
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3; width:80px; text-align:center;">
-                            <div style="width:20px; height:20px; border-radius:50%; background:\\\${cmd.status === 'Completed' ? '#22c55e' : '#eab308'}; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
+                            <div style="width:20px; height:20px; border-radius:50%; background:\${cmd.status === 'Completed' ? '#22c55e' : '#eab308'}; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
                             <span style="font-size:11px; font-weight:800; color:#1e293b;">3. In Transit</span>
                             <span style="font-size:10px; color:var(--text-muted); font-weight:700;">Ongoing</span>
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3; width:80px; text-align:center;">
-                            <div style="width:20px; height:20px; border-radius:50%; background:\\\${cmd.status === 'Completed' ? '#22c55e' : '#cbd5e1'}; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
+                            <div style="width:20px; height:20px; border-radius:50%; background:\${cmd.status === 'Completed' ? '#22c55e' : '#cbd5e1'}; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
                             <span style="font-size:11px; font-weight:800; color:#1e293b;">4. Completed</span>
-                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">\\\${cmd.status === 'Completed' ? completionTime : 'Pending'}</span>
+                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">\${cmd.status === 'Completed' ? completionTime : 'Pending'}</span>
                         </div>
                     </div>
                 </div>
 
                 <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px; width:100%;">
                     <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:6px;">Requester Comments / Remarks</span>
-                    <p style="margin:0; font-size:13px; font-weight:600; color:#475569; font-style:italic;">\\\${commentsVal}</p>
+                    <p style="margin:0; font-size:13px; font-weight:600; color:#475569; font-style:italic;">\${commentsVal}</p>
                 </div>
 
-                \\\${evidenceImgHtml || closureImgHtml ? \\\`
+                \${evidenceImgHtml || closureImgHtml ? \`
                     <div style="display:flex; flex-wrap:wrap; gap:20px; width:100%;">
-                        \\\${evidenceImgHtml}
-                        \\\${closureImgHtml}
-                    </div>\\\` : ''}
+                        \${evidenceImgHtml}
+                        \${closureImgHtml}
+                    </div>\` : ''}
 
-                \\\${audioHtml}
-            \\\`;
+                \${audioHtml}
+            \`;
 
             openModal('taskDetailModal');
             if (window.lucide) lucide.createIcons();
@@ -8271,10 +8312,10 @@ function toggleGlobalMute(muted) {
                     return false;
                 });
                 if (filtered.length === 0) {
-                    listArea.innerHTML = \\\`<div style="text-align:center; padding:30px; color:var(--text-muted); font-size:14px;">
+                    listArea.innerHTML = \`<div style="text-align:center; padding:30px; color:var(--text-muted); font-size:14px;">
                     <i data-lucide="check-circle" style="width:40px; height:40px; opacity:0.3; margin-bottom:10px;"></i><br>
-                    No pending \\\${type === 'sos' ? 'emergency' : 'supply'} requests found.
-                </div>\\\`;
+                    No pending \${type === 'sos' ? 'emergency' : 'supply'} requests found.
+                </div>\`;
                 } else {
                     filtered.forEach((req, index) => {
                         let typeLabel = (req.type || '').charAt(0).toUpperCase() + (req.type || '').slice(1) + ' Rescue';
@@ -8285,20 +8326,20 @@ function toggleGlobalMute(muted) {
                         if (req.type === 'medical') {
                             color = 'var(--critical)';
                             bg = '#fee2e2';
-                            typeLabel = '🏥 Medical Rescue';
+                            typeLabel = ' Medical Rescue';
                         } else if (req.type === 'pregnancy') {
                             color = 'var(--special)';
                             bg = '#f3e8ff';
-                            typeLabel = '🤰 Pregnancy Rescue';
+                            typeLabel = ' Pregnancy Rescue';
                         } else if (req.type === 'food' || req.type === 'delivery' || req.type === 'medical_delivery') {
                             color = 'var(--pending)';
                             bg = '#fffbeb';
-                            typeLabel = req.type === 'food' ? '📦 Food Delivery' : '💊 Medical Supply';
+                            typeLabel = req.type === 'food' ? ' Food Delivery' : ' Medical Supply';
                             isCritical = false;
                         } else if (req.type === 'sos') {
                             color = 'var(--critical)';
                             bg = 'rgba(239,68,68,0.05)';
-                            typeLabel = '🚨 SOS Alert Response';
+                            typeLabel = ' SOS Alert Response';
                             isCritical = true;
                         }
 
@@ -8307,18 +8348,18 @@ function toggleGlobalMute(muted) {
                             try {
                                 const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
                                 const items = [];
-                                if (d.food) items.push(\\\`🍞 Food: <b>\\\${d.food}</b>\\\`);
-                                if (d.med) items.push(\\\`💊 Medicine: <b>\\\${d.med}</b>\\\`);
-                                if (d.sanitary) items.push(\\\`🧻 Sanitary: <b>\\\${d.sanitary}</b>\\\`);
-                                if (d.comments) items.push(\\\`💬 <i>"\\\${d.comments}"</i>\\\`);
+                                if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
+                                if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
+                                if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
+                                if (d.comments) items.push(\` <i>"\${d.comments}"</i>\`);
 
                                 if (items.length > 0) {
-                                    detailsHtml = \\\`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
-                                    \\\${items.join(' • ')}
-                                </div>\\\`;
+                                    detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
+                                    \${items.join(' • ')}
+                                </div>\`;
                                 }
                             } catch (e) {
-                                detailsHtml = \\\`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">💬 <i>"\\\${req.details}"</i></div>\\\`;
+                                detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;"> <i>"\${req.details}"</i></div>\`;
                             }
                         }
 
@@ -8326,38 +8367,38 @@ function toggleGlobalMute(muted) {
                         const user = (currentUsers || []).find(u => u.device_id === req.device_id || u.phone === req.device_id || u.phone === req.phone);
                         const nickName = user ? (user.serial_number || user.name) : (req.phone || req.device_id || 'Unknown');
                         const assignBtnLabel = !isCritical ? 'Assign as Normal Task' : 'Accept & Assign';
-                        const esc = (s) => (s || '').toString().replace(/'/g, "\\\\\\\\'").replace(/\\\\n/g, " ").replace(/\\\\r/g, "");
+                        const esc = (s) => (s || '').toString().replace(/'/g, "\\\\'").replace(/\\n/g, " ").replace(/\\r/g, "");
                         const safeSector = esc(req.sector);
                         const safeType = esc(typeLabel);
 
                         const div = document.createElement('div');
                         div.style.marginBottom = '12px';
-                        div.innerHTML = \\\`
-                        <div class="notif-item actionable-item" style="align-items: flex-start; border-left: 3px solid \\\${color};">
-                            <div class="notif-icon" style="background:\\\${bg}; color:\\\${color}; font-weight:900; font-size:12px; margin-left: 10px;">\\\${num}</div>
+                        div.innerHTML = \`
+                        <div class="notif-item actionable-item" style="align-items: flex-start; border-left: 3px solid \${color};">
+                            <div class="notif-icon" style="background:\${bg}; color:\${color}; font-weight:900; font-size:12px; margin-left: 10px;">\${num}</div>
                             <div class="notif-content">
-                                <div class="notif-title" style="color:\\\${color}; font-weight:800; display:flex; justify-content:space-between; align-items:center;">
-                                    <span>\\\${typeLabel}</span>
-                                    <span style="font-size:9px; background:\\\${bg}; padding:2px 4px; border-radius:3px;">\\\${!isCritical ? 'NORMAL' : 'CRITICAL'}</span>
+                                <div class="notif-title" style="color:\${color}; font-weight:800; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>\${typeLabel}</span>
+                                    <span style="font-size:9px; background:\${bg}; padding:2px 4px; border-radius:3px;">\${!isCritical ? 'NORMAL' : 'CRITICAL'}</span>
                                 </div>
                                 <div class="notif-count text-sm text-muted" style="margin-bottom:6px;">
-                                    <b>Person:</b> <span style="color:var(--text-main); font-weight:700;">\\\${nickName}</span><br>
-                                    <b>Sector:</b> \\\${req.sector || 'Unspecified'}<br>
-                                    <b>Location:</b> \\\${req.lat ? String(req.lat).substring(0, 8) + ', ' + String(req.lng).substring(0, 8) : 'Unknown'}<br>
-                                    <b>Priority:</b> <span style="color:\\\${isCritical ? '#e11d48' : 'var(--text-muted)'}; font-weight:900;">\\\${(req.priority || (isCritical ? 'CRITICAL' : 'NORMAL')).toUpperCase()}</span><br>
-                                    <b>Urgency:</b> <span style="color:\\\${(req.urgency || '').toLowerCase() === 'critical' ? 'var(--critical)' : 'inherit'}; font-weight:700;">\\\${(req.urgency || '').toUpperCase()}</span>
-                                    \\\${detailsHtml}
-                                    \\\${req.image_url ? \\\`<div style="margin-top:8px;"><img src="\\\${formatMediaUrl(req.image_url)}" style="width:80px; height:80px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>\\\` : ''}
+                                    <b>Person:</b> <span style="color:var(--text-main); font-weight:700;">\${nickName}</span><br>
+                                    <b>Sector:</b> \${req.sector || 'Unspecified'}<br>
+                                    <b>Location:</b> \${req.lat ? String(req.lat).substring(0, 8) + ', ' + String(req.lng).substring(0, 8) : 'Unknown'}<br>
+                                    <b>Priority:</b> <span style="color:\${isCritical ? '#e11d48' : 'var(--text-muted)'}; font-weight:900;">\${(req.priority || (isCritical ? 'CRITICAL' : 'NORMAL')).toUpperCase()}</span><br>
+                                    <b>Urgency:</b> <span style="color:\${(req.urgency || '').toLowerCase() === 'critical' ? 'var(--critical)' : 'inherit'}; font-weight:700;">\${(req.urgency || '').toUpperCase()}</span>
+                                    \${detailsHtml}
+                                    \${req.image_url ? \`<div style="margin-top:8px;"><img src="http://\${window.location.hostname || 'localhost'}:3001\${req.image_url}" style="width:80px; height:80px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>\` : ''}
                                 </div>
                                 <div class="actionable-actions" style="margin-top: 10px;">
-                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="closeModal('viewRequestsModal'); openAssignModal('\\\${req.id}', '\\\${safeType}', '\\\${safeSector}', '\\\${req.urgency}', '\\\${num}')">\\\${assignBtnLabel}</button>
-                                    <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px; color: var(--accent); border-color: var(--accent);" onclick="closeModal('viewRequestsModal'); openReplyModal('\\\${req.device_id || req.phone}', '\\\${nickName}')">Reply</button>
-                                    <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px;" onclick="closeModal('viewRequestsModal'); declineRescueRequest('\\\${req.id}')">Decline</button>
-                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="closeModal('viewRequestsModal'); closeRescueRequest('\\\${req.id}')">✅ Close</button>
+                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="closeModal('viewRequestsModal'); openAssignModal('\${req.id}', '\${safeType}', '\${safeSector}', '\${req.urgency}', '\${num}')">\${assignBtnLabel}</button>
+                                    <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px; color: var(--accent); border-color: var(--accent);" onclick="closeModal('viewRequestsModal'); openReplyModal('\${req.device_id || req.phone}', '\${nickName}')">Reply</button>
+                                    <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px;" onclick="closeModal('viewRequestsModal'); declineRescueRequest('\${req.id}')">Decline</button>
+                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="closeModal('viewRequestsModal'); closeRescueRequest('\${req.id}')">✅ Close</button>
                                 </div>
                             </div>
                         </div>
-                    \\\`;
+                    \`;
                         listArea.appendChild(div);
                     });
                 }
@@ -8408,7 +8449,7 @@ function toggleGlobalMute(muted) {
                 const marker = L.marker([req.lat, req.lng], {
                     icon: L.divIcon({
                         className: 'custom-sos-icon',
-                        html: '<div style="font-size:16px;">🚨</div>',
+                        html: '<div style="font-size:16px;"></div>',
                         iconSize: [20, 20],
                         iconAnchor: [10, 10]
                     })
@@ -8512,12 +8553,12 @@ function toggleGlobalMute(muted) {
             // Clear mgmtDetailPanel if the bulk grouping UI was open inside it
             const detailPanel = document.getElementById('mgmtDetailPanel');
             if (detailPanel && detailPanel.querySelector('#bulkGroupName')) {
-                detailPanel.innerHTML = \\\`
+                detailPanel.innerHTML = \`
                     <div style="flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-muted); flex-direction:column; gap:16px; padding:40px; text-align:center;">
                         <i data-lucide="info" style="width:48px; height:48px; opacity:0.2;"></i>
                         <p style="font-weight:600;">Select a mission from the triage columns to view tactical coordinates and requester profile.</p>
                     </div>
-                \\\`;
+                \`;
                 if (window.lucide) lucide.createIcons();
             }
         }
@@ -8592,7 +8633,7 @@ function toggleGlobalMute(muted) {
             });
 
             if (filtered.length === 0) {
-                listArea.innerHTML = \\\`<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;">No unassigned \\\${type} requests found.</div>\\\`;
+                listArea.innerHTML = \`<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;">No unassigned \${type} requests found.</div>\`;
             } else {
                 filtered.forEach((req, index) => {
                     let typeLabel = (req.type || '').charAt(0).toUpperCase() + (req.type || '').slice(1) + ' Rescue';
@@ -8603,20 +8644,20 @@ function toggleGlobalMute(muted) {
                     if (req.type === 'medical') {
                         color = 'var(--critical)';
                         bg = '#fee2e2';
-                        typeLabel = '🏥 Medical Rescue';
+                        typeLabel = ' Medical Rescue';
                     } else if (req.type === 'pregnancy') {
                         color = 'var(--special)';
                         bg = '#f3e8ff';
-                        typeLabel = '🤰 Pregnancy Rescue';
+                        typeLabel = ' Pregnancy Rescue';
                     } else if (req.type === 'food' || req.type === 'delivery' || req.type === 'medical_delivery') {
                         color = 'var(--pending)';
                         bg = '#fffbeb';
-                        typeLabel = req.type === 'food' ? '📦 Food Delivery' : '💊 Medical Supply';
+                        typeLabel = req.type === 'food' ? ' Food Delivery' : ' Medical Supply';
                         isCritical = false;
                     } else if (req.type === 'sos') {
                         color = 'var(--critical)';
                         bg = 'rgba(239,68,68,0.05)';
-                        typeLabel = '🚨 SOS Alert Response';
+                        typeLabel = ' SOS Alert Response';
                         isCritical = true;
                     }
 
@@ -8626,14 +8667,14 @@ function toggleGlobalMute(muted) {
                         try {
                             const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
                             const items = [];
-                            if (d.food) items.push(\\\`🍞 Food: <b>\\\${d.food}</b>\\\`);
-                            if (d.med) items.push(\\\`💊 Medicine: <b>\\\${d.med}</b>\\\`);
-                            if (d.sanitary) items.push(\\\`🧻 Sanitary: <b>\\\${d.sanitary}</b>\\\`);
+                            if (d.food) items.push(\` Food: <b>\${d.food}</b>\`);
+                            if (d.med) items.push(\` Medicine: <b>\${d.med}</b>\`);
+                            if (d.sanitary) items.push(\` Sanitary: <b>\${d.sanitary}</b>\`);
 
                             if (items.length > 0) {
-                                detailsHtml = \\\`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
-                                    \\\${items.join(' • ')}
-                                </div>\\\`;
+                                detailsHtml = \`<div style="margin-top:4px; padding:6px; background:rgba(0,0,0,0.03); border-radius:4px; font-size:11px;">
+                                    \${items.join(' • ')}
+                                </div>\`;
                             }
                         } catch (e) { }
                     }
@@ -8642,41 +8683,41 @@ function toggleGlobalMute(muted) {
                     const user = (currentUsers || []).find(u => u.device_id === req.device_id || u.phone === req.device_id || u.phone === req.phone);
                     const nickName = user ? (user.serial_number || user.name) : (req.phone || req.device_id || 'Unknown');
                     const assignBtnLabel = !isCritical ? 'Assign as Normal Task' : 'Accept & Assign';
-                    const esc = (s) => (s || '').toString().replace(/'/g, "\\\\\\\\'").replace(/\\\\n/g, " ").replace(/\\\\r/g, "");
+                    const esc = (s) => (s || '').toString().replace(/'/g, "\\\\'").replace(/\\n/g, " ").replace(/\\r/g, "");
                     const safeSector = esc(req.sector);
                     const safeType = esc(typeLabel);
 
                     const div = document.createElement('div');
                     div.style.marginBottom = '12px';
-                    div.innerHTML = \\\`
-                        <div class="notif-item actionable-item" style="align-items: flex-start; border-left: 3px solid \\\${color}; cursor:pointer;" 
-                             onclick="openAssignModal('\\\${req.id}', '\\\${safeType}', '\\\${safeSector}', '\\\${req.urgency}', '\\\${num}')">
+                    div.innerHTML = \`
+                        <div class="notif-item actionable-item" style="align-items: flex-start; border-left: 3px solid \${color}; cursor:pointer;" 
+                             onclick="openAssignModal('\${req.id}', '\${safeType}', '\${safeSector}', '\${req.urgency}', '\${num}')">
                             <div style="padding: 10px 0 0 10px;" onclick="event.stopPropagation();">
-                                <input type="checkbox" class="group-checkbox" data-id="\\\${req.id}" style="width:18px; height:18px; cursor:pointer;" onchange="updateGroupingCount()">
+                                <input type="checkbox" class="group-checkbox" data-id="\${req.id}" style="width:18px; height:18px; cursor:pointer;" onchange="updateGroupingCount()">
                             </div>
-                            <div class="notif-icon" style="background:\\\${bg}; color:\\\${color}; font-weight:900; font-size:12px; margin-left: 10px;">\\\${num}</div>
+                            <div class="notif-icon" style="background:\${bg}; color:\${color}; font-weight:900; font-size:12px; margin-left: 10px;">\${num}</div>
                             <div class="notif-content">
-                                <div class="notif-title" style="color:\\\${color}; font-weight:800; display:flex; justify-content:space-between; align-items:center;">
-                                    <span>\\\${typeLabel}</span>
-                                    <span style="font-size:9px; background:\\\${bg}; padding:2px 4px; border-radius:3px;">\\\${!isCritical ? 'NORMAL' : 'CRITICAL'}</span>
+                                <div class="notif-title" style="color:\${color}; font-weight:800; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>\${typeLabel}</span>
+                                    <span style="font-size:9px; background:\${bg}; padding:2px 4px; border-radius:3px;">\${!isCritical ? 'NORMAL' : 'CRITICAL'}</span>
                                 </div>
                                 <div class="notif-count text-sm text-muted" style="margin-bottom:6px;">
-                                    <b>Person:</b> <span style="color:var(--text-main); font-weight:700;">\\\${nickName}</span><br>
-                                    <b>Sector:</b> \\\${req.sector || 'Unspecified'}<br>
-                                    <b>Priority:</b> <span style="color:\\\${isCritical ? '#e11d48' : 'var(--text-muted)'}; font-weight:900;">\\\${(req.priority || (isCritical ? 'CRITICAL' : 'NORMAL')).toUpperCase()}</span><br>
-                                    <b>Urgency:</b> <span style="color:\\\${(req.urgency || '').toLowerCase() === 'critical' ? 'var(--critical)' : 'inherit'}; font-weight:700;">\\\${(req.urgency || '').toUpperCase()}</span>
-                                    \\\${detailsHtml}
-                                    \\\${req.image_url ? \\\`<div style="margin-top:8px;"><img src="\\\${formatMediaUrl(req.image_url)}" style="width:60px; height:60px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>\\\` : ''}
+                                    <b>Person:</b> <span style="color:var(--text-main); font-weight:700;">\${nickName}</span><br>
+                                    <b>Sector:</b> \${req.sector || 'Unspecified'}<br>
+                                    <b>Priority:</b> <span style="color:\${isCritical ? '#e11d48' : 'var(--text-muted)'}; font-weight:900;">\${(req.priority || (isCritical ? 'CRITICAL' : 'NORMAL')).toUpperCase()}</span><br>
+                                    <b>Urgency:</b> <span style="color:\${(req.urgency || '').toLowerCase() === 'critical' ? 'var(--critical)' : 'inherit'}; font-weight:700;">\${(req.urgency || '').toUpperCase()}</span>
+                                    \${detailsHtml}
+                                    \${req.image_url ? \`<div style="margin-top:8px;"><img src="http://\${window.location.hostname || 'localhost'}:3001\${req.image_url}" style="width:60px; height:60px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>\` : ''}
                                 </div>
                                 <div class="actionable-actions">
-                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="openAssignModal('\\\${req.id}', '\\\${safeType}', '\\\${safeSector}', '\\\${req.urgency}', '\\\${num}')">\\\${assignBtnLabel}</button>
-                                    <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px; color: var(--accent); border-color: var(--accent);" onclick="event.stopPropagation(); openReplyModal('\\\${req.device_id || req.phone}', '\\\${nickName}')">Reply</button>
-                                    <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px;" onclick="event.stopPropagation(); declineRescueRequest('\\\${req.id}')">Decline</button>
-                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeRescueRequest('\\\${req.id}')">✅ Close</button>
+                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="openAssignModal('\${req.id}', '\${safeType}', '\${safeSector}', '\${req.urgency}', '\${num}')">\${assignBtnLabel}</button>
+                                    <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px; color: var(--accent); border-color: var(--accent);" onclick="event.stopPropagation(); openReplyModal('\${req.device_id || req.phone}', '\${nickName}')">Reply</button>
+                                    <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px;" onclick="event.stopPropagation(); declineRescueRequest('\${req.id}')">Decline</button>
+                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeRescueRequest('\${req.id}')">✅ Close</button>
                                 </div>
                             </div>
                         </div>
-                    \\\`;
+                    \`;
                     listArea.appendChild(div);
                 });
             }
@@ -8708,7 +8749,7 @@ function toggleGlobalMute(muted) {
             const checkedBoxes = document.querySelectorAll('.group-checkbox:checked');
             const count = checkedBoxes.length;
             const el = document.getElementById('groupingSelectionCount');
-            if (el) el.innerText = \\\`\\\${count} Requests Selected\\\`;
+            if (el) el.innerText = \`\${count} Requests Selected\`;
 
             // Save active selection dynamically to sessionStorage
             const selectedIds = Array.from(checkedBoxes).map(cb => cb.getAttribute('data-id'));
@@ -8743,8 +8784,8 @@ function toggleGlobalMute(muted) {
             const targetId = assignType === 'individual' ? document.getElementById('groupingPersonSelect').value : document.getElementById('groupingTeamSelect').value;
 
             const targetName = assignType === 'individual'
-                ? (targetId ? document.querySelector(\\\`#groupingPersonSelect option[value="\\\${targetId}"]\\\`).textContent : '')
-                : (targetId ? document.querySelector(\\\`#groupingTeamSelect option[value="\\\${targetId}"]\\\`).textContent : '');
+                ? (targetId ? document.querySelector(\`#groupingPersonSelect option[value="\${targetId}"]\`).textContent : '')
+                : (targetId ? document.querySelector(\`#groupingTeamSelect option[value="\${targetId}"]\`).textContent : '');
 
             const newGroup = {
                 id: groupId,
@@ -8769,10 +8810,10 @@ function toggleGlobalMute(muted) {
 
             if (targetId) {
                 // Instantly dispatch to backend
-                const localId = \\\`CMD-GRP-\\\${String(Date.now()).slice(-4)}\\\`;
+                const localId = \`CMD-GRP-\${String(Date.now()).slice(-4)}\`;
                 const historyEntry = {
                     id: localId,
-                    desc: \\\`Tactical Cluster: \\\${name}\\\`,
+                    desc: \`Tactical Cluster: \${name}\`,
                     type: 'group',
                     zone: 'Multi-Sector Triage',
                     team: targetName,
@@ -8788,7 +8829,7 @@ function toggleGlobalMute(muted) {
                 if (typeof renderCmds === 'function') renderCmds();
 
                 try {
-                    await fetch(\\\`\\\${API_BASE}/commands\\\`, {
+                    await fetch(\`\${API_BASE}/commands\`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -8798,7 +8839,7 @@ function toggleGlobalMute(muted) {
                             priority: newGroup.priority.toLowerCase(),
                             command_payload: {
                                 name: name,
-                                message: \\\`Proceed to Tactical Cluster: \\\${name}\\\`,
+                                message: \`Proceed to Tactical Cluster: \${name}\`,
                                 lat: newGroup.requests.length > 0 ? parseFloat(newGroup.requests[0].lat) : 0,
                                 lng: newGroup.requests.length > 0 ? parseFloat(newGroup.requests[0].lng) : 0,
                                 is_group_mission: true,
@@ -8820,9 +8861,9 @@ function toggleGlobalMute(muted) {
                 } catch (e) {
                     console.warn('Group dispatch persist failed:', e);
                 }
-                showAdminToast(\\\`Tactical Group "\\\${name}" assigned to \\\${targetName}.\\\`);
+                showAdminToast(\`Tactical Group "\${name}" assigned to \${targetName}.\`);
             } else {
-                showAdminToast(\\\`Tactical Group "\\\${name}" created (Unassigned).\\\`);
+                showAdminToast(\`Tactical Group "\${name}" created (Unassigned).\`);
             }
 
             // Clear modal cache on successful dispatch
@@ -8924,15 +8965,15 @@ function toggleGlobalMute(muted) {
 
             let assignedTo = group.status === 'Unassigned' ? 'Unassigned' : (group.assigned_to || 'Assigned');
 
-            groupPerimeters[group.id].bindPopup(\\\`
+            groupPerimeters[group.id].bindPopup(\`
                 <div style="font-family:'Inter'; padding:5px; text-align:center;">
-                    <b style="color:\\\${isDiluted ? '#9ca3af' : 'var(--special)'}; font-size:14px;">\\\${group.name}</b><br>
-                    <span style="font-size:11px; color:var(--text-muted);">\\\${group.requests.length} Requests Clustered</span><br>
-                    <span style="font-size:11px; color:var(--text-main); font-weight:600;">Status: \\\${group.status}</span><br>
-                    <span style="font-size:11px; color:var(--primary); font-weight:600;">Team: \\\${assignedTo}</span><br>
-                    \\\${!isDiluted ? \\\`<button class="btn btn-primary" style="width:100%; margin-top:8px; padding:4px; font-size:10px;" onclick="openMgmtDetail('\\\${group.id}', true); switchPage('notif-mgmt');">View Group Details</button>\\\` : ''}
+                    <b style="color:\${isDiluted ? '#9ca3af' : 'var(--special)'}; font-size:14px;">\${group.name}</b><br>
+                    <span style="font-size:11px; color:var(--text-muted);">\${group.requests.length} Requests Clustered</span><br>
+                    <span style="font-size:11px; color:var(--text-main); font-weight:600;">Status: \${group.status}</span><br>
+                    <span style="font-size:11px; color:var(--primary); font-weight:600;">Team: \${assignedTo}</span><br>
+                    \${!isDiluted ? \`<button class="btn btn-primary" style="width:100%; margin-top:8px; padding:4px; font-size:10px;" onclick="openMgmtDetail('\${group.id}', true); switchPage('notif-mgmt');">View Group Details</button>\` : ''}
                 </div>
-            \\\`);
+            \`);
         }
 
         // --- Notification Log Center Page Logic ---
@@ -9009,18 +9050,18 @@ function toggleGlobalMute(muted) {
 
             const isChecked = (window.bulkSelectedIds && window.bulkSelectedIds.includes(data.id.toString())) ? 'checked' : '';
 
-            div.innerHTML = \\\`
+            div.innerHTML = \`
                 <div onclick="event.stopPropagation();" style="display:flex; align-items:center;">
-                    <input type="checkbox" class="mgmt-select-checkbox" data-id="\\\${data.id}" data-is-group="\\\${isGroup}" \\\${isChecked} onchange="updateMgmtSelection()" style="width:16px; height:16px; cursor:pointer; accent-color:var(--accent);">
+                    <input type="checkbox" class="mgmt-select-checkbox" data-id="\${data.id}" data-is-group="\${isGroup}" \${isChecked} onchange="updateMgmtSelection()" style="width:16px; height:16px; cursor:pointer; accent-color:var(--accent);">
                 </div>
                 <div class="notif-content" style="flex:1;">
-                    <div class="notif-title" style="font-size:14px; font-weight:900; color:var(--primary); line-height:1.2;">\\\${isGroup ? data.name : (data.serial_number || data.id)}</div>
+                    <div class="notif-title" style="font-size:14px; font-weight:900; color:var(--primary); line-height:1.2;">\${isGroup ? data.name : (data.serial_number || data.id)}</div>
                     <div class="notif-count" style="font-size:11px; font-weight:600; color:var(--text-muted); margin-top:2px;">
-                        <i data-lucide="map-pin" style="width:10px; display:inline-block; vertical-align:middle;"></i> \\\${isGroup ? (data.requests.length + ' Clustered Tasks') : (data.location_name || 'Sector 4')}
+                        <i data-lucide="map-pin" style="width:10px; display:inline-block; vertical-align:middle;"></i> \${isGroup ? (data.requests.length + ' Clustered Tasks') : (data.location_name || 'Sector 4')}
                     </div>
                 </div>
                 <i data-lucide="chevron-right" style="width:14px; color:var(--text-muted); opacity:0.3;"></i>
-            \\\`;
+            \`;
             return div;
         }
 
@@ -9035,7 +9076,7 @@ function toggleGlobalMute(muted) {
             const btn = document.getElementById('bulkMgmtAssignBtn');
             if (btn) {
                 btn.disabled = selected.length < 2;
-                btn.innerHTML = \\\`<i data-lucide="users" style="width:14px; margin-right:6px;"></i> Group & Assign (\\\${selected.length})\\\`;
+                btn.innerHTML = \`<i data-lucide="users" style="width:14px; margin-right:6px;"></i> Group & Assign (\${selected.length})\`;
                 lucide.createIcons();
             }
 
@@ -9044,15 +9085,15 @@ function toggleGlobalMute(muted) {
             if (batchCont) {
                 batchCont.innerHTML = selectedIds.map(id => {
                     const req = rescueRequests.find(r => r.id.toString() === id.toString());
-                    return req ? \\\`
+                    return req ? \`
                         <div style="padding:14px; background:#f8fafc; border-radius:12px; display:flex; justify-content:space-between; align-items:center; border:1px solid #f1f5f9;">
                             <div>
-                                <div style="font-weight:900; font-size:13px; color:var(--primary);">\\\${(req.type || 'RESCUE').toUpperCase()} #\\\${req.id}</div>
-                                <div style="font-size:11px; color:var(--text-muted); font-weight:600;">Sector: \\\${req.sector || 'N/A'}</div>
+                                <div style="font-weight:900; font-size:13px; color:var(--primary);">\${(req.type || 'RESCUE').toUpperCase()} #\${req.id}</div>
+                                <div style="font-size:11px; color:var(--text-muted); font-weight:600;">Sector: \${req.sector || 'N/A'}</div>
                             </div>
-                            <div class="tag \\\${req.priority === 'Critical' ? 'tag-red' : 'tag-purple'}" style="font-size:9px;">\\\${req.priority}</div>
+                            <div class="tag \${req.priority === 'Critical' ? 'tag-red' : 'tag-purple'}" style="font-size:9px;">\${req.priority}</div>
                         </div>
-                    \\\` : '';
+                    \` : '';
                 }).join('');
             }
 
@@ -9106,15 +9147,15 @@ function toggleGlobalMute(muted) {
 
             let groupOptions = '<option value="">Select Tactical Group...</option>';
             try {
-                const res = await fetch(\\\`\\\${API_BASE}/groups\\\`);
+                const res = await fetch(\`\${API_BASE}/groups\`);
                 const groups = await res.json();
-                groupOptions += groups.map(g => \\\`<option value="\\\${g.id}">\\\${g.group_name}</option>\\\`).join('');
+                groupOptions += groups.map(g => \`<option value="\${g.id}">\${g.group_name}</option>\`).join('');
             } catch (e) { }
 
-            panel.innerHTML = \\\`
+            panel.innerHTML = \`
                 <div style="padding:32px; background:white; border-bottom:1px solid var(--border); box-shadow:0 4px 12px rgba(0,0,0,0.02);">
                     <h2 style="margin:0; font-size:24px; font-weight:900; color:var(--primary); letter-spacing:-0.5px;">Group & Assign Tasks</h2>
-                    <p style="margin:4px 0 0 0; font-size:12px; color:var(--text-muted); font-weight:600;">Clustering \\\${selectedIds.length} tactical missions for joint field resolution.</p>
+                    <p style="margin:4px 0 0 0; font-size:12px; color:var(--text-muted); font-weight:600;">Clustering \${selectedIds.length} tactical missions for joint field resolution.</p>
                 </div>
                 <div style="flex:1; overflow-y:auto; padding:32px;">
                     <div id="bulkGroupMap" style="height:250px; border-radius:16px; margin-bottom:24px; border:1px solid var(--border); z-index:1;"></div>
@@ -9138,7 +9179,7 @@ function toggleGlobalMute(muted) {
                         <div id="bulkGroupSelectCont">
                             <label class="input-label">Select Field Squad / Team</label>
                             <select id="bulkGroupSelect" class="form-control" style="font-weight:700; font-size:15px; padding:14px;">
-                                \\\${groupOptions}
+                                \${groupOptions}
                             </select>
                         </div>
 
@@ -9146,24 +9187,24 @@ function toggleGlobalMute(muted) {
                             <label class="input-label">Select Individual Rescuer</label>
                             <select id="bulkIndivSelect" class="form-control" style="font-weight:700; font-size:15px; padding:14px;">
                                 <option value="">Select Rescuer...</option>
-                                \\\${currentUsers.filter(u => u.role === 'rescuer' || u.role === 'Rescuer').map(u => \\\`<option value="\\\${u.id}">\\\${u.name}</option>\\\`).join('')}
+                                \${currentUsers.filter(u => u.role === 'rescuer' || u.role === 'Rescuer').map(u => \`<option value="\${u.id}">\${u.name}</option>\`).join('')}
                             </select>
                         </div>
                     </div>
                     
                     <div class="section-title" style="font-size:12px;"><i data-lucide="list" style="width:14px;"></i> Selected Missions Batch</div>
                     <div id="bulkSelectedBatchList" style="display:flex; flex-direction:column; gap:10px;">
-                        \\\${selectedIds.map(id => {
+                        \${selectedIds.map(id => {
                 const req = rescueRequests.find(r => r.id.toString() === id.toString());
-                return req ? \\\`
+                return req ? \`
                                 <div style="padding:14px; background:#f8fafc; border-radius:12px; display:flex; justify-content:space-between; align-items:center; border:1px solid #f1f5f9;">
                                     <div>
-                                        <div style="font-weight:900; font-size:13px; color:var(--primary);">\\\${(req.type || 'RESCUE').toUpperCase()} #\\\${req.id}</div>
-                                        <div style="font-size:11px; color:var(--text-muted); font-weight:600;">Sector: \\\${req.sector || 'N/A'}</div>
+                                        <div style="font-weight:900; font-size:13px; color:var(--primary);">\${(req.type || 'RESCUE').toUpperCase()} #\${req.id}</div>
+                                        <div style="font-size:11px; color:var(--text-muted); font-weight:600;">Sector: \${req.sector || 'N/A'}</div>
                                     </div>
-                                    <div class="tag \\\${req.priority === 'Critical' ? 'tag-red' : 'tag-purple'}" style="font-size:9px;">\\\${req.priority}</div>
+                                    <div class="tag \${req.priority === 'Critical' ? 'tag-red' : 'tag-purple'}" style="font-size:9px;">\${req.priority}</div>
                                 </div>
-                            \\\` : '';
+                            \` : '';
             }).join('')}
                     </div>
                 </div>
@@ -9172,7 +9213,7 @@ function toggleGlobalMute(muted) {
                         CONFIRM & INITIALIZE GROUP MISSION
                     </button>
                 </div>
-            \\\`;
+            \`;
             lucide.createIcons();
 
             // Initialize Map with 100ms delay to ensure container is rendered
@@ -9238,9 +9279,9 @@ function toggleGlobalMute(muted) {
                     coords.push([req.lat, req.lng]);
                     const icon = L.divIcon({
                         className: 'custom-div-icon',
-                        html: \\\`<div class="marker-pin" style="background:var(--accent); border-color:white; width:30px; height:30px;">
-                                <i data-lucide="\\\${req.type === 'sos' ? 'alert-triangle' : 'package'}" style="width:14px; color:white; margin:8px;"></i>
-                               </div>\\\`,
+                        html: \`<div class="marker-pin" style="background:var(--accent); border-color:white; width:30px; height:30px;">
+                                <i data-lucide="\${req.type === 'sos' ? 'alert-triangle' : 'package'}" style="width:14px; color:white; margin:8px;"></i>
+                               </div>\`,
                         iconSize: [30, 42],
                         iconAnchor: [15, 42]
                     });
@@ -9324,7 +9365,7 @@ function toggleGlobalMute(muted) {
             const selectEl = document.getElementById(type === 'group' ? 'bulkGroupSelect' : 'bulkIndivSelect');
             const targetName = selectEl && selectEl.options[selectEl.selectedIndex] ? selectEl.options[selectEl.selectedIndex].textContent : 'Unknown';
 
-            if (!confirm(\\\`INITIALIZE TACTICAL MISSION CLUSTER?\\\\n\\\\nGroup Name: \\\${name}\\\\nAssign To: \\\${targetName}\\\\nMissions: \\\${selectedIds.length}\\\\n\\\\nConfirm Dispatch?\\\`)) return;
+            if (!confirm(\`INITIALIZE TACTICAL MISSION CLUSTER?\\n\\nGroup Name: \${name}\\nAssign To: \${targetName}\\nMissions: \${selectedIds.length}\\n\\nConfirm Dispatch?\`)) return;
 
             isConfirmingBulk = true;
             try {
@@ -9346,10 +9387,10 @@ function toggleGlobalMute(muted) {
                 groupedTasks.push(newGroupEntry);
 
                 // Add to Action History (cmds) for permanent logging
-                const localId = \\\`CMD-GRP-\\\${String(Date.now()).slice(-4)}\\\`;
+                const localId = \`CMD-GRP-\${String(Date.now()).slice(-4)}\`;
                 const historyEntry = {
                     id: localId,
-                    desc: \\\`Tactical Cluster: \\\${name}\\\`,
+                    desc: \`Tactical Cluster: \${name}\`,
                     type: 'group',
                     zone: 'Multi-Sector Triage',
                     team: targetName,
@@ -9364,12 +9405,12 @@ function toggleGlobalMute(muted) {
                 cmds.unshift(historyEntry);
                 if (typeof renderCmds === 'function') renderCmds();
 
-                showAdminToast(\\\`SUCCESS: Tactical Group "\\\${name}" dispatched to \\\${targetName}.\\\`);
+                showAdminToast(\`SUCCESS: Tactical Group "\${name}" dispatched to \${targetName}.\`);
 
                 // SHOW PROFESSIONAL SUCCESS OVERLAY
                 const overlay = document.getElementById('tacticalSuccessOverlay');
                 if (overlay) {
-                    document.getElementById('successOverlayMsg').innerText = \\\`Cluster "\\\${name}" assigned to \\\${targetName}.\\\`;
+                    document.getElementById('successOverlayMsg').innerText = \`Cluster "\${name}" assigned to \${targetName}.\`;
                     overlay.style.display = 'flex';
                     overlay.style.opacity = '0';
                     setTimeout(() => overlay.style.opacity = '1', 10);
@@ -9381,7 +9422,7 @@ function toggleGlobalMute(muted) {
                 }
 
                 try {
-                    const response = await fetch(\\\`\\\${API_BASE}/commands\\\`, {
+                    const response = await fetch(\`\${API_BASE}/commands\`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -9391,7 +9432,7 @@ function toggleGlobalMute(muted) {
                             priority: newGroupEntry.requests.some(r => r.priority === 'Critical') ? 'critical' : 'normal',
                             command_payload: {
                                 name: name,
-                                message: \\\`Proceed to Tactical Cluster: \\\${name}\\\`,
+                                message: \`Proceed to Tactical Cluster: \${name}\`,
                                 lat: newGroupEntry.requests.length > 0 ? parseFloat(newGroupEntry.requests[0].lat) : 0,
                                 lng: newGroupEntry.requests.length > 0 ? parseFloat(newGroupEntry.requests[0].lng) : 0,
                                 is_group_mission: true,
@@ -9429,12 +9470,12 @@ function toggleGlobalMute(muted) {
                 } catch (err) { console.error("Error running clearGroupingCaches", err); }
 
                 // Reset Detail Panel
-                document.getElementById('mgmtDetailPanel').innerHTML = \\\`
+                document.getElementById('mgmtDetailPanel').innerHTML = \`
                 <div style="flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-muted); flex-direction:column; gap:16px;">
                     <i data-lucide="check-circle" style="width:48px; height:48px; color:var(--completed); opacity:0.2;"></i>
                     <p style="font-weight:600;">Group Mission Initialized. Select another notification.</p>
                 </div>
-            \\\`;
+            \`;
                 lucide.createIcons();
 
                 refreshAllModules();
@@ -9451,32 +9492,32 @@ function toggleGlobalMute(muted) {
             const active = groupedTasks.filter(g => g.status !== 'Closed' && (g.status || '').toLowerCase() !== 'completed');
 
             if (active.length === 0) {
-                listArea.innerHTML = \\\`
+                listArea.innerHTML = \`
                     <div style="padding:60px; text-align:center; color:var(--text-muted);">
                         <i data-lucide="info" style="width:48px; height:48px; opacity:0.1; margin-bottom:16px;"></i>
                         <p style="font-weight:600;">No active tactical clusters found.</p>
                         <p style="font-size:12px; margin-top:8px;">Start by grouping missions in the Notification Log page.</p>
                     </div>
-                \\\`;
+                \`;
             } else {
-                listArea.innerHTML = active.map(g => \\\`
+                listArea.innerHTML = active.map(g => \`
                     <div style="padding:20px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; transition:background 0.2s;" onmouseover="this.style.background='#fcfdfe'" onmouseout="this.style.background='transparent'">
                         <div style="flex:1;">
                             <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-                                <span style="font-weight:900; font-size:16px; color:var(--special);">\\\${g.name}</span>
-                                <span class="tag \\\${getTagForStatus(g.status)}" style="font-size:10px;">\\\${g.status.toUpperCase()}</span>
+                                <span style="font-weight:900; font-size:16px; color:var(--special);">\${g.name}</span>
+                                <span class="tag \${getTagForStatus(g.status)}" style="font-size:10px;">\${g.status.toUpperCase()}</span>
                             </div>
                             <div style="font-size:12px; color:var(--text-muted); font-weight:600;">
-                                <i data-lucide="users" style="width:12px; display:inline-block; vertical-align:middle;"></i> Assigned: <b>\\\${g.team || 'Pending'}</b> • <i data-lucide="list" style="width:12px; display:inline-block; vertical-align:middle;"></i> Missions: <b>\\\${g.requests.length}</b>
+                                <i data-lucide="users" style="width:12px; display:inline-block; vertical-align:middle;"></i> Assigned: <b>\${g.team || 'Pending'}</b> • <i data-lucide="list" style="width:12px; display:inline-block; vertical-align:middle;"></i> Missions: <b>\${g.requests.length}</b>
                             </div>
                         </div>
                         <div style="display:flex; gap:10px;">
-                             <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="closeModal('activeGroupsModal'); closeTaskByAdmin('\\\${g.id}')">✅ CLOSE</button>
-                             <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #eab308; border-color: #eab308; color: white;" onclick="closeModal('activeGroupsModal'); openReassignModal('\\\${g.id}')">🔄 RE-ASSIGN</button>
-                             <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="closeModal('activeGroupsModal'); selectTask('\\\${g.id}')">👁️ VIEW</button>
+                             <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #ef4444; border-color: #ef4444; color: white;" onclick="closeModal('activeGroupsModal'); closeTaskByAdmin('\${g.id}')">✅ CLOSE</button>
+                             <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #eab308; border-color: #eab308; color: white;" onclick="closeModal('activeGroupsModal'); openReassignModal('\${g.id}')"> RE-ASSIGN</button>
+                             <button class="btn btn-primary" style="padding:8px 16px; font-size:11px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="closeModal('activeGroupsModal'); selectTask('\${g.id}')">ï¸ VIEW</button>
                         </div>
                     </div>
-                \\\`).join('');
+                \`).join('');
             }
 
             openModal('activeGroupsModal');
@@ -9511,39 +9552,39 @@ function toggleGlobalMute(muted) {
                 map.flyTo([data.lat, data.lng], 16);
             }
 
-            panel.innerHTML = \\\`
+            panel.innerHTML = \`
                 <div style="padding:32px; background:white; border-bottom:1px solid var(--border); box-shadow:0 4px 12px rgba(0,0,0,0.02);">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <div>
                             <div style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
-                                \\\${isGroup ? 'Tactical Group Mission' : data.type + ' Request'}
+                                \${isGroup ? 'Tactical Group Mission' : data.type + ' Request'}
                             </div>
-                            <h2 style="margin:0; font-size:28px; font-weight:900; color:var(--primary); letter-spacing:-0.5px;">\\\${isGroup ? data.name : (data.serial_number || data.id)}</h2>
+                            <h2 style="margin:0; font-size:28px; font-weight:900; color:var(--primary); letter-spacing:-0.5px;">\${isGroup ? data.name : (data.serial_number || data.id)}</h2>
                         </div>
-                        <div class="tag \\\${isGroup ? 'tag-purple' : ((data.priority && data.priority.toLowerCase() === 'critical') ? 'tag-red' : 'tag-green')}" style="padding:6px 12px; font-size:11px;">
-                            \\\${isGroup ? 'GROUP' : data.priority}
+                        <div class="tag \${isGroup ? 'tag-purple' : ((data.priority && data.priority.toLowerCase() === 'critical') ? 'tag-red' : 'tag-green')}" style="padding:6px 12px; font-size:11px;">
+                            \${isGroup ? 'GROUP' : data.priority}
                         </div>
                     </div>
                 </div>
                 
-                <div id="mgmtDetailMap" style="height:250px; border-radius:16px; margin:24px 32px; border:1px solid var(--border); z-index:1; display:\\\${isGroup ? 'block' : 'none'};"></div>
+                <div id="mgmtDetailMap" style="height:250px; border-radius:16px; margin:24px 32px; border:1px solid var(--border); z-index:1; display:\${isGroup ? 'block' : 'none'};"></div>
 
                 <div style="flex:1; overflow-y:auto; padding:32px;">
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:32px;">
                         <div class="card" style="margin:0; padding:20px; background:white; border-radius:16px; border:1px solid #f1f5f9;">
                             <div class="section-title" style="margin-top:0;"><i data-lucide="clock" style="width:14px;"></i> Time Log</div>
-                            <div style="font-size:13px; font-weight:700; color:var(--text-main);">\\\${formatLocalDate(data.created_at)}</div>
+                            <div style="font-size:13px; font-weight:700; color:var(--text-main);">\${formatLocalDate(data.created_at)}</div>
                         </div>
                         <div class="card" style="margin:0; padding:20px; background:white; border-radius:16px; border:1px solid #f1f5f9;">
                             <div class="section-title" style="margin-top:0;"><i data-lucide="map-pin" style="width:14px;"></i> Tactical Coordinates</div>
-                            <div style="font-size:13px; font-weight:700; color:var(--primary); font-family:monospace;">\\\${data.lat ? data.lat.toFixed(6) : '26.8467'}, \\\${data.lng ? data.lng.toFixed(6) : '80.9462'}</div>
+                            <div style="font-size:13px; font-weight:700; color:var(--primary); font-family:monospace;">\${data.lat ? data.lat.toFixed(6) : '26.8467'}, \${data.lng ? data.lng.toFixed(6) : '80.9462'}</div>
                         </div>
                     </div>
 
-                    \\\${isGroup ? \\\`
+                    \${isGroup ? \`
                         <div class="section-title" style="font-size:12px; letter-spacing:0.5px; display:flex; justify-content:space-between; align-items:center;">
-                            <span><i data-lucide="list" style="width:14px;"></i> Clustered Request Details (\\\${data.requests.length})</span>
-                            <span style="font-weight:900; color:var(--special);">#GRP-\\\${id.toString().slice(-4)}</span>
+                            <span><i data-lucide="list" style="width:14px;"></i> Clustered Request Details (\${data.requests.length})</span>
+                            <span style="font-weight:900; color:var(--special);">#GRP-\${id.toString().slice(-4)}</span>
                         </div>
                         <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:32px;">
                             \${data.requests.map(r => \`
@@ -9587,7 +9628,7 @@ function toggleGlobalMute(muted) {
                                         
                                         \${r.image_url ? \`
                                             <div style="margin-bottom:15px; border-radius:8px; overflow:hidden; border:1px solid var(--border);">
-                                                <img src="\${formatMediaUrl(r.image_url)}" style="width:100%; max-height:200px; object-fit:cover; display:block;" onclick="window.open(this.src)">
+                                                <img src="http://\${window.location.hostname || 'localhost'}:3001\${r.image_url}" style="width:100%; max-height:200px; object-fit:cover; display:block;" onclick="window.open(this.src)">
                                             </div>
                                         \` : ''}
 
@@ -9612,53 +9653,53 @@ function toggleGlobalMute(muted) {
                             <table style="width:100%; border-collapse:collapse; font-size:13px;">
                                 <tr style="border-bottom:1px solid #f8fafc;">
                                     <td style="padding:16px; font-weight:600; color:var(--text-muted); width:40%; background:#fcfdfe;">Citizen Name</td>
-                                    <td style="padding:16px; font-weight:800; color:var(--primary);">\\\${data.requester_name || 'Anonymous'}</td>
+                                    <td style="padding:16px; font-weight:800; color:var(--primary);">\${data.requester_name || 'Anonymous'}</td>
                                 </tr>
                                 <tr style="border-bottom:1px solid #f8fafc;">
                                     <td style="padding:16px; font-weight:600; color:var(--text-muted); background:#fcfdfe;">Contact ID/Phone</td>
-                                    <td style="padding:16px; font-weight:800; color:var(--accent);">\\\${data.requester_phone || 'N/A'}</td>
+                                    <td style="padding:16px; font-weight:800; color:var(--accent);">\${data.requester_phone || 'N/A'}</td>
                                 </tr>
                                 <tr style="border-bottom:1px solid #f8fafc;">
                                     <td style="padding:16px; font-weight:600; color:var(--text-muted); background:#fcfdfe;">Operational Sector</td>
-                                    <td style="padding:16px; font-weight:800; color:var(--primary);">\\\${data.sector || 'Sector 4 Default'}</td>
+                                    <td style="padding:16px; font-weight:800; color:var(--primary);">\${data.sector || 'Sector 4 Default'}</td>
                                 </tr>
                                 <tr style="border-bottom:1px solid #f8fafc;">
                                     <td style="padding:16px; font-weight:600; color:var(--text-muted); background:#fcfdfe;">Detailed Location</td>
-                                    <td style="padding:16px; font-weight:800; color:var(--primary);">\\\${data.location_name || 'Locating...'}</td>
+                                    <td style="padding:16px; font-weight:800; color:var(--primary);">\${data.location_name || 'Locating...'}</td>
                                 </tr>
                                 <tr style="border-bottom:1px solid #f8fafc;">
                                     <td style="padding:16px; font-weight:600; color:var(--text-muted); background:#fcfdfe;">Urgency Score</td>
-                                    <td style="padding:16px; font-weight:900; color:var(--critical);">\\\${(data.urgency || data.priority || 'Normal').toUpperCase()}</td>
+                                    <td style="padding:16px; font-weight:900; color:var(--critical);">\${(data.urgency || data.priority || 'Normal').toUpperCase()}</td>
                                 </tr>
                                 <tr>
                                     <td style="padding:16px; font-weight:600; color:var(--text-muted); background:#fcfdfe;">Public Notes</td>
-                                    <td style="padding:16px; font-weight:700; color:var(--text-main); line-height:1.4;">\\\${data.details || data.description || 'No additional notes provided by citizen.'}</td>
+                                    <td style="padding:16px; font-weight:700; color:var(--text-main); line-height:1.4;">\${data.details || data.description || 'No additional notes provided by citizen.'}</td>
                                 </tr>
                             </table>
                         </div>
-                    \\\`}
-                \\\${(isGroup || (data.status === 'Assigned')) ? \\\`
+                    \`}
+                \${(isGroup || (data.status === 'Assigned')) ? \`
                 <div style="padding:32px; background:white; border-top:1px solid var(--border); display:flex; gap:16px; box-shadow:0 -4px 12px rgba(0,0,0,0.02);">
-                    \\\${isGroup ? \\\`
-                    <button class="btn btn-primary" style="flex:1; padding:18px; border-radius:14px; font-weight:800; font-size:15px; background:\\\${data.status === 'Assigned' ? '#eab308' : 'var(--accent)'}; border-color:\\\${data.status === 'Assigned' ? '#eab308' : 'var(--accent)'}; box-shadow:0 10px 20px -5px rgba(37,99,235,0.3);" 
-                        onclick="assignFromMgmt('\\\${data.id}', \\\${isGroup})">
-                        <i data-lucide="\\\${data.status === 'Assigned' ? 'refresh-cw' : 'user-plus'}" style="width:20px; margin-right:8px;"></i> 
-                        \\\${data.status === 'Assigned' ? 'RE-ASSIGN MISSION' : 'ASSIGN TO CREW'}
+                    \${isGroup ? \`
+                    <button class="btn btn-primary" style="flex:1; padding:18px; border-radius:14px; font-weight:800; font-size:15px; background:\${data.status === 'Assigned' ? '#eab308' : 'var(--accent)'}; border-color:\${data.status === 'Assigned' ? '#eab308' : 'var(--accent)'}; box-shadow:0 10px 20px -5px rgba(37,99,235,0.3);" 
+                        onclick="assignFromMgmt('\${data.id}', \${isGroup})">
+                        <i data-lucide="\${data.status === 'Assigned' ? 'refresh-cw' : 'user-plus'}" style="width:20px; margin-right:8px;"></i> 
+                        \${data.status === 'Assigned' ? 'RE-ASSIGN MISSION' : 'ASSIGN TO CREW'}
                     </button>
                     <button class="btn btn-primary" style="flex:1; padding:18px; border-radius:14px; font-weight:800; font-size:15px; background:#ef4444; border-color:#ef4444; box-shadow:0 10px 20px -5px rgba(239,68,68,0.3);" 
-                        onclick="closeFromMgmt('\\\${data.id}', \\\${isGroup})">
+                        onclick="closeFromMgmt('\${data.id}', \${isGroup})">
                         <i data-lucide="check-circle" style="width:20px; margin-right:8px;"></i> RESOLVE & CLOSE
                     </button>
-                    \\\` : ''}
-                    \\\${data.status === 'Assigned' ? \\\`
+                    \` : ''}
+                    \${data.status === 'Assigned' ? \`
                     <button class="btn btn-primary" style="flex:1; padding:18px; border-radius:14px; font-weight:800; font-size:15px; background:#0ea5e9; border-color:#0ea5e9; box-shadow:0 10px 20px -5px rgba(14,165,233,0.3);" 
-                        onclick="event.stopPropagation(); const cmdId = cmds.find(c => c.rescueReqId == '\\\${data.id}')?.id; if(cmdId) selectTask(cmdId); else showAdminToast('Command reference not found.', 'error');">
+                        onclick="event.stopPropagation(); const cmdId = cmds.find(c => c.rescueReqId == '\${data.id}')?.id; if(cmdId) selectTask(cmdId); else showAdminToast('Command reference not found.', 'error');">
                         <i data-lucide="map" style="width:20px; margin-right:8px;"></i> VIEW ON MAP
                     </button>
-                    \\\` : ''}
+                    \` : ''}
                 </div>
-                \\\` : ''}
-            \\\`;
+                \` : ''}
+            \`;
             lucide.createIcons();
 
             // Initialize Management Detail Map if group
@@ -9674,9 +9715,9 @@ function toggleGlobalMute(muted) {
                         const r = data.requests[idx];
                         const icon = L.divIcon({
                             className: 'custom-div-icon',
-                            html: \\\`<div class="marker-pin" style="background:var(--accent); border-color:white; width:26px; height:26px;">
-                                    <i data-lucide="\\\${r.type === 'sos' ? 'alert-triangle' : 'package'}" style="width:12px; color:white; margin:7px;"></i>
-                                   </div>\\\`,
+                            html: \`<div class="marker-pin" style="background:var(--accent); border-color:white; width:26px; height:26px;">
+                                    <i data-lucide="\${r.type === 'sos' ? 'alert-triangle' : 'package'}" style="width:12px; color:white; margin:7px;"></i>
+                                   </div>\`,
                             iconSize: [26, 38],
                             iconAnchor: [13, 38]
                         });
@@ -9704,9 +9745,9 @@ function toggleGlobalMute(muted) {
         }
 
         function toggleGroupedReqDetails(id) {
-            const drawer = document.getElementById(\\\`grouped-req-drawer-\\\${id}\\\`);
-            const card = document.getElementById(\\\`grouped-req-card-\\\${id}\\\`);
-            const icon = document.querySelector(\\\`.toggle-icon-\\\${id}\\\`);
+            const drawer = document.getElementById(\`grouped-req-drawer-\${id}\`);
+            const card = document.getElementById(\`grouped-req-card-\${id}\`);
+            const icon = document.querySelector(\`.toggle-icon-\${id}\`);
             if (!drawer || !card) return;
 
             const isHidden = drawer.style.display === 'none';
@@ -9769,7 +9810,7 @@ function toggleGlobalMute(muted) {
 
 <script>
 function toggleGlobalAI(enabled) {
-    fetch(\`\\\${API_BASE}/ai/toggle\`, {
+    fetch(\`\${API_BASE}/ai/toggle\`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: enabled })
@@ -9787,21 +9828,28 @@ function toggleGlobalAI(enabled) {
 function saveAIInterval() {
     const val = document.getElementById('aiIntervalVal').value;
     const unit = document.getElementById('aiIntervalUnit').value;
-    fetch(\`\\\${API_BASE}/ai/interval\`, {
+    fetch(\`\${API_BASE}/ai/interval\`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: val, unit: unit })
     }).then(r => r.json()).then(data => {
-        if (typeof showAdminToast === "function") showAdminToast(\`AI Interval set to \\\${val} \\\${unit}\`, 'success');
+        if (typeof showAdminToast === "function") showAdminToast(\`AI Interval set to \${val} \${unit}\`, 'success');
     }).catch(e => console.error(e));
 }
 
 function loadAIInterval() {
-    fetch(\`\\\${API_BASE}/ai/interval\`)
+    fetch(\`\${API_BASE}/ai/interval\`)
     .then(r => r.json())
     .then(data => {
         if (data && data.value) document.getElementById('aiIntervalVal').value = data.value;
         if (data && data.unit) document.getElementById('aiIntervalUnit').value = data.unit;
+    }).catch(e => console.error(e));
+
+    fetch(\`\${API_BASE}/ai/reassign-interval\`)
+    .then(r => r.json())
+    .then(data => {
+        if (data && data.value) document.getElementById('aiReassignIntervalVal').value = data.value;
+        if (data && data.unit) document.getElementById('aiReassignIntervalUnit').value = data.unit;
     }).catch(e => console.error(e));
 }
 
@@ -9838,7 +9886,7 @@ function updateAiUI(enabled) {
 
 // Fetch status on load
 document.addEventListener('DOMContentLoaded', () => {
-    fetch(\\\`\\\${API_BASE}/ai/status\\\`)
+    fetch(\`\${API_BASE}/ai/status\`)
         .then(res => res.json())
         .then(data => {
             if(data.enabled !== undefined) updateAiUI(data.enabled);
@@ -9893,18 +9941,6 @@ const CONFIG_SND = 'UklGRmisAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YUSsAAAA
 <script>
 function toggleGlobalMute(muted) {
     window.isMuted = muted;
-    
-    const btn1 = document.getElementById('globalMuteBtn');
-    if (btn1) {
-        btn1.dataset.muted = window.isMuted.toString();
-        if (window.isMuted) {
-            btn1.style.backgroundColor = "#ef4444";
-            btn1.innerHTML = '<i data-lucide="volume-x" style="width:18px; margin-right:6px;"></i> SOUND OFF';
-        } else {
-            btn1.style.backgroundColor = "#22c55e";
-            btn1.innerHTML = '<i data-lucide="volume-2" style="width:18px; margin-right:6px;"></i> SOUND ON';
-        }
-    }
     
     const btn2 = document.getElementById('sidebarMuteBtn');
     if (btn2) {

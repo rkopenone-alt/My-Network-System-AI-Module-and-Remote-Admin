@@ -89,6 +89,7 @@ const checkInterval = setInterval(() => {
     if (fs.existsSync(path.join(__dirname, 'admin-app'))) {
         fs.writeFileSync(outPath, exportedStr, 'utf8');
         console.log('Successfully generated admin-app/htmlStr.js');
+        clearInterval(checkInterval);
         
         // Also update package.json / app.json to rename to Admin App
         const appJsonPath = path.join(__dirname, 'admin-app', 'app.json');
