@@ -2695,7 +2695,7 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 phone: this.user.phone,
-                                deviceId: this.user.serial_number || 'MEM-01',
+                                deviceId: this.user.device_id || this.user.serial_number || 'MEM-01',
                                 location: { lat: this.pos.lat, lng: this.pos.lng, groupId: 1 }
                             })
                         });

@@ -1,0 +1,21 @@
+ARDMS SYSTEM BACKUP REPORT - DATE: 2026-07-04
+Device Hostname: , DESKTOP-KBHB0SB
+Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
+Generated At: , 4/7/2026, 5:07:41 pm
+
+SECTION 1: RESCUE REQUESTS & TASKS
+Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
+169,sos,critical,completed,13.0723503,80.1805238,"Critical Emergency Triggered
+[Ignored by Rescuer ID: 2]",Arjun Singh (MEM-01),2026-07-04 11:37:09,2026-07-04 11:37:40,DESKTOP-KBHB0SB
+
+
+SECTION 2: RESCUER COMMAND DISPATCHES
+Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
+179,N/A,919000000002,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":13.0723503,""lng"":80.1805238,""urgency"":""critical"",""rescue_req_id"":169,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI"",""assignment_version"":1}",Critical,completed,2026-07-04 11:37:18,,DESKTOP-KBHB0SB
+180,N/A,919000000001,"{""message"":""AI ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":13.0723503,""lng"":80.1805238,""urgency"":""critical"",""rescue_req_id"":169,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered\n[Ignored by Rescuer ID: 2]"",""assigned_by"":""AI"",""assignment_version"":3}",Critical,completed,2026-07-04 11:37:32,,DESKTOP-KBHB0SB
+181,N/A,919000000001,"{""message"":""SELF-ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":13.0723503,""lng"":80.1805238,""urgency"":""critical"",""rescue_req_id"":169,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered\n[Ignored by Rescuer ID: 2]"",""assigned_by"":""Self""}",Critical,completed,2026-07-04 11:37:40,,DESKTOP-KBHB0SB
+
+
+SECTION 3: PUBLIC SOS ALERTS
+SOS ID,Device ID,Phone,Latitude,Longitude,Details,Status,Priority,Alert Time,Device Node
+NO SOS ALERTS FOR THIS DATE

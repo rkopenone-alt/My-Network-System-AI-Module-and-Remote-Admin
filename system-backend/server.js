@@ -1391,7 +1391,8 @@ app.post('/api/sync', async (req, res) => {
     let user = await get(`SELECT * FROM users WHERE phone = ? OR device_id = ?`, [identifier, identifier]);
 
     // If user exists and we have a new deviceId, update it (pairing)
-    if (user && deviceId && user.device_id !== deviceId) {
+    // Do not overwrite with fallback serial number or phone values
+    if (user && deviceId && user.device_id !== deviceId && deviceId !== user.serial_number && deviceId !== user.phone) {
         await run(`UPDATE users SET device_id = ? WHERE id = ?`, [deviceId, user.id]);
         user.device_id = deviceId;
     }
