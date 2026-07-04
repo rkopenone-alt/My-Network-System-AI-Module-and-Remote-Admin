@@ -1011,6 +1011,9 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
                     rr.status = 'reassigned';
                 }
             }
+            if (rr.status === 'closed') {
+                rr.status = 'completed';
+            }
             return rr;
         });
 
@@ -1069,7 +1072,7 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
                 id: c.id,
                 type: c.type,
                 sector: payload.name || payload.sector || payload.message || c.sector || 'Group Cluster',
-                status: c.status,
+                status: c.status === 'closed' ? 'completed' : c.status,
                 lat: payload.lat || (groupMissions.length > 0 ? groupMissions[0].lat : null),
                 lng: payload.lng || (groupMissions.length > 0 ? groupMissions[0].lng : null),
                 image_url: reqImage,
@@ -1078,7 +1081,6 @@ app.get('/api/users/:id/combined-history', async (req, res) => {
                 priority: c.priority || 'normal',
                 details: c.type === 'group' ? JSON.stringify({ isGroup: true, missions: groupMissions, custom_polygon: payload.custom_polygon || null }) : (reqDetails || payload.details || null),
                 requester_phone: payload.requester_phone || null,
-
                 requester_name: payload.requester_name || null,
                 command_payload: c.command_payload,
                 created_at: c.created_at,
@@ -1831,7 +1833,8 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
             rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
         }
 
-        if (status !== 'closed' && !reqData.assigned_group_id) {
+        const isRescuerReq = (rescuer_phone !== undefined);
+        if (isRescuerReq && status !== 'closed' && !reqData.assigned_group_id) {
             if (reqData.assigned_user_id) {
                 if (!rescuer || reqData.assigned_user_id !== rescuer.id) {
                     return res.status(403).json({ error: 'Task is no longer assigned to this rescuer.' });
@@ -1893,7 +1896,34 @@ app.put('/api/rescue-requests/:id/status', async (req, res) => {
             await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'returned_to_pending')`, [req.params.id]);
         }
         
-        if (existingCommand) {
+        // Cancel/finalize ALL active command queue entries associated with this request
+        const relatedCommands = await all(`
+            SELECT * FROM command_queue 
+            WHERE (command_payload LIKE ? OR command_payload LIKE ? OR command_payload LIKE ?)
+            AND status NOT IN ('completed', 'closed', 'finished', 'cancelled')
+        `, [`%"rescue_req_id":${req.params.id},%`, `%"rescue_req_id":${req.params.id}}%`, `%"rescue_req_id":"${req.params.id}"%`]);
+
+        for (const cmd of relatedCommands) {
+            if (compImageUrl) {
+                await run(`UPDATE command_queue SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, cmd.id]);
+            } else {
+                await run(`UPDATE command_queue SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, cmd.id]);
+            }
+            
+            // Broadcast TASK_REVOKED to this rescuer
+            const targetPhone = cmd.target_phone;
+            const rescuerUser = await get(`SELECT id, device_id FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [targetPhone, targetPhone, targetPhone]);
+            const targetId = rescuerUser ? (rescuerUser.device_id || rescuerUser.id) : targetPhone;
+            
+            broadcastToAdminAndTarget('TASK_REVOKED', {
+                task_id: req.params.id,
+                command_id: cmd.id,
+                old_rescuer_id: rescuerUser ? rescuerUser.id : 'Unknown',
+                message: `Task manually closed/completed by Admin.`
+            }, targetId);
+        }
+
+        if (relatedCommands.length === 0 && existingCommand) {
             if (compImageUrl) {
                 await run(`UPDATE command_queue SET status = ?, completion_image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [finalStatus, compImageUrl, existingCommand.id]);
             } else {
@@ -2202,7 +2232,7 @@ app.put('/api/commands/:id/status', async (req, res) => {
             rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
         }
         if (!cmdData) return res.status(404).json({ error: 'Command not found' });
-        if (['ignored', 'cancelled', 'reassigned', 'closed', 'completed'].includes(cmdData.status) && status !== 'declined') {
+        if (['ignored', 'cancelled', 'reassigned', 'closed', 'completed'].includes(cmdData.status)) {
             return res.status(403).json({ error: 'Command is no longer active or has been revoked.' });
         }
         if (rescuer && !cmdData.group_id) {
@@ -2781,8 +2811,8 @@ async function runAIAssignment() {
         }
         // ──────────────────────────────────────────────────────────────────────────
 
-        // Fetch only pending requests that have existed longer than the buffer duration
-        const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE (status = 'pending' OR status = 'partially_declined') AND (strftime('%s', 'now') - strftime('%s', created_at)) >= ? ORDER BY id ASC`, [bufferSecs]);
+        // Fetch only pending requests that have existed longer than the buffer duration/interval configured in settings
+        const pendingRequests = await all(`SELECT * FROM rescue_requests WHERE (status = 'pending' OR status = 'partially_declined') AND (strftime('%s', 'now') - strftime('%s', COALESCE(updated_at, created_at))) >= ? ORDER BY id ASC`, [bufferSecs]);
         if (pendingRequests.length === 0) return;
 
         // Fetch AI Managed Users who are active, online, or recently updated location

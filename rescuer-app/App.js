@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, ActivityIndicator, Text, PermissionsAndroid, Platform, Alert, Image, TouchableOpacity, StyleSheet, TextInput, Modal } from 'react-native';
 import { Audio } from 'expo-av';
 
@@ -205,20 +205,6 @@ export default function App() {
     initializeApp();
   }, []);
 
-  useEffect(() => {
-    if (webViewRef.current && serverIp) {
-      const code = `
-        window.__SERVER_IP__ = '${serverIp}';
-        window.__API_BASE__ = 'http://${serverIp}:${SERVER_PORT}/api';
-        window.__WS_URL__ = 'ws://${serverIp}:${SERVER_PORT}';
-        localStorage.setItem('manualServerIp', '${serverIp}');
-        window.location.reload();
-        true;
-      `;
-      webViewRef.current.injectJavaScript(code);
-    }
-  }, [serverIp]);
-
   // Custom Camera States
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
@@ -349,11 +335,11 @@ export default function App() {
     true;
   `;
 
-  // Dynamically inject the serverIp into the compiled HTML string before rendering
-  const processedHtml = htmlString.replace(
-    /const finalIp = storedIp \|\| window\.__SERVER_IP__ \|\| \(isNative \? '' : window\.location\.hostname\) \|\| '';/,
-    `const finalIp = '${serverIp}';`
-  );
+  // Memoize the WebView source to prevent redundant reloads on state updates
+  const webViewSource = useMemo(() => ({
+    html: htmlString,
+    baseUrl: 'http://localhost:3001'
+  }), []);
 
   if (hasPermission === null) {
     return (
@@ -378,10 +364,9 @@ export default function App() {
     <View style={{ flex: 1 }}>
       {!isCameraActive && <NetworkStatusIndicator isConnected={isConnected} />}
       <WebView
-        key={serverIp}
         mediaPlaybackRequiresUserAction={false}
         ref={webViewRef}
-        source={{ html: processedHtml, baseUrl: `http://${serverIp}:${SERVER_PORT}` }}
+        source={webViewSource}
         style={{ flex: 1 }}
         originWhitelist={['*']}
         javaScriptEnabled={true}
