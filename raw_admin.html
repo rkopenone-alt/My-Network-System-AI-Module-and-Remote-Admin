@@ -4692,8 +4692,10 @@ function toggleGlobalMute(muted) {
                             isStale = true; // No location timestamp, skip
                         }
 
-                        // Do not completely remove offline or stale rescuers from map, just change their style
-                        
+                        if (isOffline || isStale) {
+                            return; // Remove/don't display old or disconnected rescuer icons in map
+                        }
+
                         // Apply a tiny visual scatter (jitter) if multiple rescuers occupy the exact same spot
                         let rescuerLat = parseFloat(r.lat);
                         let rescuerLng = parseFloat(r.lng);
@@ -4715,10 +4717,7 @@ function toggleGlobalMute(muted) {
                         let statusText = 'online';
                         let ringColor = '#3b82f6'; // Blue: Online & Available
                         
-                        if (isOffline || isStale) {
-                            ringColor = '#64748b'; // Gray: Offline/Stale
-                            statusText = isOffline ? 'offline' : 'inactive';
-                        } else if (assignedTask || assignedCmd) {
+                        if (assignedTask || assignedCmd) {
                             ringColor = '#ef4444'; // Red: Online & Assigned
                         }
 
