@@ -3469,7 +3469,7 @@
     <script>
         const PROTOCOL = (window.location.protocol === 'http:' || window.location.protocol === 'https:') ? window.location.protocol : 'http:';
         const manualIp = localStorage.getItem('manualServerIp');
-        const SERVER_IP = window.__SERVER_IP__ || (manualIp ? manualIp : ((window.location.protocol === 'http:' || window.location.protocol === 'https:') ? window.location.hostname : '127.0.0.1'));
+        const SERVER_IP = manualIp || window.__SERVER_IP__ || ((window.location.protocol === 'http:' || window.location.protocol === 'https:') ? window.location.hostname : '127.0.0.1');
         const API_BASE = `${PROTOCOL}//${SERVER_IP}:3001/api`;
 
         function formatMediaUrl(url) {
@@ -3667,7 +3667,7 @@ function toggleGlobalMute(muted) {
                             refreshAllModules();
                         } else if (data.type === 'LIVE_LOCATION_UPDATE') {
                             if (globalRescuers) {
-                                const existing = globalRescuers.find(r => r.device_id === data.data.deviceId || r.phone === data.data.deviceId);
+                                const existing = globalRescuers.find(r => r.device_id === data.data.deviceId || r.phone === data.data.deviceId || r.serial_number === data.data.deviceId || r.id.toString() === data.data.deviceId);
                                 if (existing) {
                                     existing.lat = data.data.lat;
                                     existing.lng = data.data.lng;
@@ -4647,31 +4647,64 @@ function toggleGlobalMute(muted) {
                 });
 
                 // 2. Render Rescuers & Missions (with Dotted Lines for Critical Tasks)
+                const coordinatesRegistry = new Set();
+
                 rescuers.forEach(r => {
                     if (r.lat && r.lng) {
+                        // Check if disconnected or offline
+                        const isOffline = (r.status === 'offline' || r.is_online === 0);
+
+                        // Check for stale location updates (older than 10 minutes)
+                        let isStale = false;
+                        if (r.location_last_updated) {
+                            const lastUpdated = new Date(r.location_last_updated.replace(' ', 'T') + 'Z').getTime();
+                            const limit = Date.now() - 10 * 60 * 1000;
+                            if (isNaN(lastUpdated) || lastUpdated < limit) {
+                                isStale = true;
+                            }
+                        } else {
+                            isStale = true; // No location timestamp, skip
+                        }
+
+                        if (isOffline || isStale) {
+                            return; // Remove/don't display old or disconnected rescuer icons in map
+                        }
+
+                        // Apply a tiny visual scatter (jitter) if multiple rescuers occupy the exact same spot
+                        let rescuerLat = parseFloat(r.lat);
+                        let rescuerLng = parseFloat(r.lng);
+                        let coordKey = `${rescuerLat.toFixed(5)},${rescuerLng.toFixed(5)}`;
+                        let safetyLoop = 0;
+                        while (coordinatesRegistry.has(coordKey) && safetyLoop < 10) {
+                            rescuerLat += (Math.random() - 0.5) * 0.00008; // approx 8 meters jitter
+                            rescuerLng += (Math.random() - 0.5) * 0.00008;
+                            coordKey = `${rescuerLat.toFixed(5)},${rescuerLng.toFixed(5)}`;
+                            safetyLoop++;
+                        }
+                        coordinatesRegistry.add(coordKey);
+
                         // Find current mission if any
                         const assignedTask = tasks.find(t => t.status === 'assigned' && t.rescuer_phone === r.phone);
                         const assignedCmd = activeCmds.find(c => c.status === 'accepted' && c.target_phone === r.phone);
                         const missionInfo = assignedTask ? assignedTask.type.toUpperCase() : (assignedCmd ? 'HQ DIRECTIVE' : 'AVAILABLE');
 
                         let statusText = 'online';
-                        let isOffline = false;
                         let ringColor = '#3b82f6'; // Blue: Online & Available
                         
-                        if (r.status === 'offline' || r.live_connected === false) {
-                            statusText = '⚠️  Signal Lost / Offline';
-                            isOffline = true;
-                            ringColor = '#9ca3af'; // Grey: Offline
-                        } else if (assignedTask || assignedCmd) {
+                        if (assignedTask || assignedCmd) {
                             ringColor = '#ef4444'; // Red: Online & Assigned
                         }
 
-                        const rescuerIconHtml = `<div style="background:url('official_rescuer_icon.png') center/cover; width:100%; height:100%; border-radius:50%; border: 3px solid ${ringColor}; box-shadow: 0 0 6px ${ringColor}; box-sizing: border-box;"></div>`;
-                        const m = addMarker(r.lat, r.lng, 'rescuer', rescuerIconHtml, `Rescuer: ${r.name}`, r.name, false, false, r.id, false, statusText, null, r.serial_number || r.phone, missionInfo);
-
-                        if (isOffline) {
-                            m.setOpacity(0.6); // Gray out slightly if offline
-                        }
+                        // Premium rescuer/first responder icon (shield outline with cross in the center)
+                        const rescuerIconHtml = `
+                            <div style="background:${ringColor}; width:100%; height:100%; border-radius:50%; border: 2px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; box-sizing: border-box; overflow:hidden;">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="white" fill-opacity="0.2"/>
+                                    <path d="M12 8v8M8 12h8" stroke-width="3.5"/>
+                                </svg>
+                            </div>
+                        `;
+                        const m = addMarker(rescuerLat, rescuerLng, 'rescuer', rescuerIconHtml, `Rescuer: ${r.name}`, r.name, false, false, r.id, false, statusText, null, r.serial_number || r.phone, missionInfo);
 
                         window.markerClusterGroup.addLayer(m);
                         mapLayers.push(m);
@@ -7873,6 +7906,9 @@ function toggleGlobalMute(muted) {
             const inputVal = document.getElementById('manualIpInput').value.trim();
             if (!inputVal) {
                 localStorage.removeItem('manualServerIp');
+                if (window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: '' }));
+                }
                 showAdminToast("Manual IP cleared! Reverting to Auto-Detect...", "success");
                 setTimeout(() => window.location.reload(), 1200);
                 return;
@@ -7889,6 +7925,9 @@ function toggleGlobalMute(muted) {
 
                 if (res.ok) {
                     localStorage.setItem('manualServerIp', inputVal);
+                    if (window.ReactNativeWebView) {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: inputVal }));
+                    }
                     showAdminToast("Manual IP reachable and saved! Reconnecting...", "success");
                     setTimeout(() => window.location.reload(), 1200);
                 } else {
@@ -7904,12 +7943,18 @@ function toggleGlobalMute(muted) {
         function forceManualIp() {
             const inputVal = document.getElementById('manualIpInput').value.trim();
             localStorage.setItem('manualServerIp', inputVal);
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: inputVal }));
+            }
             showAdminToast("Forcing Manual IP! Reconnecting...", "success");
             setTimeout(() => window.location.reload(), 1200);
         }
 
         function useAutoIp() {
             localStorage.removeItem('manualServerIp');
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'UPDATE_IP', ip: '' }));
+            }
             showAdminToast("Reverting to Auto-Detect! Reconnecting...", "success");
             setTimeout(() => window.location.reload(), 1200);
         }
@@ -8177,7 +8222,7 @@ function toggleGlobalMute(muted) {
                     <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:16px;">Mission Operation Timeline</span>
                     <div style="display:flex; justify-content:space-between; align-items:center; position:relative; padding:0 20px; flex-wrap:nowrap;">
                         <div style="position:absolute; top:24px; left:40px; right:40px; height:4px; background:#e2e8f0; z-index:1;"></div>
-                        <div style="position:absolute; top:24px; left:40px; right:40px; height:4px; background:#22c55e; z-index:2; width:${cmd.status === 'Completed' ? '100%' : '50%'}; transition: width 0.5s;"></div>
+                        <div style="position:absolute; top:24px; left:40px; right:40px; height:4px; background:#22c55e; z-index:2; width:${['Completed', 'Closed', 'Finished'].includes(cmd.status) ? '100%' : '50%'}; transition: width 0.5s;"></div>
 
                         <div style="display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3; width:80px; text-align:center;">
                             <div style="width:20px; height:20px; border-radius:50%; background:#22c55e; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
@@ -8190,14 +8235,14 @@ function toggleGlobalMute(muted) {
                             <span style="font-size:10px; color:var(--text-muted); font-weight:700;">${dispatchTime}</span>
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3; width:80px; text-align:center;">
-                            <div style="width:20px; height:20px; border-radius:50%; background:${cmd.status === 'Completed' ? '#22c55e' : '#eab308'}; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
+                            <div style="width:20px; height:20px; border-radius:50%; background:${['Completed', 'Closed', 'Finished'].includes(cmd.status) ? '#22c55e' : '#eab308'}; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
                             <span style="font-size:11px; font-weight:800; color:#1e293b;">3. In Transit</span>
-                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">Ongoing</span>
+                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">${['Completed', 'Closed', 'Finished'].includes(cmd.status) ? 'Done' : 'Ongoing'}</span>
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3; width:80px; text-align:center;">
-                            <div style="width:20px; height:20px; border-radius:50%; background:${cmd.status === 'Completed' ? '#22c55e' : '#cbd5e1'}; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
+                            <div style="width:20px; height:20px; border-radius:50%; background:${['Completed', 'Closed', 'Finished'].includes(cmd.status) ? '#22c55e' : '#cbd5e1'}; border:4px solid white; box-shadow:0 0 8px rgba(0,0,0,0.1);"></div>
                             <span style="font-size:11px; font-weight:800; color:#1e293b;">4. Completed</span>
-                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">${cmd.status === 'Completed' ? completionTime : 'Pending'}</span>
+                            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">${['Completed', 'Closed', 'Finished'].includes(cmd.status) ? completionTime : 'Pending'}</span>
                         </div>
                     </div>
                 </div>

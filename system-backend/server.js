@@ -1118,7 +1118,7 @@ app.get('/api/users', async (req, res) => {
         const users = await all(`
             SELECT u.*, rl.lat, rl.lng, rl.last_updated as location_last_updated
             FROM users u
-            LEFT JOIN rescuer_locations rl ON u.device_id = rl.device_id OR u.phone = rl.device_id
+            LEFT JOIN rescuer_locations rl ON u.device_id = rl.device_id OR u.phone = rl.device_id OR u.serial_number = rl.device_id OR CAST(u.id AS TEXT) = rl.device_id
             ORDER BY u.registered_at DESC
         `);
         for (let user of users) {
@@ -1135,7 +1135,7 @@ app.get('/api/users/:id', async (req, res) => {
         const user = await get(`
             SELECT u.*, rl.lat, rl.lng, rl.last_updated as location_last_updated
             FROM users u
-            LEFT JOIN rescuer_locations rl ON u.device_id = rl.device_id OR u.phone = rl.device_id
+            LEFT JOIN rescuer_locations rl ON u.device_id = rl.device_id OR u.phone = rl.device_id OR u.serial_number = rl.device_id OR CAST(u.id AS TEXT) = rl.device_id
             WHERE u.id = ?
         `, [req.params.id]);
         if (!user) return res.status(404).json({ error: 'User not found' });
@@ -2242,8 +2242,14 @@ app.put('/api/commands/:id/status', async (req, res) => {
             rescuer = await get(`SELECT id, phone, device_id, name FROM users WHERE phone = ? OR device_id = ? OR id = ?`, [rPhone, rPhone, rPhone]);
         }
         if (!cmdData) return res.status(404).json({ error: 'Command not found' });
-        if (['ignored', 'cancelled', 'reassigned', 'closed', 'completed'].includes(cmdData.status)) {
-            return res.status(403).json({ error: 'Command is no longer active or has been revoked.' });
+        if (rescuer) {
+            if (['ignored', 'cancelled', 'reassigned', 'closed', 'completed'].includes(cmdData.status)) {
+                return res.status(403).json({ error: 'Command is no longer active or has been revoked.' });
+            }
+        } else {
+            if (['cancelled', 'closed', 'completed'].includes(cmdData.status)) {
+                return res.status(403).json({ error: 'Command is already closed or cancelled.' });
+            }
         }
         if (rescuer && !cmdData.group_id) {
             const tpClean = (cmdData.target_phone || '').replace(/\D/g, '').slice(-10);
@@ -2828,7 +2834,7 @@ async function runAIAssignment() {
         // Fetch AI Managed Users who are active, online, or recently updated location
         const aiUsers = await all(`
             SELECT DISTINCT u.* FROM users u
-            LEFT JOIN rescuer_locations rl ON u.device_id = rl.device_id OR u.phone = rl.device_id
+            LEFT JOIN rescuer_locations rl ON u.device_id = rl.device_id OR u.phone = rl.device_id OR u.serial_number = rl.device_id OR CAST(u.id AS TEXT) = rl.device_id
             WHERE (u.ai_managed = 1 OR u.ai_controlled = 1)
             AND u.is_available = 1 
             AND u.status != 'busy' 
@@ -2865,7 +2871,7 @@ async function runAIAssignment() {
                 if (req.details && (req.details.includes(`[Declined by Rescuer ID: ${user.id}]`) || req.details.includes(`[Ignored by Rescuer ID: ${user.id}]`))) continue;
 
                 // 2. Find location (Prioritize logged-in/available rescuers)
-                const loc = locations.find(l => l.device_id === user.device_id || l.device_id === user.phone);
+                const loc = locations.find(l => l.device_id === user.device_id || l.device_id === user.phone || l.device_id === user.serial_number || l.device_id === String(user.id));
                 
                 let dist = Infinity;
                 if (loc && loc.lat && loc.lng && req.lat && req.lng) {

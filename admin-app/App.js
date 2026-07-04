@@ -354,8 +354,19 @@ export default function App() {
     true;
   `;
 
-  // Dynamically inject the serverIp into the compiled HTML string before rendering (legacy comment)
-  const processedHtml = htmlString;
+  // Dynamically inject the serverIp into the compiled HTML string before rendering (safely inside head tag)
+  const processedHtml = htmlString.replace(
+    '<head>',
+    `<head>
+    <script>
+      window.__SERVER_PORT__ = '${SERVER_PORT}';
+      window.__SERVER_IP__ = '${serverIp}';
+      window.__API_BASE__ = 'http://${serverIp}:${SERVER_PORT}/api';
+      window.__WS_URL__ = 'ws://${serverIp}:${SERVER_PORT}';
+      window.__IS_NATIVE_APP__ = true;
+      localStorage.setItem('manualServerIp', '${serverIp}');
+    </script>`
+  );
 
   if (hasPermission === null && appState === 'DASHBOARD') {
     return (
@@ -514,8 +525,14 @@ export default function App() {
             }
 
             if (data.type === 'UPDATE_IP') {
-              await AsyncStorage.setItem('serverIp', data.ip);
-              setServerIp(data.ip);
+              if (data.ip && data.ip.trim() !== '') {
+                await AsyncStorage.setItem('serverIp', data.ip);
+                setServerIp(data.ip);
+              } else {
+                await AsyncStorage.removeItem('serverIp');
+                setServerIp('');
+                setAppState('NETWORK_SETUP');
+              }
               return;
             }
 

@@ -1,28 +1,30 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-07-03
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 4/7/2026, 5:23:28 am
+Generated At: , 4/7/2026, 8:51:52 am
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
 166,pregnancy,critical,closed,12.9943901,80.1956562,Critical Emergency Triggered,Unassigned,2026-07-03 22:51:46,2026-07-03 22:52:16,DESKTOP-KBHB0SB
-167,medical,critical,pending,12.9943881,80.1956881,"Critical Emergency Triggered
+167,medical,critical,completed,12.9943881,80.1956881,"Critical Emergency Triggered
 [Declined by Rescuer ID: 1]
 [AI_ROTATION_COMPLETED]
 [Declined by Rescuer ID: 1]
 [Declined by Rescuer ID: 1]
 [Declined by Rescuer ID: 1]
 [Declined by Rescuer ID: 1]
-[Declined by Rescuer ID: 1]",Unassigned,2026-07-03 23:35:06,2026-07-03 23:45:48,DESKTOP-KBHB0SB
-168,pregnancy,critical,pending,12.9943846,80.1956913,"Critical Emergency Triggered
+[Declined by Rescuer ID: 1]
+[Declined by Rescuer ID: 1]",Arjun Singh (MEM-01),2026-07-03 23:35:06,2026-07-04 03:10:56,DESKTOP-KBHB0SB
+168,pregnancy,critical,completed,12.9943846,80.1956913,"Critical Emergency Triggered
 [Ignored by Rescuer ID: 1]
-[AI_ROTATION_COMPLETED]",Unassigned,2026-07-03 23:44:29,2026-07-03 23:44:42,DESKTOP-KBHB0SB
+[AI_ROTATION_COMPLETED]
+[Declined by Rescuer ID: 1]",Arjun Singh (MEM-01),2026-07-03 23:44:29,2026-07-04 03:10:53,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES
 Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At,Acknowledged At,Device Node
-177,N/A,919000000001,"{""message"":""MEDICAL RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943881,""lng"":80.1956881,""urgency"":""critical"",""rescue_req_id"":167,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer ID: 1]\n[AI_ROTATION_COMPLETED]\n[Declined by Rescuer ID: 1]\n[Declined by Rescuer ID: 1]\n[Declined by Rescuer ID: 1]""}",Critical,declined,2026-07-03 23:35:14,,DESKTOP-KBHB0SB
-178,N/A,919000000001,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943846,""lng"":80.1956913,""urgency"":""critical"",""rescue_req_id"":168,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI"",""assignment_version"":1}",Critical,ignored,2026-07-03 23:44:37,,DESKTOP-KBHB0SB
+177,N/A,919000000001,"{""message"":""MEDICAL RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943881,""lng"":80.1956881,""urgency"":""critical"",""rescue_req_id"":167,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer ID: 1]\n[AI_ROTATION_COMPLETED]\n[Declined by Rescuer ID: 1]\n[Declined by Rescuer ID: 1]\n[Declined by Rescuer ID: 1]""}",Critical,completed,2026-07-03 23:35:14,,DESKTOP-KBHB0SB
+178,N/A,919000000001,"{""message"":""AI ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943846,""lng"":80.1956913,""urgency"":""critical"",""rescue_req_id"":168,""requester_name"":""Sneha Reddy"",""requester_phone"":""918000000002"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI"",""assignment_version"":1}",Critical,completed,2026-07-03 23:44:37,,DESKTOP-KBHB0SB
 
 
 SECTION 3: PUBLIC SOS ALERTS
