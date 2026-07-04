@@ -1115,13 +1115,21 @@ app.get('/api/users/:id/history', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
     try {
-        const users = await all(`
+        const role = req.query.role;
+        let query = `
             SELECT u.*, rl.lat, rl.lng, rl.last_updated as location_last_updated,
                    (strftime('%s', 'now') - strftime('%s', rl.last_updated)) as location_age_seconds
             FROM users u
             LEFT JOIN rescuer_locations rl ON u.device_id = rl.device_id OR u.phone = rl.device_id OR u.serial_number = rl.device_id OR CAST(u.id AS TEXT) = rl.device_id
-            ORDER BY u.registered_at DESC
-        `);
+        `;
+        let params = [];
+        if (role) {
+            query += ` WHERE u.role = ? `;
+            params.push(role);
+        }
+        query += ` ORDER BY u.registered_at DESC `;
+
+        const users = await all(query, params);
         for (let user of users) {
             const userGroups = await all(`SELECT g.* FROM group_members gm JOIN groups g ON gm.group_id = g.id WHERE gm.user_id = ?`, [user.id]);
             user.groups = userGroups;

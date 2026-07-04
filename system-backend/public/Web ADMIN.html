@@ -3667,16 +3667,24 @@ function toggleGlobalMute(muted) {
                             refreshAllModules();
                         } else if (data.type === 'LIVE_LOCATION_UPDATE') {
                             if (globalRescuers) {
-                                const existing = globalRescuers.find(r => r.device_id === data.data.deviceId || r.phone === data.data.deviceId || r.serial_number === data.data.deviceId || r.id.toString() === data.data.deviceId);
+                                const existing = globalRescuers.find(r => r.device_id === data.data.deviceId || r.phone === data.data.deviceId || r.serial_number === data.data.deviceId || (r.id && r.id.toString() === data.data.deviceId));
                                 if (existing) {
                                     existing.lat = data.data.lat;
                                     existing.lng = data.data.lng;
+                                    existing.location_age_seconds = 0;
+                                    existing.location_last_updated = new Date().toISOString();
+                                    existing.is_online = 1;
+                                    existing.status = 'online';
                                 } else {
                                     globalRescuers.push({
                                         device_id: data.data.deviceId,
                                         name: data.data.name,
                                         lat: data.data.lat,
-                                        lng: data.data.lng
+                                        lng: data.data.lng,
+                                        location_age_seconds: 0,
+                                        location_last_updated: new Date().toISOString(),
+                                        is_online: 1,
+                                        status: 'online'
                                     });
                                 }
                                 if (typeof updateTacticalMap === 'function') updateTacticalMap(false);
@@ -4401,10 +4409,12 @@ function toggleGlobalMute(muted) {
 
 
             marker.on('click', () => {
-                const coordInput = document.getElementById('cmdCoords');
-                if (coordInput) {
-                    coordInput.value = `${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`;
-                    if (dbId) coordInput.dataset.reqId = dbId;
+                if (type.toLowerCase() !== 'rescuer') {
+                    const coordInput = document.getElementById('cmdCoords');
+                    if (coordInput) {
+                        coordInput.value = `${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`;
+                        if (dbId) coordInput.dataset.reqId = dbId;
+                    }
                 }
             });
 
@@ -4450,7 +4460,7 @@ function toggleGlobalMute(muted) {
                     metaHtml += `<div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:2px;">Created: ${formatLocalDate(timestamp)}</div>`;
                 }
 
-                if (dbId) {
+                if (dbId && type.toLowerCase() !== 'rescuer') {
                     if (status) {
                         let badgeClass = status === 'pending' ? 'tag-yellow' : (status === 'completed' ? 'tag-green' : (status === 'declined' ? 'tag-red' : 'tag-purple'));
                         statusHtml = `<div style="margin-top:8px; margin-bottom:4px;"><span class="tag ${badgeClass}">${status.toUpperCase()}</span></div>`;
@@ -4490,8 +4500,10 @@ function toggleGlobalMute(muted) {
                     }
                 }
 
+                const displayHeader = type.toLowerCase() === 'rescuer' ? 'Rescuer Profile' : `${type} Mission`;
+
                 marker.bindPopup(`<div style="font-family:'Inter'; font-size:13px; padding:4px; min-width:180px;">
-                    <div style="font-weight:900; text-transform:uppercase; margin-bottom:4px; color:var(--primary);">${type} Mission</div>
+                    <div style="font-weight:900; text-transform:uppercase; margin-bottom:4px; color:var(--primary);">${displayHeader}</div>
                     ${metaHtml}
                     <div style="line-height:1.4; color:var(--text-muted); margin-top:4px;">${details}</div>
                     ${statusHtml}
