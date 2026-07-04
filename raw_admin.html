@@ -5454,8 +5454,8 @@ function toggleGlobalMute(muted) {
                     return;
                 }
 
-                const isOngoing = ['assigned', 'accepted', 'acknowledged', 'in_progress'].includes(s);
-                const isPending = s === 'pending';
+                const isOngoing = ['accepted', 'acknowledged', 'in_progress'].includes(s);
+                const isPending = ['pending', 'assigned'].includes(s);
 
                 // Apply historyStatusFilter
                 if (historyStatusFilter === 'ongoing' && !isOngoing && !isPending) return;

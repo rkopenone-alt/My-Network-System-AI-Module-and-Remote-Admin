@@ -1649,7 +1649,7 @@
                     historyData.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
 
                     // Filter: Show all active statuses (assigned = awaiting acceptance, accepted/ongoing = in progress)
-                    const activeData = historyData.filter(t => t.status && !['completed', 'resolved', 'inactive', 'declined', 'cancelled', 'ignored', 'reassigned'].includes(t.status.toLowerCase()));
+                    const activeData = historyData.filter(t => t.status && !['completed', 'closed', 'resolved', 'inactive', 'declined', 'cancelled', 'ignored', 'reassigned', 'finished', 'done'].includes(t.status.toLowerCase()));
 
                     // Deduplicate identical tasks (Requests vs Commands, and duplicate Commands)
                     const seenRescueReqIds = new Set();
@@ -2845,7 +2845,7 @@
             },
 
             handleCommand(c) {
-                if (c.status === 'completed' || c.status === 'declined' || c.status === 'ignored' || c.status === 'reassigned' || c.status === 'cancelled') return;
+                if (c.status === 'completed' || c.status === 'closed' || c.status === 'finished' || c.status === 'done' || c.status === 'resolved' || c.status === 'declined' || c.status === 'ignored' || c.status === 'reassigned' || c.status === 'cancelled') return;
 
                 // Security/Targeting check: only show if for this rescuer or their group
                 const myPhone = this.user?.phone;
