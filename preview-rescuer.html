@@ -2756,13 +2756,13 @@
                 this.ws = ws;
                 ws.onopen = () => {
                     console.log('Connected to WS');
-                    ws.send(JSON.stringify({ type: 'REGISTER', deviceId: this.user?.device_id || 'RESCUER_' + Date.now() }));
+                    ws.send(JSON.stringify({ type: 'REGISTER', deviceId: this.user?.device_id || this.user?.serial_number || 'RESCUER_' + Date.now() }));
                     
                     if (this.activeMission) {
                         const cleanId = String(this.activeMission.id).replace('CMD-', '').replace('REQ-', '');
                         ws.send(JSON.stringify({
                             type: 'TASK_SYNC',
-                            deviceId: this.user?.device_id || 'RESCUER_' + Date.now(),
+                            deviceId: this.user?.device_id || this.user?.serial_number || 'RESCUER_' + Date.now(),
                             data: {
                                 task_id: cleanId,
                                 current_assigned_rescuer_id: this.user?.id || null,

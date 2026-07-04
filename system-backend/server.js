@@ -1115,7 +1115,12 @@ app.get('/api/users/:id/history', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
     try {
-        const users = await all(`SELECT * FROM users ORDER BY registered_at DESC`);
+        const users = await all(`
+            SELECT u.*, rl.lat, rl.lng, rl.last_updated as location_last_updated
+            FROM users u
+            LEFT JOIN rescuer_locations rl ON u.device_id = rl.device_id OR u.phone = rl.device_id
+            ORDER BY u.registered_at DESC
+        `);
         for (let user of users) {
             const userGroups = await all(`SELECT g.* FROM group_members gm JOIN groups g ON gm.group_id = g.id WHERE gm.user_id = ?`, [user.id]);
             user.groups = userGroups;
@@ -1127,7 +1132,12 @@ app.get('/api/users', async (req, res) => {
 
 app.get('/api/users/:id', async (req, res) => {
     try {
-        const user = await get(`SELECT * FROM users WHERE id = ?`, [req.params.id]);
+        const user = await get(`
+            SELECT u.*, rl.lat, rl.lng, rl.last_updated as location_last_updated
+            FROM users u
+            LEFT JOIN rescuer_locations rl ON u.device_id = rl.device_id OR u.phone = rl.device_id
+            WHERE u.id = ?
+        `, [req.params.id]);
         if (!user) return res.status(404).json({ error: 'User not found' });
         
         const userGroups = await all(`SELECT g.* FROM group_members gm JOIN groups g ON gm.group_id = g.id WHERE gm.user_id = ?`, [user.id]);
