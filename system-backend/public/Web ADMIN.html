@@ -4401,9 +4401,19 @@ function toggleGlobalMute(muted) {
             // Make command markers draggable (SOS tasks should stick to coordinates)
             const draggable = isCommand && dbId !== null;
 
+            let zOffset = 1000;
+            if (type.toLowerCase() === 'rescuer') {
+                zOffset = 10000; // Always on top
+            } else if (isCommand) {
+                zOffset = 5000;
+            } else if (['sos', 'medical', 'pregnancy', 'critical'].includes(type.toLowerCase())) {
+                zOffset = 2000;
+            }
+
             let marker = L.marker([lat, lng], {
                 icon: icon,
-                draggable: draggable
+                draggable: draggable,
+                zIndexOffset: zOffset
             });
             // Marker gets added to map or cluster group externally
 
@@ -4682,10 +4692,8 @@ function toggleGlobalMute(muted) {
                             isStale = true; // No location timestamp, skip
                         }
 
-                        if (isOffline || isStale) {
-                            return; // Remove/don't display old or disconnected rescuer icons in map
-                        }
-
+                        // Do not completely remove offline or stale rescuers from map, just change their style
+                        
                         // Apply a tiny visual scatter (jitter) if multiple rescuers occupy the exact same spot
                         let rescuerLat = parseFloat(r.lat);
                         let rescuerLng = parseFloat(r.lng);
@@ -4707,7 +4715,10 @@ function toggleGlobalMute(muted) {
                         let statusText = 'online';
                         let ringColor = '#3b82f6'; // Blue: Online & Available
                         
-                        if (assignedTask || assignedCmd) {
+                        if (isOffline || isStale) {
+                            ringColor = '#64748b'; // Gray: Offline/Stale
+                            statusText = isOffline ? 'offline' : 'inactive';
+                        } else if (assignedTask || assignedCmd) {
                             ringColor = '#ef4444'; // Red: Online & Assigned
                         }
 

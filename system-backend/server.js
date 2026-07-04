@@ -59,9 +59,36 @@ const db = new sqlite3.Database(path.join(__dirname, 'rescue.db'), (err) => {
             db.run('PRAGMA synchronous=NORMAL;', (err) => {
                 if (err) console.error('[DB Sync PRAGMA Error]:', err);
             });
+            
+            // Clean up finalized tasks/commands/assignments on startup
+            db.run("DELETE FROM rescue_requests WHERE status IN ('completed', 'closed', 'declined', 'ignored', 'cancelled', 'finished')");
+            db.run("DELETE FROM command_queue WHERE status IN ('completed', 'closed', 'declined', 'ignored', 'cancelled', 'finished')");
+            db.run("DELETE FROM sos_assignment_history WHERE rescue_req_id NOT IN (SELECT id FROM rescue_requests)");
+            db.run("DELETE FROM sos_completion_log WHERE rescue_req_id NOT IN (SELECT id FROM rescue_requests)");
+            console.log('[DB Config] Cleaned up completed/closed/declined/ignored/cancelled tasks on startup.');
         });
     }
 });
+
+// Graceful shutdown exit handlers to checkpoint SQLite WAL database and close cleanly
+const shutdown = () => {
+    console.log('\n[SERVER] Shutting down cleanly...');
+    db.serialize(() => {
+        db.run('PRAGMA wal_checkpoint(TRUNCATE);', (err) => {
+            if (err) console.error('Failed to checkpoint WAL on exit:', err);
+            else console.log('Successfully checkpointed and truncated WAL.');
+            
+            db.close((err) => {
+                if (err) console.error('Error closing SQLite DB on exit:', err);
+                else console.log('SQLite DB closed cleanly.');
+                process.exit(0);
+            });
+        });
+    });
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 const run = (sql, params = []) => new Promise((res, rej) =>
     db.run(sql, params, function (err) { err ? rej(err) : res(this); }));
