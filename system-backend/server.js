@@ -1116,7 +1116,8 @@ app.get('/api/users/:id/history', async (req, res) => {
 app.get('/api/users', async (req, res) => {
     try {
         const users = await all(`
-            SELECT u.*, rl.lat, rl.lng, rl.last_updated as location_last_updated
+            SELECT u.*, rl.lat, rl.lng, rl.last_updated as location_last_updated,
+                   (strftime('%s', 'now') - strftime('%s', rl.last_updated)) as location_age_seconds
             FROM users u
             LEFT JOIN rescuer_locations rl ON u.device_id = rl.device_id OR u.phone = rl.device_id OR u.serial_number = rl.device_id OR CAST(u.id AS TEXT) = rl.device_id
             ORDER BY u.registered_at DESC
@@ -1133,7 +1134,8 @@ app.get('/api/users', async (req, res) => {
 app.get('/api/users/:id', async (req, res) => {
     try {
         const user = await get(`
-            SELECT u.*, rl.lat, rl.lng, rl.last_updated as location_last_updated
+            SELECT u.*, rl.lat, rl.lng, rl.last_updated as location_last_updated,
+                   (strftime('%s', 'now') - strftime('%s', rl.last_updated)) as location_age_seconds
             FROM users u
             LEFT JOIN rescuer_locations rl ON u.device_id = rl.device_id OR u.phone = rl.device_id OR u.serial_number = rl.device_id OR CAST(u.id AS TEXT) = rl.device_id
             WHERE u.id = ?

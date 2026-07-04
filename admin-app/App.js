@@ -504,6 +504,7 @@ export default function App() {
                 const keys = await AsyncStorage.getAllKeys();
                 await AsyncStorage.multiRemove(keys.filter(k => k !== 'serverIp' && k !== 'rescuer_device_id'));
               } catch(e) {}
+              setAppState('NETWORK_SETUP');
               return;
             }
 

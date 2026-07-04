@@ -4656,7 +4656,11 @@ function toggleGlobalMute(muted) {
 
                         // Check for stale location updates (older than 10 minutes)
                         let isStale = false;
-                        if (r.location_last_updated) {
+                        if (r.location_age_seconds !== undefined && r.location_age_seconds !== null) {
+                            if (r.location_age_seconds > 600) {
+                                isStale = true;
+                            }
+                        } else if (r.location_last_updated) {
                             const lastUpdated = new Date(r.location_last_updated.replace(' ', 'T') + 'Z').getTime();
                             const limit = Date.now() - 10 * 60 * 1000;
                             if (isNaN(lastUpdated) || lastUpdated < limit) {
