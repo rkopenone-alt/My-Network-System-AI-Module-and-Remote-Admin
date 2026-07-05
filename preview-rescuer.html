@@ -1049,6 +1049,41 @@
     <!-- Hidden Camera / File Input for completion photo capture -->
     <input type="file" id="hiddenCameraInput" accept="image/*" capture="environment" style="display:none;">
 
+    <!-- Universal Image Viewer Modal -->
+    <div id="imageViewerModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:20000; align-items:center; justify-content:center; flex-direction:column; padding:20px; box-sizing:border-box;">
+        <div style="position:absolute; top:20px; right:20px; display:flex; gap:15px; z-index:20001;">
+            <button onclick="core.downloadImage()" style="background:#3b82f6; color:white; border:none; padding:10px 20px; border-radius:30px; font-weight:800; font-family:'Inter'; cursor:pointer; font-size:14px; box-shadow:0 4px 6px rgba(0,0,0,0.3);">📥 Download</button>
+            <button onclick="core.closeImageModal()" style="background:#ef4444; color:white; border:none; padding:10px 20px; border-radius:30px; font-weight:800; font-family:'Inter'; cursor:pointer; font-size:14px; box-shadow:0 4px 6px rgba(0,0,0,0.3);">✕ Close</button>
+        </div>
+        <div id="imageViewerZoomContainer" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:auto;">
+            <img id="imageViewerSrc" src="" style="max-width:90%; max-height:80%; object-fit:contain; transition:transform 0.2s; cursor:grab; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+        </div>
+    </div>
+
+    <!-- Universal Audio Player Modal -->
+    <div id="audioPlayerModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:20000; align-items:center; justify-content:center; flex-direction:column; padding:20px; box-sizing:border-box;">
+        <div style="background:#1e293b; padding:30px; border-radius:20px; border:2px solid #3b82f6; width:90%; max-width:400px; text-align:center; box-shadow:0 10px 25px rgba(0,0,0,0.5); display:flex; flex-direction:column; gap:20px; align-items:center; position:relative;">
+            <h3 style="color:#3b82f6; margin:0; font-family:'Inter'; font-weight:800; font-size:18px;">🎵 Audio Player</h3>
+            
+            <audio id="audioViewerSource" src="" style="display:none;"></audio>
+            
+            <div style="width:100%; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                    <span id="audioCurrentTime" style="color:#94a3b8; font-size:12px; font-family:'Inter';">00:00</span>
+                    <span id="audioTotalDuration" style="color:#94a3b8; font-size:12px; font-family:'Inter';">00:00</span>
+                </div>
+                <input type="range" id="audioSeekBar" value="0" min="0" max="100" style="width:100%; accent-color:#3b82f6; height:6px; border-radius:3px; outline:none; background:#475569; cursor:pointer;" oninput="core.onAudioSeek(this.value)">
+            </div>
+
+            <div style="display:flex; gap:15px; align-items:center; justify-content:center; width:100%; margin-top:10px;">
+                <button id="audioPlayPauseBtn" onclick="core.toggleAudioPlay()" style="background:#3b82f6; color:white; border:none; width:55px; height:55px; border-radius:50%; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); transition:all 0.2s;">▶</button>
+                <button onclick="core.downloadAudio()" style="background:#10b981; color:white; border:none; padding:12px 24px; border-radius:30px; font-weight:800; font-family:'Inter'; cursor:pointer; font-size:14px; box-shadow:0 4px 6px rgba(0,0,0,0.3); height:45px;">📥 Download</button>
+            </div>
+
+            <button onclick="core.closeAudioModal()" style="position:absolute; top:12px; right:15px; background:none; border:none; color:#94a3b8; font-size:20px; cursor:pointer; font-weight:800;">✕</button>
+        </div>
+    </div>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -1231,6 +1266,191 @@
             pos: { lat: 13.0750, lng: 80.2600 },
             allHistory: [],
             capturedImages: {},
+            currentImageUrl: '',
+            currentAudioUrl: '',
+            imageZoomScale: 1,
+
+            openImageModal(src) {
+                this.currentImageUrl = src;
+                const modal = document.getElementById('imageViewerModal');
+                const img = document.getElementById('imageViewerSrc');
+                img.src = src;
+                this.imageZoomScale = 1;
+                img.style.transform = `scale(${this.imageZoomScale})`;
+                modal.style.display = 'flex';
+                
+                let isDragging = false;
+                let startX, startY, scrollLeft, scrollTop;
+                const container = document.getElementById('imageViewerZoomContainer');
+
+                container.onmousedown = (e) => {
+                    isDragging = true;
+                    container.style.cursor = 'grabbing';
+                    startX = e.pageX - container.offsetLeft;
+                    startY = e.pageY - container.offsetTop;
+                    scrollLeft = container.scrollLeft;
+                    scrollTop = container.scrollTop;
+                };
+                container.onmouseleave = () => {
+                    isDragging = false;
+                    container.style.cursor = 'grab';
+                };
+                container.onmouseup = () => {
+                    isDragging = false;
+                    container.style.cursor = 'grab';
+                };
+                container.onmousemove = (e) => {
+                    if (!isDragging) return;
+                    e.preventDefault();
+                    const x = e.pageX - container.offsetLeft;
+                    const y = e.pageY - container.offsetTop;
+                    const walkX = (x - startX) * 1.5;
+                    const walkY = (y - startY) * 1.5;
+                    container.scrollLeft = scrollLeft - walkX;
+                    container.scrollTop = scrollTop - walkY;
+                };
+
+                container.onwheel = (e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                    this.imageZoomScale = Math.min(Math.max(0.5, this.imageZoomScale + delta), 4);
+                    img.style.transform = `scale(${this.imageZoomScale})`;
+                };
+            },
+
+            closeImageModal() {
+                document.getElementById('imageViewerModal').style.display = 'none';
+            },
+
+            downloadImage() {
+                if (!this.currentImageUrl) return;
+                const src = this.currentImageUrl;
+                const a = document.createElement('a');
+                a.href = src;
+                a.download = src.startsWith('data:') ? 'task_image.jpg' : (src.split('/').pop() || 'download.jpg');
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            },
+
+            openAudioModal(src) {
+                this.currentAudioUrl = src;
+                const modal = document.getElementById('audioPlayerModal');
+                const audio = document.getElementById('audioViewerSource');
+                audio.src = src;
+                audio.load();
+                modal.style.display = 'flex';
+
+                const playBtn = document.getElementById('audioPlayPauseBtn');
+                playBtn.innerHTML = '▶';
+
+                const seekBar = document.getElementById('audioSeekBar');
+                seekBar.value = 0;
+
+                const curTimeSpan = document.getElementById('audioCurrentTime');
+                const totTimeSpan = document.getElementById('audioTotalDuration');
+                curTimeSpan.innerText = '00:00';
+                totTimeSpan.innerText = '00:00';
+
+                audio.ontimeupdate = () => {
+                    if (audio.duration) {
+                        const progress = (audio.currentTime / audio.duration) * 100;
+                        seekBar.value = progress;
+                        curTimeSpan.innerText = this.formatTime(audio.currentTime);
+                    }
+                };
+
+                audio.onloadedmetadata = () => {
+                    totTimeSpan.innerText = this.formatTime(audio.duration);
+                };
+
+                audio.onended = () => {
+                    playBtn.innerHTML = '▶';
+                    seekBar.value = 0;
+                    curTimeSpan.innerText = '00:00';
+                };
+            },
+
+            closeAudioModal() {
+                const audio = document.getElementById('audioViewerSource');
+                audio.pause();
+                document.getElementById('audioPlayerModal').style.display = 'none';
+            },
+
+            toggleAudioPlay() {
+                const audio = document.getElementById('audioViewerSource');
+                const playBtn = document.getElementById('audioPlayPauseBtn');
+                if (audio.paused) {
+                    audio.play();
+                    playBtn.innerHTML = '⏸';
+                } else {
+                    audio.pause();
+                    playBtn.innerHTML = '▶';
+                }
+            },
+
+            onAudioSeek(val) {
+                const audio = document.getElementById('audioViewerSource');
+                if (audio.duration) {
+                    audio.currentTime = (val / 100) * audio.duration;
+                }
+            },
+
+            downloadAudio() {
+                if (!this.currentAudioUrl) return;
+                const src = this.currentAudioUrl;
+                const a = document.createElement('a');
+                a.href = src;
+                a.download = src.startsWith('data:') ? 'task_audio.mp3' : (src.split('/').pop() || 'download.mp3');
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            },
+
+            formatTime(secs) {
+                if (isNaN(secs)) return '00:00';
+                const m = Math.floor(secs / 60).toString().padStart(2, '0');
+                const s = Math.floor(secs % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            },
+
+            async cacheTaskMedia(task) {
+                if (!task) return;
+                const cleanId = String(task.id).replace('CMD-', '').replace('REQ-', '');
+                
+                if (task.image_url && !localStorage.getItem('cache_media_image_' + cleanId)) {
+                    try {
+                        const url = `http://${this.serverIp || window.location.hostname || '127.0.0.1'}:3001${task.image_url}`;
+                        const response = await originalFetch(url);
+                        const blob = await response.blob();
+                        const base64 = await this.blobToBase64(blob);
+                        localStorage.setItem('cache_media_image_' + cleanId, base64);
+                    } catch (e) {
+                        console.error('[Media Cache] Failed to cache image', cleanId, e);
+                    }
+                }
+                
+                if (task.audio_url && !localStorage.getItem('cache_media_audio_' + cleanId)) {
+                    try {
+                        const url = `http://${this.serverIp || window.location.hostname || '127.0.0.1'}:3001${task.audio_url}`;
+                        const response = await originalFetch(url);
+                        const blob = await response.blob();
+                        const base64 = await this.blobToBase64(blob);
+                        localStorage.setItem('cache_media_audio_' + cleanId, base64);
+                    } catch (e) {
+                        console.error('[Media Cache] Failed to cache audio', cleanId, e);
+                    }
+                }
+            },
+
+            blobToBase64(blob) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            },
 
             init() {
                 // Resolve correct IP address
@@ -1498,6 +1718,44 @@
             bootstrap() {
                 this.updateUI();
                 this.initMap();
+
+                // Restore active mission from localStorage
+                try {
+                    const cachedMission = localStorage.getItem('active_mission');
+                    if (cachedMission) {
+                        const m = JSON.parse(cachedMission);
+                        this.activeMission = m;
+                        document.getElementById('missionBanner').style.display = 'flex';
+                        document.getElementById('missType').innerText = `${m.type.toUpperCase()} MISSION`;
+                        document.getElementById('missLoc').innerText = m.sector;
+                        
+                        setTimeout(() => {
+                            if (this.map && m.lat && m.lng) {
+                                if (this.navPolyline) this.map.removeLayer(this.navPolyline);
+                                const isCrit = ['sos', 'medical', 'pregnancy', 'critical'].includes(m.type.toLowerCase());
+                                const routeColor = isCrit ? 'var(--danger)' : 'var(--primary)';
+                                this.navPolyline = L.polyline([[this.pos.lat, this.pos.lng], [Number(m.lat), Number(m.lng)]], {
+                                    color: routeColor, weight: 6, opacity: 0.8, dashArray: '10, 15'
+                                }).addTo(this.map);
+                                
+                                if (m.isGroupMission && m.groupCoords && m.groupCoords.length > 0) {
+                                    const style = { color: '#a855f7', fillColor: '#a855f7', fillOpacity: 0.15, dashArray: '5, 8', weight: 2.5 };
+                                    if (m.groupCoords.length === 1) {
+                                        this.missionZoneLayer = L.circle(m.groupCoords[0], { ...style, radius: 400 }).addTo(this.map);
+                                    } else if (m.groupCoords.length === 2) {
+                                        this.missionZoneLayer = L.rectangle(L.latLngBounds(m.groupCoords).pad(0.2), style).addTo(this.map);
+                                    } else {
+                                        const hull = m.customGroupPolygon || m.groupCoords;
+                                        this.missionZoneLayer = L.polygon(hull, style).addTo(this.map);
+                                    }
+                                }
+                            }
+                        }, 500);
+                    }
+                } catch (e) {
+                    console.error('[Restore Active Mission] Failed:', e);
+                }
+
                 this.refresh();
                 this.startSync();
                 this.connectWS();
@@ -1819,10 +2077,24 @@
                     card.className = 'notif-card';
                     if (isOngoing) card.style.borderLeft = '4px solid var(--warning)';
 
+                    const cleanId = String(t.id).replace('CMD-', '').replace('REQ-', '');
+                    const cachedImage = localStorage.getItem('cache_media_image_' + cleanId);
+                    const imageSrc = cachedImage || (t.image_url ? `http://${core.serverIp || window.location.hostname || '127.0.0.1'}:3001${t.image_url}` : null);
+
                     let evidenceHtml = '';
-                    if (t.image_url) {
+                    if (imageSrc) {
                         evidenceHtml += `<div style="width:100%; height:120px; border-radius:12px; overflow:hidden; margin-bottom:12px; border:1px solid var(--border);">
-                            <img src="http://${core.serverIp || window.location.hostname || '127.0.0.1'}:3001${t.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                            <img src="${imageSrc}" onclick="core.openImageModal(this.src)" style="width:100%; height:100%; object-fit:cover; cursor:pointer;">
+                        </div>`;
+                    }
+
+                    const cachedAudio = localStorage.getItem('cache_media_audio_' + cleanId);
+                    const audioSrc = cachedAudio || (t.audio_url ? `http://${core.serverIp || window.location.hostname || '127.0.0.1'}:3001${t.audio_url}` : null);
+                    if (audioSrc) {
+                        evidenceHtml += `<div style="margin-bottom:12px;">
+                            <button class="btn-action" style="background:#8b5cf6; color:white; font-size:12px; padding:8px 16px; display:inline-flex; align-items:center; gap:8px; border-radius:30px; border:none; font-weight:800; cursor:pointer;" onclick="core.openAudioModal('${audioSrc}')">
+                                🎵 Play Voice Message
+                            </button>
                         </div>`;
                     }
 
@@ -1964,17 +2236,20 @@
                     const historyData = await resHistory.json();
                     const task = historyData.find(t => String(t.id) === String(id) && t.source === source);
 
-                    if (task && task.details) {
-                        const d = typeof task.details === 'string' ? JSON.parse(task.details) : task.details;
-                        if (d.custom_polygon) {
-                            customGroupPolygon = d.custom_polygon;
-                        }
-                        if (d.isGroup && d.missions && d.missions.length > 0) {
-                            isGroupMission = true;
-                            groupCoords = d.missions.map(m => [Number(m.lat), Number(m.lng)]).filter(c => !isNaN(c[0]));
-                            if (groupCoords.length > 0 && (!finalLat || finalLat === 0)) {
-                                finalLat = groupCoords[0][0];
-                                finalLng = groupCoords[0][1];
+                    if (task) {
+                        this.cacheTaskMedia(task);
+                        if (task.details) {
+                            const d = typeof task.details === 'string' ? JSON.parse(task.details) : task.details;
+                            if (d.custom_polygon) {
+                                customGroupPolygon = d.custom_polygon;
+                            }
+                            if (d.isGroup && d.missions && d.missions.length > 0) {
+                                isGroupMission = true;
+                                groupCoords = d.missions.map(m => [Number(m.lat), Number(m.lng)]).filter(c => !isNaN(c[0]));
+                                if (groupCoords.length > 0 && (!finalLat || finalLat === 0)) {
+                                    finalLat = groupCoords[0][0];
+                                    finalLng = groupCoords[0][1];
+                                }
                             }
                         }
                     }
@@ -1986,6 +2261,14 @@
                         const res = await fetch(`${this.API}/commands/${id}`);
                         const cmd = await res.json();
                         const payload = JSON.parse(cmd.command_payload);
+
+                        if (cmd) {
+                            this.cacheTaskMedia({
+                                id: cmd.id,
+                                image_url: cmd.image_url || payload.image_url,
+                                audio_url: cmd.audio_url || payload.audio_url
+                            });
+                        }
 
                         if (!finalLat || finalLat === 0) {
                             finalLat = Number(payload.lat) || finalLat;
@@ -2011,7 +2294,8 @@
                     finalLng = groupCoords[0][1];
                 }
 
-                this.activeMission = { id, type, sector: finalSector, lat: finalLat, lng: finalLng, source };
+                this.activeMission = { id, type, sector: finalSector, lat: finalLat, lng: finalLng, source, isGroupMission, groupCoords, customGroupPolygon };
+                localStorage.setItem('active_mission', JSON.stringify(this.activeMission));
 
                 document.getElementById('missionBanner').style.display = 'flex';
                 document.getElementById('missType').innerText = `${type.toUpperCase()} MISSION`;
@@ -2218,13 +2502,68 @@
             // ───────────────────────────────────────────────────
 
             async completeTask(id, source = 'request') {
-                // ── Photo verification gate (Now Optional) ───────────────
                 const photoBase64 = this.capturedImages[id] || this.capturedImages['__banner__'] || null;
-                // ─────────────────────────────────────────────────────────
 
                 this.showLoader(true);
+                const endpoint = (source === 'command' || this.activeMission?.source === 'command') ? 'commands' : 'rescue-requests';
+                
+                const processCompletionLocal = () => {
+                    delete this.capturedImages[id];
+                    delete this.capturedImages['__banner__'];
+
+                    this.toast('MISSION SUCCESSFUL', '✅');
+
+                    try {
+                        const histCacheKey = 'cache_' + this.API + '/users/' + this.user.id + '/combined-history';
+                        let cachedHist = JSON.parse(localStorage.getItem(histCacheKey) || '[]');
+                        let existing = cachedHist.find(h => String(h.id) === String(id) && h.source === (source === 'command' ? 'command' : 'request'));
+                        if (existing) {
+                            existing.status = 'completed';
+                            existing.updated_at = new Date().toISOString();
+                        } else if (this.activeMission) {
+                            cachedHist.push({
+                                id: id,
+                                type: this.activeMission.type || 'unknown',
+                                sector: this.activeMission.sector || 'Unknown Sector',
+                                lat: this.activeMission.lat,
+                                lng: this.activeMission.lng,
+                                source: (source === 'command' ? 'command' : 'request'),
+                                status: 'completed',
+                                created_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString(),
+                                priority: ['sos', 'medical', 'pregnancy', 'critical'].includes((this.activeMission.type || '').toLowerCase()) ? 'critical' : 'normal'
+                            });
+                        }
+                        localStorage.setItem(histCacheKey, JSON.stringify(cachedHist));
+                    } catch (err) { console.error("History cache update failed", err); }
+
+                    if (this.activeMission && String(this.activeMission.id) === String(id)) {
+                        this.endMission();
+                    } else {
+                        if (this.taskMarkers[id]) this.map.removeLayer(this.taskMarkers[id]);
+                        delete this.taskMarkers[id];
+                        this.refresh();
+                    }
+                };
+
+                if (!navigator.onLine) {
+                    const queue = JSON.parse(localStorage.getItem('offline_completions') || '[]');
+                    if (!queue.some(x => x.id === id && x.endpoint === endpoint)) {
+                        queue.push({
+                            id,
+                            endpoint,
+                            rescuer_phone: this.user.phone,
+                            completion_image: photoBase64,
+                            completed_at: new Date().toISOString()
+                        });
+                        localStorage.setItem('offline_completions', JSON.stringify(queue));
+                    }
+                    processCompletionLocal();
+                    this.showLoader(false);
+                    return;
+                }
+
                 try {
-                    const endpoint = (source === 'command' || this.activeMission?.source === 'command') ? 'commands' : 'rescue-requests';
                     const res = await fetch(`${this.API}/${endpoint}/${id}/status`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
@@ -2236,47 +2575,8 @@
                     });
                     if (!res.ok) throw new Error((await res.json()).error || 'Failed to complete task');
 
-                    // Clear captured image after successful submit
-                    delete this.capturedImages[id];
-                    delete this.capturedImages['__banner__'];
+                    processCompletionLocal();
 
-                    this.toast('MISSION SUCCESSFUL', '✅');
-
-                    // --- LOCAL HISTORY INJECTION ---
-                    try {
-                        const histCacheKey = 'cache_' + this.API + '/users/' + this.user.id + '/combined-history';
-                        let cachedHist = JSON.parse(localStorage.getItem(histCacheKey) || '[]');
-                        let existing = cachedHist.find(h => String(h.id) === String(id) && h.source === (source === 'command' ? 'command' : 'request'));
-                        if (existing) {
-                            existing.status = 'completed';
-                            existing.updated_at = new Date().toISOString();
-                        } else if (this.activeMission) {
-                            cachedHist.push({
-                                id: id,
-                                type: this.activeMission.type || 'unknown',
-                                sector: this.activeMission.sector || 'Unknown Sector',
-                                lat: this.activeMission.lat,
-                                lng: this.activeMission.lng,
-                                source: (source === 'command' ? 'command' : 'request'),
-                                status: 'completed',
-                                created_at: new Date().toISOString(),
-                                updated_at: new Date().toISOString(),
-                                priority: ['sos', 'medical', 'pregnancy', 'critical'].includes((this.activeMission.type || '').toLowerCase()) ? 'critical' : 'normal'
-                            });
-                        }
-                        localStorage.setItem(histCacheKey, JSON.stringify(cachedHist));
-                    } catch (err) { console.error("History cache update failed", err); }
-                    // -------------------------------
-
-                    if (this.activeMission && String(this.activeMission.id) === String(id)) {
-                        this.endMission();
-                    } else {
-                        if (this.taskMarkers[id]) this.map.removeLayer(this.taskMarkers[id]);
-                        delete this.taskMarkers[id];
-                        this.refresh();
-                    }
-
-                    // If we just completed a critical mission and have an interrupted task, reopen it
                     const isCritCompletion = ['sos', 'medical', 'pregnancy', 'critical'].includes(this.activeMission?.type?.toLowerCase() || '');
                     if (isCritCompletion && this.interruptedMission) {
                         setTimeout(async () => {
@@ -2284,7 +2584,6 @@
                             this.interruptedMission = null;
                             this.toast("Restoring interrupted normal task...", '🔄');
 
-                            // Clear interrupted task in backend
                             fetch(`${this.API}/users/${this.user.id}/interrupted-task`, {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
@@ -2295,37 +2594,61 @@
                         }, 2000);
                     }
                 } catch (e) {
-                    this.toast('MISSION COMPLETED (OFFLINE)', '✅');
-
-                    // --- LOCAL HISTORY INJECTION (OFFLINE FALLBACK) ---
-                    try {
-                        const histCacheKey = 'cache_' + this.API + '/users/' + this.user.id + '/combined-history';
-                        let cachedHist = JSON.parse(localStorage.getItem(histCacheKey) || '[]');
-                        let existing = cachedHist.find(h => String(h.id) === String(id) && h.source === (source === 'command' ? 'command' : 'request'));
-                        if (existing) {
-                            existing.status = 'completed';
-                            existing.updated_at = new Date().toISOString();
-                        } else if (this.activeMission) {
-                            cachedHist.push({
-                                id: id,
-                                type: this.activeMission.type || 'unknown',
-                                sector: this.activeMission.sector || 'Unknown Sector',
-                                lat: this.activeMission.lat,
-                                lng: this.activeMission.lng,
-                                source: (source === 'command' ? 'command' : 'request'),
-                                status: 'completed',
-                                created_at: new Date().toISOString(),
-                                updated_at: new Date().toISOString(),
-                                priority: ['sos', 'medical', 'pregnancy', 'critical'].includes((this.activeMission.type || '').toLowerCase()) ? 'critical' : 'normal'
-                            });
-                        }
-                        localStorage.setItem(histCacheKey, JSON.stringify(cachedHist));
-                    } catch (err) { console.error("History cache update failed", err); }
-                    // --------------------------------------------------
-
-                    if (this.activeMission && String(this.activeMission.id) === String(id)) this.endMission();
+                    const queue = JSON.parse(localStorage.getItem('offline_completions') || '[]');
+                    if (!queue.some(x => x.id === id && x.endpoint === endpoint)) {
+                        queue.push({
+                            id,
+                            endpoint,
+                            rescuer_phone: this.user.phone,
+                            completion_image: photoBase64,
+                            completed_at: new Date().toISOString()
+                        });
+                        localStorage.setItem('offline_completions', JSON.stringify(queue));
+                    }
+                    processCompletionLocal();
                 } finally {
                     this.showLoader(false);
+                }
+            },
+
+            async syncOfflineCompletions() {
+                if (!navigator.onLine) return;
+                const queue = JSON.parse(localStorage.getItem('offline_completions') || '[]');
+                if (queue.length === 0) return;
+                
+                console.log(`[Offline Sync] Processing ${queue.length} completed tasks offline...`);
+                let successCount = 0;
+                let newQueue = [...queue];
+
+                for (const item of queue) {
+                    try {
+                        const res = await originalFetch(`${this.API}/${item.endpoint}/${item.id}/status`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                status: 'completed',
+                                rescuer_phone: item.rescuer_phone,
+                                completion_image: item.completion_image
+                            })
+                        });
+                        
+                        if (res.ok || res.status === 403 || res.status === 404) {
+                            successCount++;
+                            newQueue = newQueue.filter(x => !(x.id === item.id && x.endpoint === item.endpoint));
+                            const cleanId = String(item.id).replace('CMD-', '').replace('REQ-', '');
+                            localStorage.removeItem('cache_media_image_' + cleanId);
+                            localStorage.removeItem('cache_media_audio_' + cleanId);
+                        }
+                    } catch (e) {
+                        console.error('[Offline Sync] Sync failed for', item.id, e);
+                        break;
+                    }
+                }
+                
+                localStorage.setItem('offline_completions', JSON.stringify(newQueue));
+                if (successCount > 0) {
+                    this.toast(`Synced ${successCount} offline completion(s)`, '✅');
+                    this.refresh();
                 }
             },
 
@@ -2372,6 +2695,7 @@
             },
 
             endMission() {
+                localStorage.removeItem('active_mission');
                 document.getElementById('missionBanner').style.display = 'none';
                 if (this.navPolyline) this.map.removeLayer(this.navPolyline);
                 if (this.missionZoneLayer) {
@@ -2485,11 +2809,25 @@
                     const sourcePrefix = h.source === 'command' ? 'CMD' : 'REQ';
                     
                     let histEvidence = '';
+                    const cleanId = String(h.id).replace('CMD-', '').replace('REQ-', '');
+                    const cachedImage = localStorage.getItem('cache_media_image_' + cleanId);
                     const displayImage = h.completion_image_url || h.image_url;
-                    if (displayImage) {
-                        const serverBase = this.API.replace('/api', '');
+                    const imageSrc = cachedImage || (displayImage ? `${this.API.replace('/api', '')}${displayImage}` : null);
+                    
+                    if (imageSrc) {
                         histEvidence = `<div style="width:50px; height:50px; border-radius:8px; overflow:hidden; border:1px solid var(--border); margin-left:10px;">
-                            <img src="${serverBase}${displayImage}" style="width:100%; height:100%; object-fit:cover;">
+                            <img src="${imageSrc}" onclick="core.openImageModal(this.src)" style="width:100%; height:100%; object-fit:cover; cursor:pointer;">
+                        </div>`;
+                    }
+
+                    const cachedAudio = localStorage.getItem('cache_media_audio_' + cleanId);
+                    const audioSrc = cachedAudio || (h.audio_url ? `${this.API.replace('/api', '')}${h.audio_url}` : null);
+                    let audioHtml = '';
+                    if (audioSrc) {
+                        audioHtml = `<div style="margin-top:6px;">
+                            <button class="btn-action" style="background:#8b5cf6; color:white; font-size:10px; padding:4px 10px; display:inline-flex; align-items:center; gap:6px; border-radius:30px; border:none; font-weight:800; cursor:pointer;" onclick="core.openAudioModal('${audioSrc}')">
+                                🎵 Play Voice
+                            </button>
                         </div>`;
                     }
 
@@ -2535,6 +2873,7 @@
                             <p>ID: #${sourcePrefix}-${h.id} • ${formatLocalDate(recordTime)}</p>
                             <p style="margin-top:4px; font-style:italic;">${timeLabel}: ${formatLocalTime(recordTime)}</p>
                             ${commentHtml}
+                            ${audioHtml}
                         </div>
                         ${histEvidence}
                         <div class="hist-meta" style="margin-left:10px;">
@@ -2688,7 +3027,7 @@
                 }
 
                 const runSync = async () => {
-
+                    await this.syncOfflineCompletions();
                     try {
                         const res = await fetch(`${this.API}/sync`, {
                             method: 'POST',
@@ -2885,6 +3224,13 @@
                 let payload = {};
                 try { payload = JSON.parse(c.command_payload); } catch (e) { }
 
+                const cleanId = String(c.id).replace('CMD-', '').replace('REQ-', '');
+                const cachedImage = localStorage.getItem('cache_media_image_' + cleanId);
+                const imageSrc = cachedImage || (c.image_url ? `http://${core.serverIp || window.location.hostname || '127.0.0.1'}:3001${c.image_url}` : null);
+
+                const cachedAudio = localStorage.getItem('cache_media_audio_' + cleanId);
+                const audioSrc = cachedAudio || (c.audio_url ? `http://${core.serverIp || window.location.hostname || '127.0.0.1'}:3001${c.audio_url}` : null);
+
                 const isCrit = c.priority === 'critical' || c.command_type === 'critical';
                 const modal = document.createElement('div');
                 modal.id = 'cmd_modal_' + c.id;
@@ -2901,9 +3247,17 @@
                         <h2 style="color: ${isCrit ? '#ef4444' : '#3b82f6'}; margin-top: 0;">${isCrit ? '🚨 CRITICAL DIRECTIVE' : '📢 NEW TASK'}</h2>
                         <p style="color: #fff; font-size: 16px; margin: 10px 0;">${payload.message || 'New task assigned from HQ'}</p>
                         
-                        ${c.image_url ? `
+                        ${imageSrc ? `
                             <div style="width:100%; height:140px; border-radius:8px; overflow:hidden; margin-bottom:12px; border:1px solid #334155;">
-                                <img src="http://${core.serverIp || window.location.hostname || '127.0.0.1'}:3001${c.image_url}" style="width:100%; height:100%; object-fit:cover;">
+                                <img src="${imageSrc}" onclick="core.openImageModal(this.src)" style="width:100%; height:100%; object-fit:cover; cursor:pointer;">
+                            </div>
+                        ` : ''}
+
+                        ${audioSrc ? `
+                            <div style="margin-bottom:12px;">
+                                <button class="btn-action" style="background:#8b5cf6; color:white; font-size:12px; padding:8px 16px; display:inline-flex; align-items:center; gap:8px; border-radius:30px; border:none; font-weight:800; cursor:pointer;" onclick="core.openAudioModal('${audioSrc}')">
+                                    🎵 Play Voice Message
+                                </button>
                             </div>
                         ` : ''}
 
