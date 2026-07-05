@@ -747,6 +747,8 @@ app.post('/api/auth/login', async (req, res) => {
         }
 
         if (deviceId) {
+            // Unlink this device from any other user to prevent cross-login presence bugs
+            await run(`UPDATE users SET device_id = NULL, is_online = 0, status = 'offline' WHERE device_id = ?`, [deviceId]);
             // Always update device ID to the current one so notifications reach the active session
             await run(`UPDATE users SET device_id = ? WHERE id = ?`, [deviceId, user.id]);
             user.device_id = deviceId;
@@ -1148,7 +1150,7 @@ app.get('/api/users', async (req, res) => {
             query += ` WHERE u.role = ? `;
             params.push(role);
         }
-        query += ` ORDER BY u.registered_at DESC `;
+        query += ` GROUP BY u.id ORDER BY u.registered_at DESC `;
 
         const users = await all(query, params);
         for (let user of users) {
@@ -1533,7 +1535,13 @@ app.put('/api/sos/:id/status', async (req, res) => {
 
 // ─── Rescuers ──────────────────────────────────────────────────────────────────
 app.get('/api/rescuers', async (req, res) => {
-    try { res.json(await all(`SELECT * FROM rescuer_locations`)); }
+    try { 
+        res.json(await all(`
+            SELECT rl.*, u.status as status, u.is_online 
+            FROM rescuer_locations rl
+            LEFT JOIN users u ON rl.device_id = u.serial_number OR rl.device_id = u.phone OR rl.device_id = u.device_id
+        `)); 
+    }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -2653,6 +2661,9 @@ app.post('/api/settings', async (req, res) => {
         if (key === 'sos_buffer_minutes') {
             broadcast('BUFFER_TIME_UPDATE', { minutes: parseInt(value) || 15 });
         }
+        if (key === 'ai_enabled') {
+            broadcast('AI_STATUS_UPDATE', { enabled: value === 'true' });
+        }
         if (key === 'ai_interval_val' || key === 'ai_interval_unit' || key === 'ai_enabled') {
             startAITimer();
         }
@@ -2697,6 +2708,7 @@ app.post('/api/ai/toggle', async (req, res) => {
     const { enabled } = req.body;
     try {
         await run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('ai_enabled', ?)`, [enabled ? 'true' : 'false']);
+        broadcast('AI_STATUS_UPDATE', { enabled });
         if (enabled) {
             runAIAssignment();
             startAITimer();
