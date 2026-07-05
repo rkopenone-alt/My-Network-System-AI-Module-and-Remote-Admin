@@ -1183,9 +1183,11 @@
                                     <span
                                         style="font-size: 8px; font-weight: 900; color: var(--primary-dark)">ACTIVE</span>
                                 </div>
-                                <div onclick="core.toast('Voice input currently disabled', '🎙️')" class="config-card"
-                                    style="margin: 0; padding: 8px; flex: 1; display: flex; justify-content: center; align-items: center; cursor: pointer; opacity: 0.5;">
+                                <input type="file" id="audioInput" accept="audio/*" capture="microphone" style="display:none" onchange="core.handleAudioNative(this)">
+                                <div id="audioNativeBtnCard" onclick="core.openAudioNative()" class="config-card"
+                                    style="margin: 0; padding: 8px; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; background: var(--bg); border-color: var(--border);">
                                     <span style="font-size: 20px;">🎙️</span>
+                                    <span id="audioNativeLabel" style="font-size: 8px; font-weight: 900; color: var(--primary-dark); display: none;">SAVED</span>
                                 </div>
                             </div>
                         </div>
@@ -1194,8 +1196,17 @@
                             <img id="capturedImg" src=""
                                 style="width:100%; border-radius: 16px; border: 2px solid var(--primary);">
                             <div onclick="core.removePhoto()"
-                                style="position: absolute; top: 10px; right: 10px; background: var(--danger); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 900; cursor: pointer;">
-                                ✕</div>
+                                style="position: absolute; top: -10px; right: -10px; background: var(--danger); color: white; width: 30px; height: 30px; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-weight: 900; cursor: pointer; box-shadow: var(--shadow-sm);">
+                                ✕
+                            </div>
+                        </div>
+                        
+                        <div id="audioPreview" style="display:none; margin-bottom: 15px; position: relative; padding: 10px; border: 2px solid var(--primary); border-radius: 16px;">
+                            <audio id="capturedAudio" src="" controls style="width:100%;"></audio>
+                            <div onclick="core.removeAudioNative()"
+                                style="position: absolute; top: -10px; right: -10px; background: var(--danger); color: white; width: 30px; height: 30px; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-weight: 900; cursor: pointer; box-shadow: var(--shadow-sm); z-index: 10;">
+                                ✕
+                            </div>
                         </div>
                     </div>
                     
@@ -2918,6 +2929,57 @@
                 document.getElementById('camInput').value = '';
                 document.getElementById('photoPreview').style.display = 'none';
                 this.toast('PHOTO REMOVED', '🗑️');
+                this.checkFormValidity();
+            },
+
+            openAudioNative() {
+                document.getElementById('audioInput').click();
+            },
+
+            handleAudioNative(input) {
+                if (input.files && input.files[0]) {
+                    const file = input.files[0];
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        let base64data = reader.result;
+                        if (base64data.length > 500 * 1024) {
+                            this.toast('Audio too large, truncating', '⚠️');
+                            base64data = base64data.substring(0, 500 * 1024);
+                        }
+                        this.needs.audio = base64data;
+                        document.getElementById('capturedAudio').src = base64data;
+                        document.getElementById('audioPreview').style.display = 'block';
+                        
+                        const btn = document.getElementById('audioNativeBtnCard');
+                        const label = document.getElementById('audioNativeLabel');
+                        if (btn) {
+                            btn.style.background = 'var(--primary-light)';
+                            btn.style.borderColor = 'var(--primary)';
+                        }
+                        if (label) label.style.display = 'block';
+                        
+                        this.toast('AUDIO SAVED', '🎙️');
+                        this.checkFormValidity();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            },
+
+            removeAudioNative() {
+                this.needs.audio = null;
+                document.getElementById('audioInput').value = '';
+                document.getElementById('audioPreview').style.display = 'none';
+                
+                const btn = document.getElementById('audioNativeBtnCard');
+                const label = document.getElementById('audioNativeLabel');
+                if (btn) {
+                    btn.style.background = 'var(--bg)';
+                    btn.style.borderColor = 'var(--border)';
+                }
+                if (label) label.style.display = 'none';
+                
+                this.toast('AUDIO REMOVED', '🗑️');
+                this.checkFormValidity();
             },
 
             setRoute(route, btn) {
