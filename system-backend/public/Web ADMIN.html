@@ -4700,7 +4700,11 @@ function toggleGlobalMute(muted) {
                                 isStale = true;
                             }
                         } else if (r.location_last_updated) {
-                            const lastUpdated = new Date(r.location_last_updated.replace(' ', 'T') + 'Z').getTime();
+                            let dateStr = r.location_last_updated;
+                            if (!dateStr.endsWith('Z')) {
+                                dateStr = dateStr.replace(' ', 'T') + 'Z';
+                            }
+                            const lastUpdated = new Date(dateStr).getTime();
                             const limit = Date.now() - 10 * 60 * 1000;
                             if (isNaN(lastUpdated) || lastUpdated < limit) {
                                 isStale = true;
