@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=1280, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>ARDMS Command Center - Professional Dashboard</title>
     <!-- Leaflet & Icons -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -3100,6 +3100,23 @@
     </div>
 
     <!-- Assign Rescue Operation Modal -->
+    <!-- Media Modal -->
+    <div class="modal-overlay" id="mediaModal" style="z-index: 10000;">
+        <div class="modal" style="max-width: 600px; text-align: center; padding: 24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h3 style="font-weight: 800; font-size: 18px; color: var(--text-main);">Media Viewer</h3>
+                <button onclick="closeMediaModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-muted);">&times;</button>
+            </div>
+            <div id="mediaModalContent" style="margin-bottom: 20px; min-height: 200px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-radius: 8px;">
+                <!-- Content injected via JS -->
+            </div>
+            <div style="display:flex; justify-content:center; gap: 12px;">
+                <a id="mediaDownloadBtn" href="#" target="_blank" download class="btn btn-primary" style="background:#0ea5e9; border-color:#0ea5e9; color:white; text-decoration:none;"><i data-lucide="download" style="width:16px; height:16px;"></i> Download</a>
+                <button class="btn btn-outline" onclick="closeMediaModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="assignModal">
         <div class="modal">
             <div class="modal-header">
@@ -5133,7 +5150,7 @@ function toggleGlobalMute(muted) {
                         rescueReqId: req.id,
                         requestIds: [],
                         payload: req,
-                        requesterName: req.assigned_officer_name || 'Citizen',
+                        requesterName: 'ID: ' + req.id + ' | Ph: ' + (req.phone || req.device_id || 'No Phone'),
                         requesterPhone: req.phone || null,
                         requesterType: req.type || null,
                         requesterLat: req.lat || null,
@@ -5465,33 +5482,49 @@ function toggleGlobalMute(muted) {
                                (r.urgency || '').toLowerCase() === 'critical' || 
                                ['sos', 'medical', 'pregnancy', 'critical', 'rescue'].includes((r.type || '').toLowerCase());
 
-                let publicInfo = '';
-                if (r.name || r.phone) {
-                    publicInfo = `<div style="margin-bottom:4px; font-size:11px;"><b style="color:var(--text);">${r.name || 'Unknown'}</b><br><span style="color:var(--accent);">${r.phone || 'No Phone'}</span></div>`;
+                let infoHtml = `<div style="font-size:11px; line-height:1.4;">`;
+                infoHtml += `<div><b>Requester:</b> ID: ${r.id} | Ph: ${r.phone || r.device_id || 'No Phone'}</div>`;
+                
+                let reqTypeStr = (r.type || 'Request').toUpperCase();
+                if (r.type === 'sos') reqTypeStr = 'SOS Emergency';
+                else if (r.type === 'medical') reqTypeStr = 'Medical Rescue';
+                
+                infoHtml += `<div><b>Type:</b> ${reqTypeStr}</div>`;
+                
+                let parsedDetails = r.details || 'None';
+                try {
+                    let d = JSON.parse(r.details);
+                    let arr = [];
+                    if (d.food) arr.push(`Food: ${d.food}`);
+                    if (d.med) arr.push(`Med: ${d.med}`);
+                    if (d.sanitary) arr.push(`Sanitary: ${d.sanitary}`);
+                    if (arr.length > 0) parsedDetails = arr.join(', ');
+                } catch(e) {}
+                
+                infoHtml += `<div><b>Details:</b> ${parsedDetails}</div>`;
+                
+                if (r.lat && r.lng) {
+                    infoHtml += `<div style="margin-top:2px; font-weight:600; color:var(--text-muted);">📍 ${parseFloat(r.lat).toFixed(5)}, ${parseFloat(r.lng).toFixed(5)}</div>`;
                 }
-                let infoText = r.details || '-';
-                if (infoText.length > 50) infoText = infoText.substring(0, 50) + '...';
-                infoText = publicInfo + infoText;
+                infoHtml += `</div>`;
+                let infoText = infoHtml;
 
                 let evidenceThumb = '-';
                 if (r.image_url) {
                     const thumbUrl = formatMediaUrl(r.image_url);
-                    evidenceThumb = `<img src="${thumbUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid ${isCrit ? '#ef4444' : 'var(--border)'};" onclick="event.stopPropagation(); window.open('${thumbUrl}', '_blank');">`;
+                    evidenceThumb = `<img src="${thumbUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid ${isCrit ? '#ef4444' : 'var(--border)'}; cursor:pointer;" onclick="event.stopPropagation(); openMediaModal('${thumbUrl}', 'image');">`;
                 }
 
                 let evidenceAudio = '-';
                 if (r.audio_url) {
                     const audioUrl = formatMediaUrl(r.audio_url);
-                    evidenceAudio = `<div style="display:flex; flex-direction:column; gap:4px; align-items:center; min-width: 200px;" onmousedown="event.stopPropagation();" onclick="event.stopPropagation();">
-                        <audio controls src="${audioUrl}" style="width:200px; height:32px; margin-bottom:4px;" onclick="event.stopPropagation();" onmousedown="event.stopPropagation();" preload="metadata"></audio>
-                        <a href="${audioUrl}" target="_blank" style="font-size:10px; font-weight:800; color:#1d4ed8; text-decoration:none; border:1px solid #1d4ed8; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;" onclick="event.stopPropagation();">DOWNLOAD</a>
-                    </div>`;
+                    evidenceAudio = `<button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="event.stopPropagation(); openMediaModal('${audioUrl}', 'audio')">🔊 Play Audio</button>`;
                 }
 
                 let closureThumb = '-';
                 if (r.completion_image_url) {
                     const closureUrl = formatMediaUrl(r.completion_image_url);
-                    closureThumb = `<img src="${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e;" onclick="event.stopPropagation(); window.open('${closureUrl}', '_blank');">`;
+                    closureThumb = `<img src="${closureUrl}" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:2px solid #22c55e; cursor:pointer;" onclick="event.stopPropagation(); openMediaModal('${closureUrl}', 'image');">`;
                 }
 
                 let assignedTo = 'Unassigned';
@@ -5572,6 +5605,8 @@ function toggleGlobalMute(muted) {
                         <div style="display:flex; gap:4px;">
                             ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeTaskByAdmin('${actionBtnId}')">✅ Close</button>` : ''}
                             ${isOngoing ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #eab308; border-color: #eab308; color: white;" onclick="event.stopPropagation(); openReassignModal('${actionBtnId}')"> Re-Assign</button>` : ''}
+                            ${isPending ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #ef4444; border-color: #ef4444; color: white;" onclick="event.stopPropagation(); closeRescueRequest('${r.id}')">✅ Close</button>` : ''}
+                            ${isPending ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #10b981; border-color: #10b981; color: white;" onclick="event.stopPropagation(); openAssignModal('${r.id}', 'Rescue Task', '${(r.sector || '').replace(/'/g, "\\'")}', '${r.urgency || 'normal'}', '00')">Assign</button>` : ''}
                             <button class="btn btn-primary" style="padding:4px 8px; font-size:10px; background: #0ea5e9; border-color: #0ea5e9; color: white;" onclick="event.stopPropagation(); ${isOngoing ? `selectTask('${displayId}')` : `openCompletedTaskDetailModal('${displayId}')`}">View</button>
                         </div>
                     </td>
@@ -6495,7 +6530,8 @@ function toggleGlobalMute(muted) {
                                 <b>Priority:</b> <span style="color:${isCritical ? '#e11d48' : 'var(--text-muted)'}; font-weight:900;">${(req.priority || (isCritical ? 'CRITICAL' : 'NORMAL')).toUpperCase()}</span><br>
                                 <b>Urgency:</b> <span style="color:${req.urgency === 'critical' ? 'var(--critical)' : 'inherit'}; font-weight:700;">${req.urgency.toUpperCase()}</span>
                                 ${detailsHtml}
-                                ${req.image_url ? `<div style="margin-top:8px;"><img src="${formatMediaUrl(req.image_url)}" style="width:60px; height:60px; border-radius:6px; object-fit:cover; border:1px solid var(--border);"></div>` : ''}
+                                ${req.image_url ? `<div style="margin-top:8px;"><img src="${formatMediaUrl(req.image_url)}" style="width:60px; height:60px; border-radius:6px; object-fit:cover; border:1px solid var(--border); cursor:pointer;" onclick="event.stopPropagation(); openMediaModal('${formatMediaUrl(req.image_url)}', 'image')"></div>` : ''}
+                                ${req.audio_url ? `<div style="margin-top:8px;"><button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="event.stopPropagation(); openMediaModal('${formatMediaUrl(req.audio_url)}', 'audio')">🔊 Play Audio Message</button></div>` : ''}
                             </div>
                             <div class="actionable-actions">
                                 <button class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="openAssignModal('${req.id}', '${safeType}', '${safeSector}', '${req.urgency}', '${num}')">${assignBtnLabel}</button>
@@ -6640,6 +6676,39 @@ function toggleGlobalMute(muted) {
             if (id) {
                 openAssignModal(id, `SOS Emergency Request`, sector, urgency, '');
             }
+        }
+
+        function openMediaModal(url, type) {
+            const modal = document.getElementById('mediaModal');
+            const content = document.getElementById('mediaModalContent');
+            const downloadBtn = document.getElementById('mediaDownloadBtn');
+            
+            content.innerHTML = '';
+            downloadBtn.href = url;
+            downloadBtn.download = url.split('/').pop() || 'media';
+
+            if (type === 'image') {
+                content.innerHTML = `<img src="${url}" style="max-width:100%; max-height:60vh; border-radius:8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">`;
+            } else if (type === 'audio') {
+                content.innerHTML = `
+                    <div style="width: 100%; padding: 20px;">
+                        <i data-lucide="mic" style="width:48px; height:48px; color:var(--accent); margin-bottom:16px;"></i>
+                        <audio controls autoplay style="width: 100%;">
+                            <source src="${url}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>`;
+            }
+            
+            modal.style.display = 'flex';
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function closeMediaModal() {
+            const modal = document.getElementById('mediaModal');
+            const content = document.getElementById('mediaModalContent');
+            modal.style.display = 'none';
+            content.innerHTML = ''; // Stop audio from playing when closed
         }
 
         function openAssignModal(id, title, sector, urgency, num = '00') {
@@ -8059,7 +8128,7 @@ function toggleGlobalMute(muted) {
                         rescueReqId: req.id,
                         requestIds: [],
                         payload: req,
-                        requesterName: req.assigned_officer_name || 'Citizen',
+                        requesterName: 'ID: ' + req.id + ' | Ph: ' + (req.phone || req.device_id || 'No Phone'),
                         requesterPhone: req.phone || null,
                         requesterType: req.type || null,
                         requesterLat: req.lat || null,
@@ -8102,7 +8171,7 @@ function toggleGlobalMute(muted) {
                     <div style="flex:1; min-width:240px; display:flex; flex-direction:column; gap:6px;">
                         <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Evidence Photo</span>
                         <div style="border-radius:12px; overflow:hidden; border:2px solid var(--border); height:180px;">
-                            <img src="${fullUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="window.open('${fullUrl}', '_blank')">
+                            <img src="${fullUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="openMediaModal('${fullUrl}', 'image')">
                         </div>
                     </div>`;
             }
@@ -8114,7 +8183,7 @@ function toggleGlobalMute(muted) {
                     <div style="flex:1; min-width:240px; display:flex; flex-direction:column; gap:6px;">
                         <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Closure / Proof Photo</span>
                         <div style="border-radius:12px; overflow:hidden; border:2px solid #22c55e; height:180px;">
-                            <img src="${fullUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="window.open('${fullUrl}', '_blank')">
+                            <img src="${fullUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="openMediaModal('${fullUrl}', 'image')">
                         </div>
                     </div>`;
             }
@@ -8126,11 +8195,7 @@ function toggleGlobalMute(muted) {
                     <div style="background:var(--bg); border:1px solid var(--border); padding:16px; border-radius:14px; margin-top:10px; width:100%;">
                         <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:8px;">Requester Audio Message</span>
                         <div style="display:flex; align-items:center; gap:12px;">
-                            <audio controls style="flex:1; height:32px;">
-                                <source src="${audioUrl}" type="audio/wav">
-                                Your browser does not support audio.
-                            </audio>
-                            <a href="${audioUrl}" class="btn btn-outline" target="_blank" style="padding:6px 12px; text-decoration:none; font-weight:800; font-size:11px;"> Download</a>
+                            <button class="btn btn-outline" style="padding:6px 12px; font-weight:800; font-size:11px;" onclick="openMediaModal('${audioUrl}', 'audio')">🔊 Play Audio Message</button>
                         </div>
                     </div>`;
             }

@@ -1,7 +1,7 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-07-05
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 5/7/2026, 11:20:59 am
+Generated At: , 5/7/2026, 12:13:59 pm
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
@@ -250,9 +250,9 @@ Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Resp
 419,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:53,2026-07-05 05:25:53,DESKTOP-KBHB0SB
 420,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:53,2026-07-05 05:25:53,DESKTOP-KBHB0SB
 421,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:53,2026-07-05 05:25:53,DESKTOP-KBHB0SB
-422,pregnancy,high,closed,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:50:48,DESKTOP-KBHB0SB
-423,pregnancy,high,closed,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:50:51,DESKTOP-KBHB0SB
-424,pregnancy,high,closed,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:50:57,DESKTOP-KBHB0SB
+422,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
+423,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
+424,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
 425,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
 426,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
 427,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
@@ -277,36 +277,6 @@ Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Resp
 446,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
 447,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
 448,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-449,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-450,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-451,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-452,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-453,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-454,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-455,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-456,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-457,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-458,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-459,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-460,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-461,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-462,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-463,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-464,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-465,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-466,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-467,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-468,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-469,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-470,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-471,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-472,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-473,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-474,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-475,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-476,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-477,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
-478,pregnancy,high,pending,null,null,,Unassigned,2026-07-05 05:25:54,2026-07-05 05:25:54,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES

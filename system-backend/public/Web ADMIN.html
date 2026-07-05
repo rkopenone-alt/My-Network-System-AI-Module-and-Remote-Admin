@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=1280, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>ARDMS Command Center - Professional Dashboard</title>
     <!-- Leaflet & Icons -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -5150,7 +5150,7 @@ function toggleGlobalMute(muted) {
                         rescueReqId: req.id,
                         requestIds: [],
                         payload: req,
-                        requesterName: req.assigned_officer_name || 'Citizen',
+                        requesterName: 'ID: ' + req.id + ' | Ph: ' + (req.phone || req.device_id || 'No Phone'),
                         requesterPhone: req.phone || null,
                         requesterType: req.type || null,
                         requesterLat: req.lat || null,
@@ -5483,7 +5483,7 @@ function toggleGlobalMute(muted) {
                                ['sos', 'medical', 'pregnancy', 'critical', 'rescue'].includes((r.type || '').toLowerCase());
 
                 let infoHtml = `<div style="font-size:11px; line-height:1.4;">`;
-                infoHtml += `<div><b>Requester:</b> ${r.name || 'Unknown'} (${r.phone || r.device_id || 'No Phone'})</div>`;
+                infoHtml += `<div><b>Requester:</b> ID: ${r.id} | Ph: ${r.phone || r.device_id || 'No Phone'}</div>`;
                 
                 let reqTypeStr = (r.type || 'Request').toUpperCase();
                 if (r.type === 'sos') reqTypeStr = 'SOS Emergency';
@@ -8128,7 +8128,7 @@ function toggleGlobalMute(muted) {
                         rescueReqId: req.id,
                         requestIds: [],
                         payload: req,
-                        requesterName: req.assigned_officer_name || 'Citizen',
+                        requesterName: 'ID: ' + req.id + ' | Ph: ' + (req.phone || req.device_id || 'No Phone'),
                         requesterPhone: req.phone || null,
                         requesterType: req.type || null,
                         requesterLat: req.lat || null,
