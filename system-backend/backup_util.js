@@ -31,6 +31,8 @@ function runSystemBackup(dbPath) {
             console.error('[Backup] Error opening database for backup:', err);
             return;
         }
+        // Set busyTimeout to prevent locks during active writes
+        db.configure('busyTimeout', 10000);
     });
 
     db.serialize(() => {

@@ -51,6 +51,8 @@ const db = new sqlite3.Database(path.join(__dirname, 'rescue.db'), (err) => {
         console.error('DB Error:', err);
     } else {
         console.log('Connected to SQLite DB');
+        // Set a high busy timeout to handle disk speed/locks on low-end systems
+        db.configure('busyTimeout', 10000);
         db.serialize(() => {
             db.run('PRAGMA journal_mode=WAL;', (err) => {
                 if (err) console.error('[DB WAL PRAGMA Error]:', err);
@@ -83,6 +85,15 @@ const shutdown = () => {
 
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+
+// Prevent Node process from crashing due to unexpected database/network errors
+process.on('uncaughtException', (err) => {
+    console.error('[CRITICAL UNCAUGHT EXCEPTION]:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[CRITICAL UNHANDLED REJECTION]:', reason);
+});
 
 const run = (sql, params = []) => new Promise((res, rej) =>
     db.run(sql, params, function (err) { err ? rej(err) : res(this); }));
