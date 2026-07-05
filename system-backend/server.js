@@ -1483,7 +1483,7 @@ app.post('/api/sync', async (req, res) => {
         user.device_id = deviceId;
     }
 
-    const effectiveDeviceId = user ? user.device_id : (deviceId || identifier);
+    const effectiveDeviceId = (user && user.device_id) ? user.device_id : (deviceId || identifier);
 
     if (location) {
         db.run(`INSERT OR REPLACE INTO rescuer_locations (device_id, group_id, name, lat, lng, last_updated) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
