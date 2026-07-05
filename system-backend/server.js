@@ -102,6 +102,22 @@ const get = (sql, params = []) => new Promise((res, rej) =>
 const all = (sql, params = []) => new Promise((res, rej) =>
     db.all(sql, params, (err, rows) => err ? rej(err) : res(rows)));
 
+const runTransaction = async (callback) => {
+    await run('BEGIN IMMEDIATE TRANSACTION');
+    try {
+        const result = await callback();
+        await run('COMMIT');
+        return result;
+    } catch (err) {
+        try {
+            await run('ROLLBACK');
+        } catch (rollbackErr) {
+            console.error('Rollback failed:', rollbackErr);
+        }
+        throw err;
+    }
+};
+
 // ─── Test Endpoints (For Connectivity Verification) ────────────────────────
 app.get('/api/test', (req, res) => res.json({ status: 'Connected to API' }));
 app.get('/api/auth/test', (req, res) => res.json({ status: 'Connected to Auth API' }));
@@ -457,6 +473,15 @@ const pendingMessages = new Map(); // Map<deviceId, Array<{type, data, timestamp
 
 const socketManager = {
     addClient(deviceId, ws) {
+        const oldWs = clients.get(deviceId);
+        if (oldWs && oldWs !== ws) {
+            console.log(`[GATEWAY] Closing duplicate session for device: ${deviceId}`);
+            try {
+                oldWs.terminate();
+            } catch (err) {
+                console.error(`[GATEWAY] Error terminating duplicate socket:`, err);
+            }
+        }
         clients.set(deviceId, ws);
         console.log(`[GATEWAY] Device connected: ${deviceId}`);
 
@@ -472,6 +497,14 @@ const socketManager = {
     removeClient(deviceId) {
         clients.delete(deviceId);
         console.log(`[GATEWAY] Device disconnected: ${deviceId}`);
+        
+        // Clean up rooms to prevent stale device ID memory leaks
+        for (const [roomName, deviceSet] of rooms.entries()) {
+            deviceSet.delete(deviceId);
+            if (deviceSet.size === 0) {
+                rooms.delete(roomName);
+            }
+        }
     },
 
     joinRoom(deviceId, room) {
@@ -1193,24 +1226,49 @@ app.get('/api/users/:id', async (req, res) => {
 
 app.post('/api/users', async (req, res) => {
     let { name, role, phone, device_id, group_ids, photo_url, password, serial_number, ai_managed } = req.body;
-    phone = phone || null;
-    try {
-        const result = await run(`INSERT INTO users (name, role, phone, device_id, photo_url, password, serial_number, ai_managed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [name, role, phone, device_id, photo_url, password, serial_number, ai_managed ? 1 : 0]);
-        const userId = result.lastID;
+    phone = phone ? phone.trim() : null;
+    serial_number = serial_number ? serial_number.trim() : null;
 
-        if (group_ids && Array.isArray(group_ids)) {
-            for (const gid of group_ids) {
-                await run(`INSERT OR IGNORE INTO group_members (user_id, group_id) VALUES (?, ?)`, [userId, gid]);
-            }
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: 'Name is required' });
+    }
+
+    try {
+        if (phone) {
+            const dupPhone = await get(`SELECT id FROM users WHERE phone = ? LIMIT 1`, [phone]);
+            if (dupPhone) return res.status(400).json({ error: `Phone number ${phone} is already registered.` });
+        }
+        if (serial_number) {
+            const dupSerial = await get(`SELECT id FROM users WHERE serial_number = ? LIMIT 1`, [serial_number]);
+            if (dupSerial) return res.status(400).json({ error: `Serial number ${serial_number} is already in use.` });
         }
 
-        const user = await get(`SELECT * FROM users WHERE id = ?`, [userId]);
-        const userGroups = await all(`SELECT g.* FROM group_members gm JOIN groups g ON gm.group_id = g.id WHERE gm.user_id = ?`, [userId]);
-        user.groups = userGroups;
+        const user = await runTransaction(async () => {
+            const result = await run(`INSERT INTO users (name, role, phone, device_id, photo_url, password, serial_number, ai_managed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
+                [name.trim(), role || 'rescuer', phone, device_id || null, photo_url || null, password || null, serial_number, ai_managed ? 1 : 0]);
+            const userId = result.lastID;
+
+            if (group_ids && Array.isArray(group_ids)) {
+                for (const gid of group_ids) {
+                    await run(`INSERT OR IGNORE INTO group_members (user_id, group_id) VALUES (?, ?)`, [userId, gid]);
+                }
+            }
+
+            const newUser = await get(`SELECT * FROM users WHERE id = ?`, [userId]);
+            const userGroups = await all(`SELECT g.* FROM group_members gm JOIN groups g ON gm.group_id = g.id WHERE gm.user_id = ?`, [userId]);
+            newUser.groups = userGroups;
+            return newUser;
+        });
 
         await logCommand('USER_ADDED', 'Commander', name, { role, group_ids });
+        
+        // Notify all clients of new user
+        socketManager.broadcast('MEMBER_LIST_UPDATE', { action: 'add', user });
         res.json(user);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+        console.error('Error adding user:', e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.put('/api/users/:id', async (req, res) => {
@@ -1222,27 +1280,39 @@ app.put('/api/users/:id', async (req, res) => {
 
         const safeName = name !== undefined ? name : oldUser.name;
         const safeRole = role !== undefined ? role : oldUser.role;
-        const safePhone = (phone !== undefined && phone !== "") ? phone : (phone === "" ? null : oldUser.phone);
+        const safePhone = (phone !== undefined && phone !== "") ? phone.trim() : (phone === "" ? null : oldUser.phone);
         const safeDeviceId = device_id !== undefined ? device_id : oldUser.device_id;
         const safeStatus = status !== undefined ? status : oldUser.status;
         const safePhotoUrl = photo_url !== undefined ? photo_url : oldUser.photo_url;
         const safePassword = password !== undefined ? password : oldUser.password;
-        const safeSerialNumber = serial_number !== undefined ? serial_number : oldUser.serial_number;
+        const safeSerialNumber = serial_number !== undefined ? (serial_number ? serial_number.trim() : null) : oldUser.serial_number;
         const safeAiManaged = ai_managed !== undefined ? (ai_managed ? 1 : 0) : oldUser.ai_managed;
 
-        await run(`UPDATE users SET name = ?, role = ?, phone = ?, device_id = ?, status = ?, photo_url = ?, password = ?, serial_number = ?, ai_managed = ? WHERE id = ?`, 
-            [safeName, safeRole, safePhone, safeDeviceId, safeStatus, safePhotoUrl, safePassword, safeSerialNumber, safeAiManaged, userId]);
-
-        if (group_ids && Array.isArray(group_ids)) {
-            await run(`DELETE FROM group_members WHERE user_id = ?`, [userId]);
-            for (const gid of group_ids) {
-                await run(`INSERT OR IGNORE INTO group_members (user_id, group_id) VALUES (?, ?)`, [userId, gid]);
-            }
+        if (safePhone) {
+            const dupPhone = await get(`SELECT id FROM users WHERE phone = ? AND id != ? LIMIT 1`, [safePhone, userId]);
+            if (dupPhone) return res.status(400).json({ error: `Phone number ${safePhone} is already registered to another user.` });
+        }
+        if (safeSerialNumber) {
+            const dupSerial = await get(`SELECT id FROM users WHERE serial_number = ? AND id != ? LIMIT 1`, [safeSerialNumber, userId]);
+            if (dupSerial) return res.status(400).json({ error: `Serial number ${safeSerialNumber} is already in use.` });
         }
 
-        const user = await get(`SELECT * FROM users WHERE id = ?`, [userId]);
-        const userGroups = await all(`SELECT g.* FROM group_members gm JOIN groups g ON gm.group_id = g.id WHERE gm.user_id = ?`, [userId]);
-        user.groups = userGroups;
+        const user = await runTransaction(async () => {
+            await run(`UPDATE users SET name = ?, role = ?, phone = ?, device_id = ?, status = ?, photo_url = ?, password = ?, serial_number = ?, ai_managed = ? WHERE id = ?`, 
+                [safeName, safeRole, safePhone, safeDeviceId, safeStatus, safePhotoUrl, safePassword, safeSerialNumber, safeAiManaged, userId]);
+
+            if (group_ids && Array.isArray(group_ids)) {
+                await run(`DELETE FROM group_members WHERE user_id = ?`, [userId]);
+                for (const gid of group_ids) {
+                    await run(`INSERT OR IGNORE INTO group_members (user_id, group_id) VALUES (?, ?)`, [userId, gid]);
+                }
+            }
+
+            const updatedUser = await get(`SELECT * FROM users WHERE id = ?`, [userId]);
+            const userGroups = await all(`SELECT g.* FROM group_members gm JOIN groups g ON gm.group_id = g.id WHERE gm.user_id = ?`, [userId]);
+            updatedUser.groups = userGroups;
+            return updatedUser;
+        });
 
         // If password changed, send FORCE_LOGOUT
         if (oldUser && oldUser.password !== password) {
@@ -1266,8 +1336,13 @@ app.put('/api/users/:id', async (req, res) => {
             await logCommand('ACCESS_REVOKED', 'Admin', user.name || user.serial_number, { reason: 'Admin disabled account' });
         }
 
+        // Notify all clients of updated user
+        socketManager.broadcast('MEMBER_LIST_UPDATE', { action: 'update', user });
         res.json(user);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+        console.error('Error updating user:', e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.delete('/api/users/:id', async (req, res) => {
@@ -1707,16 +1782,22 @@ app.post('/api/rescue-requests', async (req, res) => {
             }
         }
 
-        const result = await run(`INSERT INTO rescue_requests (device_id, phone, name, type, lat, lng, details, urgency, priority, sector, image_url, audio_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [device_id, phone, name || 'Citizen', type || 'pregnancy', lat, lng, details, urgency || 'high', priority || 'normal', sector || 'Unknown Zone', imageUrl, audioUrl]);
-        await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'requested')`, [result.lastID]);
-        const reqData = await get(`SELECT * FROM rescue_requests WHERE id = ?`, [result.lastID]);
+        const reqData = await runTransaction(async () => {
+            const result = await run(`INSERT INTO rescue_requests (device_id, phone, name, type, lat, lng, details, urgency, priority, sector, image_url, audio_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [device_id, phone, name || 'Citizen', type || 'pregnancy', lat, lng, details, urgency || 'high', priority || 'normal', sector || 'Unknown Zone', imageUrl, audioUrl]);
+            const requestId = result.lastID;
+
+            await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'requested')`, [requestId]);
+            
+            // Notify the user
+            await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
+                [device_id, 'rescue_ack', `Your priority ${type} rescue request is received. A team will be assigned shortly.`, 0]);
+
+            return await get(`SELECT * FROM rescue_requests WHERE id = ?`, [requestId]);
+        });
+
         broadcast('NEW_RESCUE_REQUEST', reqData, 'admin');
         await logCommand('RESCUE_REQUEST_CREATED', phone || device_id, 'Command Center', reqData);
-
-        // Notify the user
-        await run(`INSERT INTO notifications (device_id, type, message, action_required) VALUES (?, ?, ?, ?)`,
-            [device_id, 'rescue_ack', `Your priority ${type} rescue request is received. A team will be assigned shortly.`, 0]);
 
         // Trigger AI auto-assignment immediately
         runAIAssignment();
