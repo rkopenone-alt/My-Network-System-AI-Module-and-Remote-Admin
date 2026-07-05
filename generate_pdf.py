@@ -25,7 +25,20 @@ pdf.cell(0, 8, "Advanced Rescue & Disaster Management System", align="C", new_x=
 pdf.cell(0, 8, "Technical Operations Manual & System Workflows", align="C", new_x="LMARGIN", new_y="NEXT")
 pdf.add_page()
 
+
 # Helpers
+def add_image(filename, w):
+    try:
+        from PIL import Image
+        img = Image.open(filename)
+        aspect = img.height / img.width
+        h = w * aspect
+        pdf.image(filename, w=w)
+        pdf.ln(h + 3)
+    except Exception as e:
+        print(f"Error loading {filename}: {e}")
+        pdf.ln(5)
+
 def h1(text):
     pdf.ln(6)
     pdf.set_font("helvetica", "B", 16)
@@ -85,10 +98,7 @@ b("Mobile Applications: HTML5 Progressive Web App templates (Field Rescuer and P
 pdf.add_page()
 h1("D. Master Workflow Overview")
 p("Below is the complete overview diagram tracing the flow of an emergency. It traces the signal from the Public App triggering an SOS, to the Admin Dashboard dispatching it, directly to the Rescuer App accepting it.")
-try:
-    pdf.image('master_flow.png', w=160)
-    pdf.ln(5)
-except Exception: pass
+add_image('master_flow.png', 160)
 
 p("1. Victim opens Public App and taps 'Medical Emergency'.")
 p("2. App waits 3 seconds, captures GPS, and POSTs data to Server.")
@@ -172,10 +182,7 @@ b("Step 4: A 3-second countdown banner (#selectionBufferCooldownBanner) appears.
 
 p("Visual UI Details (Home Screen Layout):")
 p("The mockup image below represents the emergency category selection home screen. It features a modern, accessible interface with warm slate styling. The primary buttons ('Medical Emergency', 'Flood Rescue', 'Fire Emergency') are large and high-contrast, ensuring ease of use for citizens under extreme panic or stress conditions.")
-try:
-    pdf.image('public_home.png', w=60)
-    pdf.ln(5)
-except Exception: pass
+add_image('public_home.png', 60)
 p("Note: The category selection maps to urgency parameters on the backend (e.g. 'Critical' for Medical/Fire/Flood and 'Normal' for general support).")
 
 # OP 1.2
@@ -199,10 +206,7 @@ b("Step 3: Track the movement of the responder in real time along with the live 
 
 p("Visual UI Details (Active Tracking Map UI):")
 p("The mockup image below shows the active tracking map. A red marker plots the citizen's static position, and a moving blue marker displays the rescuer's live telemetry coordinate in real-time, accompanied by estimated arrival metrics and an absolute 'Cancel SOS' button at the bottom.")
-try:
-    pdf.image('public_sos.png', w=60)
-    pdf.ln(5)
-except Exception: pass
+add_image('public_sos.png', 60)
 p("Note: If the network drops during this operation, the app displays a prominent status indicator showing 'Offline - Reconnecting' while retaining the last cached coordinates of the responder.")
 
 # OP 1.3
@@ -272,10 +276,7 @@ b("Step 3: Access incoming media reports directly via the split columns (thumbna
 
 p("Visual UI Details (Command Dashboard & Proximity Dispatch):")
 p("The mockup image below represents the Web Admin Command Center dispatch panel. The central map displays active incidents (red markers) and responder vectors (blue markers). Clicking a marker opens the sidebar dispatch UI, allowing operators to match the task with a proximity-ranked rescuer.")
-try:
-    pdf.image('admin_assign.png', w=130)
-    pdf.ln(5)
-except Exception: pass
+add_image('admin_assign.png', 130)
 p("Note: The dispatch dropdown lists rescuers in real-time, sorted by proximity to ensure fast arrivals.")
 
 # OP 2.2
@@ -322,10 +323,7 @@ b("Step 5: Select the target crew and click 'CONFIRM & INITIALIZE GROUP MISSION'
 
 p("Visual UI Details (Tactical Convex Hull Grouping):")
 p("The mockup image below displays the tactical group creation view. A bounding box polygon is computed and plotted around a cluster of multiple flood victims in Sector B. The sidebar transitions to the 'Grouped Supplies Request' panel for dispatching a single heavy-duty responder.")
-try:
-    pdf.image('admin_group.png', w=130)
-    pdf.ln(5)
-except Exception: pass
+add_image('admin_group.png', 130)
 p("Note: This bulk method avoids redundant dispatches and reduces radio/data traffic for multiple incidents in close proximity.")
 
 # OP 2.4
@@ -392,10 +390,7 @@ b("Step 3: Review the distance, estimated time, and incident type.")
 
 p("Visual UI Details (Incoming Mission Interface):")
 p("The mockup image below represents the high-priority alert flashed on the rescuer's smartphone. The entire card flashes yellow, looping a loud warning sound. The rescuer can tap the large green 'ACCEPT TASK' button or decline, routing the task back.")
-try:
-    pdf.image('rescuer_accept.png', w=60)
-    pdf.ln(5)
-except Exception: pass
+add_image('rescuer_accept.png', 60)
 p("Note: The wake lock prevents the screen from turning off, ensuring notifications are visible even when the device is locked.")
 
 # OP 3.2
@@ -437,10 +432,7 @@ b("Step 3: Tap any victim pin within the boundary to view their specific needs."
 
 p("Visual UI Details (Active Incident Navigation View):")
 p("The mockup image below represents the active tracking map on the rescuer app. A blue path outlines the direct route to the target location. Proximity distance and turn instructions are visible in the overlay, and a 'MARK COMPLETED' button is placed at the bottom.")
-try:
-    pdf.image('rescuer_nav.png', w=60)
-    pdf.ln(5)
-except Exception: pass
+add_image('rescuer_nav.png', 60)
 p("Note: Geolocation parameters update coordinates in the background via REST, ensuring data consistency.")
 
 # OP 3.4
@@ -502,10 +494,7 @@ b("Step 3: Tap 'Clear History Cache' in settings to clean data logs while remain
 
 p("Visual UI Details (Rescuer History Panel):")
 p("The mockup image below represents the mission history logs screen. Chronologically ordered cards display previous missions. Tapping a card displays complete dispatch logs, response times, and final resolutions.")
-try:
-    pdf.image('rescuer_history.png', w=60)
-    pdf.ln(5)
-except Exception: pass
+add_image('rescuer_history.png', 60)
 p("Note: The offline cache ensures rescuers can access these logs even in dead network zones.")
 
 pdf.add_page()
@@ -532,5 +521,5 @@ b("2. Dynamic Reassignment Buffer: The system incorporates a strict fail-safe ti
 b("3. Intelligent Siren State Management: Critical dispatch alerts physically ring the rescuer's device. To prevent debilitating audio loops in the field, the system enforces a strict state-machine that ceases the siren precisely upon task acceptance, decline, or auto-reassignment.")
 b("4. Cache Evasion Techniques: Utilizing strict cache-busting telemetry protocols, the mobile React Native WebViews are forced to bypass aggressive localized caching, guaranteeing absolute synchronization of task states across all units.")
 
-pdf.output("ARDMS_Project_Report_User_Manual_v6.pdf")
-print("PDF saved to ARDMS_Project_Report_User_Manual_v6.pdf")
+pdf.output("ARDMS_Project_Report_User_Manual.pdf")
+print("PDF saved to ARDMS_Project_Report_User_Manual.pdf")
