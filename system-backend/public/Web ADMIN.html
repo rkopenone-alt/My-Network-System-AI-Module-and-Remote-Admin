@@ -6909,7 +6909,7 @@ function toggleGlobalMute(muted) {
                 const rawStats = {
                     sos: data.filter(r => (r.type === 'sos' || r.type === 'medical' || r.type === 'pregnancy') && r.status !== 'completed').length,
                     food: data.filter(r => (r.type === 'food' || r.type === 'delivery' || r.type === 'medical_delivery') && r.status !== 'completed').length,
-                    rescuers: (currentUsers || []).filter(u => u.role?.toLowerCase() === 'rescuer').length,
+                    rescuers: (currentUsers || []).filter(u => u.role?.toLowerCase().includes('rescuer')).length,
                     active: data.filter(r => r.status === 'accepted').length
                 };
 
@@ -9255,7 +9255,7 @@ function toggleGlobalMute(muted) {
                             <label class="input-label">Select Individual Rescuer</label>
                             <select id="bulkIndivSelect" class="form-control" style="font-weight:700; font-size:15px; padding:14px;">
                                 <option value="">Select Rescuer...</option>
-                                ${currentUsers.filter(u => u.role === 'rescuer' || u.role === 'Rescuer').map(u => `<option value="${u.id}">${u.name}</option>`).join('')}
+                                ${currentUsers.filter(u => u.role && u.role.toLowerCase().includes('rescuer')).map(u => `<option value="${u.id}">${u.name}</option>`).join('')}
                             </select>
                         </div>
                     </div>

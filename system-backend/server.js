@@ -1195,8 +1195,8 @@ app.get('/api/users', async (req, res) => {
         `;
         let params = [];
         if (role) {
-            query += ` WHERE u.role = ? `;
-            params.push(role);
+            query += ` WHERE LOWER(u.role) LIKE ? `;
+            params.push(`%${role.toLowerCase()}%`);
         }
         query += ` GROUP BY u.id ORDER BY u.registered_at DESC `;
 
