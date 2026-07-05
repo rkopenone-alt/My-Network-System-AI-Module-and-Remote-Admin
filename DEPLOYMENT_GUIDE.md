@@ -76,7 +76,17 @@ The Rescue Operations System is divided into four highly-optimized, interconnect
 
 ## 2. Deployment Guide
 
-Deploying the system locally involves setting up a private communication subnet to bridge your Windows PC server (localhost) and mobile devices. Below are two deployment methodologies.
+Deploying the system locally involves setting up a private communication subnet to bridge your Windows PC server (localhost) and mobile devices.
+
+### 2.0. System Requirements & Host Server Pre-Requisites
+Before attempting to deploy, run, or build the ARDMS server and applications, ensure that the following core software resources are installed and configured on the host server computer:
+* **Node.js (v18+):** Required to run the Express backend server and manage library packages (`npm`).
+* **Python (v3+):** Needed to run the internal automation, synchronization, and build-triggering scripts (`sync_apps.py`, etc.).
+* **Java Development Kit (JDK 17):** Crucial requirement for compilation of the Android APK wrappers using React Native Gradle tasks.
+* **Git:** Version control engine to manage the repository and download code updates.
+* **Android SDK / Android Studio Command Line Tools:** Required for packaging the APK files. Ensure `ANDROID_HOME` is set in your environment path variables (e.g., `C:\Users\Alienware\AppData\Local\Android\Sdk`).
+
+Below are the two deployment methodologies.
 
 ### 2.1. Private Wi-Fi LAN Setup
 This is the standard approach using a local Wi-Fi router or mobile hotspot.
