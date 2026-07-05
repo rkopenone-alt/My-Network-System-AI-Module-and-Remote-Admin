@@ -73,4 +73,15 @@ if os.path.exists(preview_mobile) and os.path.exists(public_html_str):
     with open(public_html_str, 'w', encoding='utf-8') as f:
         f.write(js_content)
 
+# 5. Generate htmlStr.js for admin-app
+admin_html = os.path.join(workspace_dir, "raw_admin.html")
+admin_html_str = os.path.join(workspace_dir, "admin-app", "htmlStr.js")
+if os.path.exists(admin_html) and os.path.exists(admin_html_str):
+    print(f"[*] Compiling admin app HTML string into htmlStr.js...")
+    with open(admin_html, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    js_content = f"export const htmlString = {json.dumps(html_content)};\n"
+    with open(admin_html_str, 'w', encoding='utf-8') as f:
+        f.write(js_content)
+
 print("[+] Synchronizer Completed Successfully!")

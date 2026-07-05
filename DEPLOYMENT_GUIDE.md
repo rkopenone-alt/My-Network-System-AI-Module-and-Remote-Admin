@@ -80,6 +80,11 @@ Deploying the system locally involves setting up a private communication subnet 
 
 ### 2.0. System Requirements & Host Server Pre-Requisites
 Before attempting to deploy, run, or build the ARDMS server and applications, ensure that the following core software resources are installed and configured on the host server computer:
+
+> **IMPORTANT NOTE:** 
+> * You **MUST** install Node.js (v18 or higher) to run the backend API server. Without Node.js, the `npm start` command will fail and the apps won't connect.
+> * You also need Python (v3+) to run the build scripts, and Java Development Kit (JDK 17) to compile the Android apps.
+
 * **Node.js (v18+):** Required to run the Express backend server and manage library packages (`npm`).
 * **Python (v3+):** Needed to run the internal automation, synchronization, and build-triggering scripts (`sync_apps.py`, etc.).
 * **Java Development Kit (JDK 17):** Crucial requirement for compilation of the Android APK wrappers using React Native Gradle tasks.

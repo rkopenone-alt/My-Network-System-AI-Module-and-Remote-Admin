@@ -260,3 +260,4 @@ def build_docx_and_pdf(md_filename, output_base, main_title, subtitle):
 if __name__ == '__main__':
     build_docx_and_pdf("DEPLOYMENT_GUIDE.md", "DEPLOYMENT_GUIDE", "Localhost Deployment Guide", "Deployment and System Setup Specification Handbooks")
     build_docx_and_pdf("TECH_STACK.md", "TECH_STACK", "System Technical Stack", "Technical Architecture and Implementation Guide")
+    build_docx_and_pdf("PROJECT_WORKFLOW.md", "PROJECT_WORKFLOW", "Project Workflow & Operational Master Guide", "Project Flow and Operational Procedures")

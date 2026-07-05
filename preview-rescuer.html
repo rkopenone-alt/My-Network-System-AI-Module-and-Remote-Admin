@@ -1487,8 +1487,10 @@
                     }).then(res => {
                         if (res.ok) {
                             return res.json();
+                        } else if (res.status === 401 || res.status === 403) {
+                            throw new Error('Unauthorized');
                         } else {
-                            throw new Error('Invalid token');
+                            throw new Error('Network error');
                         }
                     }).then(data => {
                         if (!data.user || data.user.role !== 'rescuer') {
@@ -1501,14 +1503,14 @@
                         this.showLoader(false);
                     }).catch(e => {
                         console.error('Verification failed:', e);
-                        if (!navigator.onLine) {
-                            // If completely offline and fetch failed, proceed with cached credentials
+                        if (e.message === 'Unauthorized' || e.message === 'Unauthorized role') {
+                            // Only log out if explicitly denied by the server
+                            this.logout();
+                        } else {
+                            // If network failed or server unreachable, proceed with cached credentials
                             this.user = JSON.parse(saved);
                             this.showScreen('screenHome');
                             this.bootstrap();
-                        } else {
-                            // Online but invalid token: log out
-                            this.logout();
                         }
                         this.showLoader(false);
                     });
