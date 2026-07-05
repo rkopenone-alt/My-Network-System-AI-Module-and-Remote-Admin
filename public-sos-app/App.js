@@ -405,11 +405,9 @@ function RequirementsScreen({ user, imageEnabled = true, micEnabled = true, onNe
           const uri = audioRecordingRef.current.getURI();
           const base64Str = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
           setAudioBase64(`data:audio/m4a;base64,${base64Str}`);
-          setAttachments(prev => ({ ...prev, voice: true }));
           Alert.alert('Success', 'Voice note recorded and attached successfully!');
         } else {
           setAudioBase64(null);
-          setAttachments(prev => ({ ...prev, voice: false }));
         }
       } catch (e) {
         console.error(e);
@@ -1306,11 +1304,9 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
           const uri = audioRecordingRef.current.getURI();
           const base64Str = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
           setAudioBase64(`data:audio/m4a;base64,${base64Str}`);
-          setAttachments(prev => ({ ...prev, voice: true }));
           Alert.alert('Success', 'Voice note recorded and attached successfully!');
         } else {
           setAudioBase64(null);
-          setAttachments(prev => ({ ...prev, voice: false }));
         }
       } catch (e) {
         console.error(e);
@@ -1696,7 +1692,16 @@ function CriticalSOSScreen({ user, imageEnabled, micEnabled, isSosLocked, countd
               <Text style={[s.timerVal, { color: '#10b981', fontSize: 14, textTransform: 'uppercase' }]}>SOS READY TO DISPATCH</Text>
             )}
           </View>
-        </View>
+        
+      <RecordingModal 
+        isRecording={isRecordingUI} 
+        recordSeconds={recordSeconds}
+        onStop={() => stopRecording(false)} 
+        onCancel={() => stopRecording(true)}
+        isProcessing={isProcessingAudio}
+      />
+      
+      </View>
       </ScrollView>
 
       {/* Toast Alert */}
