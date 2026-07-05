@@ -910,63 +910,10 @@
         }
 
         /* Responsive Layout Overrides */
-        @media (max-width: 1024px) {
-            #operationalHub {
-                flex-direction: column !important;
-                overflow-y: auto !important;
-                position: absolute !important;
-            }
-            .hub-side-panel {
-                width: 100% !important;
-                min-width: unset !important;
-                height: auto !important;
-                min-height: 100vh !important;
-                padding: 40px 24px !important;
-                border-right: none !important;
-            }
-            .hub-main-content {
-                display: none !important;
-            }
-
-            .dash-layout {
-                flex-direction: column;
-                min-height: auto;
-                height: auto;
-            }
-            .left-panel, .center-panel, .right-panel {
-                width: 100%;
-                border-right: none;
-                border-left: none;
-                border-bottom: 1px solid var(--border);
-                height: auto;
-                min-height: 400px;
-            }
-            .center-panel {
-                order: -1; /* Map always at top on mobile */
-                height: 50vh;
-            }
-        }
+        
 
         /* Responsive Layout Overrides */
-        @media (max-width: 1024px) {
-            .dash-layout {
-                flex-direction: column;
-                min-height: auto;
-                height: auto;
-            }
-            .left-panel, .center-panel, .right-panel {
-                width: 100%;
-                border-right: none;
-                border-left: none;
-                border-bottom: 1px solid var(--border);
-                height: auto;
-                min-height: 400px;
-            }
-            .center-panel {
-                order: -1; /* Map always at top on mobile */
-                height: 50vh;
-            }
-        }
+        
 
         .modal-header {
             padding: 16px 24px;
@@ -1263,7 +1210,11 @@
                 }
 
                 try {
-                    const response = await originalFetch(url, options);
+                    let fetchUrl = url;
+                    if (method === 'GET' && isApi) {
+                        fetchUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+                    }
+                    const response = await originalFetch(fetchUrl, options);
                     
                     if (isApi && response.ok) {
                         if (method === 'GET') {
