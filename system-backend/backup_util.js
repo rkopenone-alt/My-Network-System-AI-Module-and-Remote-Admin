@@ -449,7 +449,7 @@ function generatePDFReport(dateFolder, date, dateData, users) {
     const reqRows = [];
     dateData.requests.forEach(r => {
         const responder = r.assigned_user_id ? (userMap[r.assigned_user_id] || `Res-${r.assigned_user_id}`) : 'Unassigned';
-        const coords = `${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}`;
+        const coords = (r.lat != null && r.lng != null) ? `${Number(r.lat).toFixed(5)}, ${Number(r.lng).toFixed(5)}` : 'Unknown';
         reqRows.push([
             `#${r.id}`,
             r.type || 'N/A',
