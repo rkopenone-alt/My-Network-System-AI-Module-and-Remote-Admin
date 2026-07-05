@@ -1,4 +1,6 @@
 const express = require('express');
+const { Mutex } = require('async-mutex');
+const dbMutex = new Mutex();
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const { WebSocketServer } = require('ws');
@@ -103,19 +105,21 @@ const all = (sql, params = []) => new Promise((res, rej) =>
     db.all(sql, params, (err, rows) => err ? rej(err) : res(rows)));
 
 const runTransaction = async (callback) => {
-    await run('BEGIN IMMEDIATE TRANSACTION');
-    try {
-        const result = await callback();
-        await run('COMMIT');
-        return result;
-    } catch (err) {
+    return await dbMutex.runExclusive(async () => {
+        await run('BEGIN IMMEDIATE TRANSACTION');
         try {
-            await run('ROLLBACK');
-        } catch (rollbackErr) {
-            console.error('Rollback failed:', rollbackErr);
+            const result = await callback();
+            await run('COMMIT');
+            return result;
+        } catch (err) {
+            try {
+                await run('ROLLBACK');
+            } catch (rollbackErr) {
+                console.error('Rollback failed:', rollbackErr);
+            }
+            throw err;
         }
-        throw err;
-    }
+    });
 };
 
 // ─── Test Endpoints (For Connectivity Verification) ────────────────────────
