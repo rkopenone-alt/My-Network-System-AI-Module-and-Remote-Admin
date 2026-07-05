@@ -51,6 +51,11 @@ with open(manifest_xml, 'w', encoding='utf-8') as f:
 import glob
 from PIL import Image
 
+anydpi_dir = os.path.join(rescuer_dir, "android", "app", "src", "main", "res", "mipmap-anydpi-v26")
+anydpi_bak = os.path.join(rescuer_dir, "android", "app", "src", "main", "res_backup_anydpi")
+if os.path.exists(anydpi_dir):
+    shutil.move(anydpi_dir, anydpi_bak)
+
 icon_source = os.path.join(admin_dir, "assets", "icon.png")
 backup_dir = os.path.join(rescuer_dir, "android", "app", "src", "main", "res_backup")
 if not os.path.exists(backup_dir):
@@ -115,5 +120,8 @@ for mipmap_folder in os.listdir(backup_dir):
     for shape in os.listdir(src_folder):
         shutil.copy(os.path.join(src_folder, shape), os.path.join(dest_folder, shape))
 shutil.rmtree(backup_dir)
+
+if os.path.exists(anydpi_bak):
+    shutil.move(anydpi_bak, anydpi_dir)
     
 print("Restored rescuer-app to original state.")
