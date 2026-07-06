@@ -1,7 +1,7 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-07-05
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 5/7/2026, 6:47:16 pm
+Generated At: , 5/7/2026, 7:55:31 pm
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
@@ -9,6 +9,7 @@ Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Resp
 450,pregnancy,critical,completed,12.9943596,80.1956616,Critical Emergency Triggered,Ram (MEM-07),2026-07-05 11:00:46,2026-07-05 11:01:29,DESKTOP-KBHB0SB
 451,pregnancy,critical,completed,12.994378,80.1956471,Critical Emergency Triggered,Ram (MEM-07),2026-07-05 11:35:40,2026-07-05 11:36:14,DESKTOP-KBHB0SB
 452,supplies,normal,completed,12.9943804,80.1956527,"{""transportMode"":""BOAT"",""needs"":[7,2,1,2],""peopleCount"":""1"",""address"":"""",""attachments"":{""voice"":false,""camera"":true,""note"":false}}",Ram (MEM-07),2026-07-05 13:16:22,2026-07-05 13:17:15,DESKTOP-KBHB0SB
+453,medical,critical,completed,12.9943756,80.1956498,Critical Emergency Triggered,Ram (MEM-07),2026-07-05 14:25:13,2026-07-05 14:25:29,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES
@@ -21,6 +22,8 @@ Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At
 209,N/A,919000000007,"{""message"":""SELF-ASSIGNED: PREGNANCY at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.994378,""lng"":80.1956471,""urgency"":""critical"",""rescue_req_id"":451,""requester_name"":""ram"",""requester_phone"":""918000000004"",""details"":""Critical Emergency Triggered"",""assigned_by"":""Self""}",Critical,completed,2026-07-05 11:36:14,,DESKTOP-KBHB0SB
 210,N/A,919000000007,"{""message"":""AI ASSIGNED: SUPPLIES at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943804,""lng"":80.1956527,""urgency"":""normal"",""rescue_req_id"":452,""requester_name"":""ram"",""requester_phone"":""918000000004"",""details"":""{\""transportMode\"":\""BOAT\"",\""needs\"":[7,2,1,2],\""peopleCount\"":\""1\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":true,\""note\"":false}}"",""assigned_by"":""AI"",""assignment_version"":1}",Normal,completed,2026-07-05 13:16:41,,DESKTOP-KBHB0SB
 211,N/A,919000000007,"{""message"":""SELF-ASSIGNED: SUPPLIES at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943804,""lng"":80.1956527,""urgency"":""normal"",""rescue_req_id"":452,""requester_name"":""ram"",""requester_phone"":""918000000004"",""details"":""{\""transportMode\"":\""BOAT\"",\""needs\"":[7,2,1,2],\""peopleCount\"":\""1\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":true,\""note\"":false}}"",""assigned_by"":""Self""}",Normal,completed,2026-07-05 13:17:15,,DESKTOP-KBHB0SB
+212,N/A,919000000007,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943756,""lng"":80.1956498,""urgency"":""critical"",""rescue_req_id"":453,""requester_name"":""ram"",""requester_phone"":""918000000004"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI"",""assignment_version"":1}",Critical,completed,2026-07-05 14:25:25,,DESKTOP-KBHB0SB
+213,N/A,919000000007,"{""message"":""SELF-ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.9943756,""lng"":80.1956498,""urgency"":""critical"",""rescue_req_id"":453,""requester_name"":""ram"",""requester_phone"":""918000000004"",""details"":""Critical Emergency Triggered"",""assigned_by"":""Self""}",Critical,completed,2026-07-05 14:25:29,,DESKTOP-KBHB0SB
 
 
 SECTION 3: PUBLIC SOS ALERTS

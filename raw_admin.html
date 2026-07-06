@@ -5872,7 +5872,7 @@ function toggleGlobalMute(muted) {
             // Use currentUsers if available, or fetch from API
             if (window.currentUsers && window.currentUsers.length > 0) {
                 window.currentUsers.forEach(u => {
-                    if (u.role === 'Rescuer' || u.role === 'Lead Rescuer') {
+                    if (u.role && (u.role.toLowerCase() === 'rescuer' || u.role.toLowerCase() === 'lead rescuer')) {
                         const opt = document.createElement('option');
                         opt.value = u.id;
                         opt.textContent = `${u.name} (${u.phone})`;
