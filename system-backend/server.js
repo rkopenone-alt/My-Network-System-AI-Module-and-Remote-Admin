@@ -643,6 +643,39 @@ wss.on('close', () => {
 
 const broadcast = (type, data, room = null) => socketManager.broadcast(type, data, room);
 
+// Helper to check if an offline-queued action is conflicting with newer server data
+const isOfflineConflict = async (req) => {
+    const offlineTsStr = req.headers['x-offline-timestamp'];
+    if (!offlineTsStr) return false;
+    
+    const offlineTs = parseInt(offlineTsStr, 10);
+    const commandId = req.params.id || req.body.command_id;
+    let reqId = req.body.rescue_req_id || req.body.request_ids;
+    if (Array.isArray(reqId) && reqId.length > 0) reqId = reqId[0];
+
+    try {
+        if (commandId) {
+            const cmd = await get(`SELECT updated_at, status FROM command_queue WHERE id = ?`, [commandId]);
+            if (cmd) {
+                const dbTs = new Date(cmd.updated_at).getTime();
+                if (dbTs > offlineTs + 2000) return true;
+                if (['completed', 'closed', 'cancelled', 'finished'].includes(cmd.status)) return true;
+            }
+        }
+        if (reqId) {
+            const rr = await get(`SELECT updated_at, status FROM rescue_requests WHERE id = ?`, [reqId]);
+            if (rr) {
+                const dbTs = new Date(rr.updated_at).getTime();
+                if (dbTs > offlineTs + 2000) return true;
+                if (['completed', 'closed', 'cancelled', 'finished', 'assigned'].includes(rr.status)) return true;
+            }
+        }
+    } catch(e) {
+        console.error("Conflict check error:", e);
+    }
+    return false;
+};
+
 const broadcastToAdminAndTarget = async (type, data, targetUserIdOrDeviceId = null) => {
     // 1. Always broadcast to the Admin dashboard room
     broadcast(type, data, 'admin');
@@ -2235,6 +2268,9 @@ app.post('/api/commands', async (req, res) => {
     let effectivePhone = target_phone;
 
     try {
+        if (await isOfflineConflict(req)) {
+            return res.status(409).json({ error: "Conflict: Task already updated by another operator." });
+        }
         if (target_user_id && !effectivePhone) {
             const user = await get(`SELECT phone, device_id FROM users WHERE id = ?`, [target_user_id]);
             if (user) effectivePhone = user.phone || user.device_id;
@@ -2365,6 +2401,9 @@ app.put('/api/commands/:id/status', async (req, res) => {
     const validStatuses = ['pending', 'accepted', 'declined', 'completed', 'acknowledged', 'in_progress'];
     if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
     try {
+        if (await isOfflineConflict(req)) {
+            return res.status(409).json({ error: "Conflict: Task already updated by another operator." });
+        }
         let finalStatus = status;
         let cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [req.params.id]);
 
@@ -2595,6 +2634,9 @@ app.put('/api/commands/:id/reassign', async (req, res) => {
     let effectiveGroupId = group_id;
 
     try {
+        if (await isOfflineConflict(req)) {
+            return res.status(409).json({ error: "Conflict: Task already updated by another operator." });
+        }
         if (target_user_id && !effectivePhone) {
             const user = await get(`SELECT phone, device_id FROM users WHERE id = ?`, [target_user_id]);
             if (user) effectivePhone = user.phone || user.device_id;

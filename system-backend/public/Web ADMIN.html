@@ -1173,15 +1173,21 @@
             // Helper to save requests
             function enqueueRequest(url, options) {
                 const queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+                const timestamp = Date.now();
+                
+                // Inject offline timestamp so the backend can perform conflict resolution
+                options.headers = options.headers || {};
+                options.headers['X-Offline-Timestamp'] = timestamp.toString();
+
                 queue.push({
-                    id: Date.now().toString(),
+                    id: timestamp.toString(),
                     url,
                     options: {
                         method: options.method,
                         headers: options.headers,
                         body: options.body
                     },
-                    timestamp: Date.now()
+                    timestamp: timestamp
                 });
                 localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
                 console.log('[Sync Engine] Queued offline request:', url);
@@ -3726,6 +3732,7 @@ function toggleGlobalMute(muted) {
             if (typeof updateNotifBadges === 'function') updateNotifBadges();
             if (typeof fetchUsers === 'function') fetchUsers();
             if (typeof fetchGroups === 'function') fetchGroups();
+            if (typeof populateAssignDropdowns === 'function') populateAssignDropdowns();
         }
 
         function showAdminToast(msg, type = 'info') {
@@ -6598,13 +6605,38 @@ function toggleGlobalMute(muted) {
                 const users = await usersRes.json();
                 const groups = await groupsRes.json();
 
+                // Save current selections to prevent resetting during real-time updates
+                const currentSelections = {};
+                ['assignPersonSelect', 'reassignPersonSelect', 'groupingPersonSelect', 'cmdIndividual'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) currentSelections[id] = el.value;
+                });
+                
+                const currentGroupSelections = {};
+                ['assignGroupSelect', 'reassignGroupSelect', 'groupingTeamSelect', 'cmdTeam'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) currentGroupSelections[id] = el.value;
+                });
+
                 let userOptions = '<option value="">-- Select Person --</option>';
-                users.forEach(u => {
-                    if (u.role !== 'public') {
-                        const isOnline = u.is_online === 1 || u.status === 'online';
-                        const statusIndicator = isOnline ? '● [ONLINE]' : '○ [OFFLINE]';
-                        userOptions += `<option value="${u.id}">${statusIndicator} ${u.name} (${u.role})</option>`;
-                    }
+                const validUsers = users.filter(u => u.role !== 'public');
+                const onlineUsers = validUsers.filter(u => u.is_online === 1 || u.status === 'online');
+                const offlineUsers = validUsers.filter(u => u.is_online !== 1 && u.status !== 'online');
+
+                const sortFn = (a, b) => {
+                    const sa = String(a.serial_number || a.id);
+                    const sb = String(b.serial_number || b.id);
+                    return sa.localeCompare(sb, undefined, {numeric: true});
+                };
+                
+                onlineUsers.sort(sortFn);
+                offlineUsers.sort(sortFn);
+
+                onlineUsers.forEach(u => {
+                    userOptions += `<option value="${u.id}">● [ONLINE] ${u.name} (${u.role})</option>`;
+                });
+                offlineUsers.forEach(u => {
+                    userOptions += `<option value="${u.id}">○ [OFFLINE] ${u.name} (${u.role})</option>`;
                 });
 
                 let groupOptions = '<option value="">-- Select Group --</option>';
@@ -6614,12 +6646,18 @@ function toggleGlobalMute(muted) {
 
                 ['assignPersonSelect', 'reassignPersonSelect', 'groupingPersonSelect', 'cmdIndividual'].forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.innerHTML = userOptions;
+                    if (el) {
+                        el.innerHTML = userOptions;
+                        if (currentSelections[id]) el.value = currentSelections[id];
+                    }
                 });
 
                 ['assignGroupSelect', 'reassignGroupSelect', 'groupingTeamSelect', 'cmdTeam'].forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.innerHTML = groupOptions;
+                    if (el) {
+                        el.innerHTML = groupOptions;
+                        if (currentGroupSelections[id]) el.value = currentGroupSelections[id];
+                    }
                 });
             } catch (e) {
                 console.error("Error populating dropdowns", e);
