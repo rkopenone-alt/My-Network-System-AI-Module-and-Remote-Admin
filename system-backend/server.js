@@ -1731,8 +1731,18 @@ app.get('/api/rescue-requests', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+const activeSubmissions = new Set();
+
 app.post('/api/rescue-requests', async (req, res) => {
     const { device_id, phone, name, type, lat, lng, details, urgency, sector, priority, image_data } = req.body;
+    
+    // Concurrency Lock: Block multiple simultaneous requests from the same device
+    const lockKey = `${device_id}_${phone}`;
+    if (activeSubmissions.has(lockKey)) {
+        return res.status(429).json({ error: `DUPLICATE_BLOCKED. Request already processing.` });
+    }
+    activeSubmissions.add(lockKey);
+    
     try {
         // Enforce SOS Buffer
         const bufferSetting = await get(`SELECT value FROM settings WHERE key = 'sos_buffer_minutes'`);
@@ -1863,6 +1873,9 @@ app.post('/api/rescue-requests', async (req, res) => {
             setTimeout(groupTasks, 500);
         }
     } catch (e) { res.status(500).json({ error: e.message }); }
+    finally {
+        activeSubmissions.delete(lockKey);
+    }
 });
 
 app.put('/api/rescue-requests/:id/accept', async (req, res) => {

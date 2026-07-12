@@ -1,7 +1,7 @@
 ARDMS SYSTEM BACKUP REPORT - DATE: 2026-07-12
 Device Hostname: , DESKTOP-KBHB0SB
 Device Info: , DESKTOP-KBHB0SB (User: Alienware, OS: Windows_NT x64)
-Generated At: , 12/7/2026, 2:13:18 pm
+Generated At: , 12/7/2026, 3:30:36 pm
 
 SECTION 1: RESCUE REQUESTS & TASKS
 Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Responder,Created At,Updated At,Device Node
@@ -26,6 +26,10 @@ Request ID,Type,Urgency,Status,Latitude,Longitude,Details/Location,Assigned Resp
 [AI_ROTATION_COMPLETED]",Ram (MEM-07),2026-07-12 08:40:47,2026-07-12 08:41:54,DESKTOP-KBHB0SB
 462,supplies,normal,completed,12.99099099099099,80.19674590511194,"{""transportMode"":""ROAD"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":false,""note"":false}}
 [Declined by Rescuer ID: 13]",Ram (MEM-07),2026-07-12 08:42:26,2026-07-12 08:43:15,DESKTOP-KBHB0SB
+463,supplies,normal,completed,12.99099099099099,80.19674590511194,"{""transportMode"":""AIR"",""needs"":[6,2,1,2],""peopleCount"":""5"",""address"":"""",""attachments"":{""voice"":false,""camera"":true,""note"":false}}
+[Declined by Rescuer ID: 3]",Neha Sharma (MEM-04),2026-07-12 09:58:39,2026-07-12 09:59:29,DESKTOP-KBHB0SB
+464,medical,critical,completed,12.99099099099099,80.19674590511194,"Critical Emergency Triggered
+[Declined by Rescuer ID: 3]",Neha Sharma (MEM-04),2026-07-12 09:59:40,2026-07-12 10:00:31,DESKTOP-KBHB0SB
 
 
 SECTION 2: RESCUER COMMAND DISPATCHES
@@ -50,6 +54,11 @@ Command ID,Assigned Group ID,Target Phone,Payload Details,Type,Status,Created At
 231,N/A,919000000007,"{""message"":""SELF-ASSIGNED: SOS at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.99099099099099,""lng"":80.19674590511194,""urgency"":""normal"",""rescue_req_id"":461,""requester_name"":""RK"",""requester_phone"":""918000000005"",""details"":""{\""transportMode\"":\""ROAD\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":true,\""note\"":false}}\n[Declined by Rescuer ID: 13]\n[AI_ROTATION_COMPLETED]"",""assigned_by"":""Self""}",Normal,completed,2026-07-12 08:41:54,,DESKTOP-KBHB0SB
 232,N/A,919000000007,"{""message"":""SUPPLIES RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.99099099099099,""lng"":80.19674590511194,""urgency"":""normal"",""rescue_req_id"":462,""requester_name"":""RK"",""requester_phone"":""918000000005"",""details"":""{\""transportMode\"":\""ROAD\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}\n[Declined by Rescuer ID: 13]""}",Normal,completed,2026-07-12 08:42:46,,DESKTOP-KBHB0SB
 233,N/A,919000000007,"{""message"":""SELF-ASSIGNED: SUPPLIES at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.99099099099099,""lng"":80.19674590511194,""urgency"":""normal"",""rescue_req_id"":462,""requester_name"":""RK"",""requester_phone"":""918000000005"",""details"":""{\""transportMode\"":\""ROAD\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":false,\""note\"":false}}\n[Declined by Rescuer ID: 13]"",""assigned_by"":""Self""}",Normal,completed,2026-07-12 08:43:15,,DESKTOP-KBHB0SB
+234,N/A,919000000004,"{""message"":""SUPPLIES RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.99099099099099,""lng"":80.19674590511194,""urgency"":""normal"",""rescue_req_id"":463,""requester_name"":""RK"",""requester_phone"":""918000000005"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":true,\""note\"":false}}\n[Declined by Rescuer ID: 3]""}",Normal,completed,2026-07-12 09:59:04,,DESKTOP-KBHB0SB
+235,N/A,919000000004,"{""message"":""SELF-ASSIGNED: SUPPLIES at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.99099099099099,""lng"":80.19674590511194,""urgency"":""normal"",""rescue_req_id"":463,""requester_name"":""RK"",""requester_phone"":""918000000005"",""details"":""{\""transportMode\"":\""AIR\"",\""needs\"":[6,2,1,2],\""peopleCount\"":\""5\"",\""address\"":\""\"",\""attachments\"":{\""voice\"":false,\""camera\"":true,\""note\"":false}}\n[Declined by Rescuer ID: 3]"",""assigned_by"":""Self""}",Normal,completed,2026-07-12 09:59:29,,DESKTOP-KBHB0SB
+236,N/A,919000000004,"{""message"":""MEDICAL RESCUE at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.99099099099099,""lng"":80.19674590511194,""urgency"":""critical"",""rescue_req_id"":464,""requester_name"":""RK"",""requester_phone"":""918000000005"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer ID: 3]""}",Critical,completed,2026-07-12 10:00:04,,DESKTOP-KBHB0SB
+237,N/A,919000000001,"{""message"":""AI ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.99099099099099,""lng"":80.19674590511194,""urgency"":""critical"",""rescue_req_id"":464,""requester_name"":""RK"",""requester_phone"":""918000000005"",""details"":""Critical Emergency Triggered"",""assigned_by"":""AI"",""assignment_version"":1}",Critical,completed,2026-07-12 10:00:04,,DESKTOP-KBHB0SB
+238,N/A,919000000004,"{""message"":""SELF-ASSIGNED: MEDICAL at Detected via GPS"",""sector"":""Detected via GPS"",""lat"":12.99099099099099,""lng"":80.19674590511194,""urgency"":""critical"",""rescue_req_id"":464,""requester_name"":""RK"",""requester_phone"":""918000000005"",""details"":""Critical Emergency Triggered\n[Declined by Rescuer ID: 3]"",""assigned_by"":""Self""}",Critical,completed,2026-07-12 10:00:32,,DESKTOP-KBHB0SB
 
 
 SECTION 3: PUBLIC SOS ALERTS

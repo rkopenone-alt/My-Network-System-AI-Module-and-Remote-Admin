@@ -2535,6 +2535,7 @@
 
             startSOS(priority = 'normal') {
                 document.querySelector('.pulse-ring').style.opacity = '1';
+                if (this.sosTimer) clearTimeout(this.sosTimer);
                 this.sosTimer = setTimeout(() => {
                     this.triggerSOS(priority);
                 }, 2000);
@@ -2693,6 +2694,9 @@
             },
 
             async triggerSOS(priorityOverride) {
+                if (this.isSubmitting) return;
+                this.isSubmitting = true;
+                
                 const priority = priorityOverride || (this.emergencyCategory === 'critical' ? 'critical' : 'normal');
                 this.updateStatusUI('TRIGGERED', `${priority.toUpperCase()} SOS initiated`, '🚨');
 
@@ -2766,6 +2770,7 @@
                 } else {
                     this.queueForRetry(payload);
                 }
+                this.isSubmitting = false;
             },
 
             queueForRetry(payload) {
