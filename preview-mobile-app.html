@@ -2698,13 +2698,36 @@
                 this.isSubmitting = true;
                 
                 const priority = priorityOverride || (this.emergencyCategory === 'critical' ? 'critical' : 'normal');
-                this.updateStatusUI('TRIGGERED', `${priority.toUpperCase()} SOS initiated`, '🚨');
+                this.updateStatusUI('TRIGGERED', `${priority.toUpperCase()} SOS initiated\nAcquiring Live GPS...`, '🚨');
+
+                // Force highly accurate live GPS fetch immediately before submitting
+                let liveLat = this.currentLocation.lat;
+                let liveLng = this.currentLocation.lng;
+
+                if (navigator.geolocation) {
+                    try {
+                        const pos = await new Promise((resolve, reject) => {
+                            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                                enableHighAccuracy: true, 
+                                timeout: 6000, 
+                                maximumAge: 0 
+                            });
+                        });
+                        liveLat = pos.coords.latitude;
+                        liveLng = pos.coords.longitude;
+                        this.currentLocation.lat = liveLat;
+                        this.currentLocation.lng = liveLng;
+                        console.log("[SOS] Acquired fresh satellite GPS:", liveLat, liveLng);
+                    } catch (e) {
+                        console.warn("[SOS] Fresh GPS fetch failed, using cached watchPosition fallback.", e);
+                    }
+                }
 
                 // Check for manual overrides from Settings
                 const overLat = parseFloat(document.getElementById('overLat')?.value);
                 const overLng = parseFloat(document.getElementById('overLng')?.value);
-                let finalLat = this.currentLocation.lat;
-                let finalLng = this.currentLocation.lng;
+                let finalLat = liveLat;
+                let finalLng = liveLng;
 
                 if (!isNaN(overLat) && !isNaN(overLng) && (overLat !== 13.085 || overLng !== 80.272)) {
                     finalLat = overLat;
