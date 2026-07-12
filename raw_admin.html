@@ -3634,6 +3634,12 @@
                             if (typeof updateAiUI === 'function') updateAiUI(data.data.enabled);
                             return; // Only update UI, avoid full refresh
                         }
+                        if (data.type === 'SETTINGS_UPDATED' || data.type === 'BUFFER_TIME_UPDATE') {
+                            if (typeof fetchRefreshSetting === 'function') fetchRefreshSetting();
+                            if (typeof fetchAIInterval === 'function') fetchAIInterval();
+                            if (typeof loadAISettings === 'function') loadAISettings();
+                            return;
+                        }
                         if (data.type === 'AI_ASSIGNED') {
                             if (window.currentSosAudio) { window.currentSosAudio.pause(); window.currentSosAudio.currentTime = 0; }
                             closeModal('sosAlertModal');

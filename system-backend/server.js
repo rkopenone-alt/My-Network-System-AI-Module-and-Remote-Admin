@@ -2902,6 +2902,7 @@ app.post('/api/ai/interval', async (req, res) => {
         if (setting && setting.value === 'true') {
             startAITimer(); // restart timer with new interval
         }
+        broadcast('SETTINGS_UPDATED', { key: 'ai_interval_val', value });
         res.json({ success: true, value, unit });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -2922,6 +2923,7 @@ app.post('/api/ai/reassign-interval', async (req, res) => {
     try {
         await run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('ai_reassign_interval_val', ?)`, [String(value)]);
         await run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('ai_reassign_interval_unit', ?)`, [String(unit)]);
+        broadcast('SETTINGS_UPDATED', { key: 'ai_reassign_interval_val', value });
         res.json({ success: true, value, unit });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
