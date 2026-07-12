@@ -2717,7 +2717,7 @@
                     lat: finalLat, 
                     lng: finalLng,
                     details: JSON.stringify({
-                        needs: this.needs,
+                        needs: { ...this.needs, photo: undefined },
                         route: this.needs.route || 'Not Defined',
                         sector: customDetails,
                         comments: customDetails

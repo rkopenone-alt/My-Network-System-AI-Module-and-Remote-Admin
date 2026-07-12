@@ -1819,9 +1819,20 @@ app.post('/api/rescue-requests', async (req, res) => {
             }
         }
 
+        let safeDetails = details;
+        if (typeof safeDetails === 'string' && safeDetails.includes('data:image')) {
+            try {
+                let parsed = JSON.parse(safeDetails);
+                if (parsed.needs && parsed.needs.photo) {
+                    delete parsed.needs.photo;
+                }
+                safeDetails = JSON.stringify(parsed);
+            } catch (e) {}
+        }
+
         const reqData = await runTransaction(async () => {
             const result = await run(`INSERT INTO rescue_requests (device_id, phone, name, type, lat, lng, details, urgency, priority, sector, image_url, audio_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [device_id, phone, name || 'Citizen', type || 'pregnancy', lat, lng, details, urgency || 'high', priority || 'normal', sector || 'Unknown Zone', imageUrl, audioUrl]);
+                [device_id, phone, name || 'Citizen', type || 'pregnancy', lat, lng, safeDetails, urgency || 'high', priority || 'normal', sector || 'Unknown Zone', imageUrl, audioUrl]);
             const requestId = result.lastID;
 
             await run(`INSERT INTO sos_assignment_history (rescue_req_id, action) VALUES (?, 'requested')`, [requestId]);

@@ -3720,17 +3720,29 @@ function toggleGlobalMute(muted) {
         }
 
         // --- GLOBAL REFRESH & SYNC HUB ---
-        function refreshAllModules() {
+        let isRefreshingModules = false;
+        async function refreshAllModules() {
+            if (isRefreshingModules) {
+                console.log("[SYSTEM] Sync skipped (already in progress)...");
+                return;
+            }
+            isRefreshingModules = true;
             console.log("[SYSTEM] Executing Global Sync...");
-            if (typeof fetchRescueRequests === 'function') fetchRescueRequests();
-            if (typeof fetchCommands === 'function') fetchCommands();
-            if (typeof fetchDashboardStats === 'function') fetchDashboardStats();
-            if (typeof updateTacticalMap === 'function') updateTacticalMap(true);
-            if (typeof updateMgmtPage === 'function') updateMgmtPage();
-            if (typeof updateNotifBadges === 'function') updateNotifBadges();
-            if (typeof fetchUsers === 'function') fetchUsers();
-            if (typeof fetchGroups === 'function') fetchGroups();
-            if (typeof populateAssignDropdowns === 'function') populateAssignDropdowns();
+            try {
+                const promises = [];
+                if (typeof fetchRescueRequests === 'function') promises.push(fetchRescueRequests());
+                if (typeof fetchCommands === 'function') promises.push(fetchCommands());
+                if (typeof fetchDashboardStats === 'function') promises.push(fetchDashboardStats());
+                if (typeof updateTacticalMap === 'function') promises.push(Promise.resolve(updateTacticalMap(true)));
+                if (typeof updateMgmtPage === 'function') promises.push(Promise.resolve(updateMgmtPage()));
+                if (typeof updateNotifBadges === 'function') promises.push(Promise.resolve(updateNotifBadges()));
+                if (typeof fetchUsers === 'function') promises.push(fetchUsers());
+                if (typeof fetchGroups === 'function') promises.push(fetchGroups());
+                if (typeof populateAssignDropdowns === 'function') promises.push(Promise.resolve(populateAssignDropdowns()));
+                await Promise.allSettled(promises);
+            } finally {
+                isRefreshingModules = false;
+            }
         }
 
         function showAdminToast(msg, type = 'info') {
@@ -10106,15 +10118,19 @@ function toggleGlobalMute(muted) {
 }
 
         // ─── FOREGROUND WAKE-UP SYNC (Mobile/WebView Fix) ───
+        let visibilityDebounceTimer = null;
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                console.log("[Admin] App returned to foreground. Forcing sync and WebSocket verification.");
-                if (typeof socket === 'undefined' || !socket || socket.readyState !== WebSocket.OPEN) {
-                    console.log("[Admin] WebSocket is dead on wake up. Reconnecting...");
-                    initWebSocket();
-                } else {
-                    refreshAllModules();
-                }
+                if (visibilityDebounceTimer) clearTimeout(visibilityDebounceTimer);
+                visibilityDebounceTimer = setTimeout(() => {
+                    console.log("[Admin] App returned to foreground. Forcing sync and WebSocket verification.");
+                    if (typeof socket === 'undefined' || !socket || socket.readyState !== WebSocket.OPEN) {
+                        console.log("[Admin] WebSocket is dead on wake up. Reconnecting...");
+                        initWebSocket();
+                    } else {
+                        refreshAllModules();
+                    }
+                }, 500); // 500ms debounce
             }
         });
 </script>
