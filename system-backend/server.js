@@ -249,7 +249,7 @@ db.serialize(() => {
     db.run(`ALTER TABLE groups ADD COLUMN ai_managed INTEGER DEFAULT 0`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE users ADD COLUMN ai_managed INTEGER DEFAULT 0`, (err) => { /* ignore */ });
     db.run(`ALTER TABLE users ADD COLUMN is_online INTEGER DEFAULT 0`, (err) => { /* ignore */ });
-    db.run(`UPDATE users SET status = 'offline', is_online = 0 WHERE role != 'public'`);
+    db.run(`UPDATE users SET status = 'offline', is_online = 0`);
 
     // Backfill serial numbers for existing users
     db.all("SELECT id, role FROM users WHERE serial_number IS NULL", [], (err, rows) => {
@@ -1935,11 +1935,12 @@ app.put('/api/rescue-requests/:id/accept', async (req, res) => {
                 [reqData.device_id, 'rescue_dispatched', `Update: ${assignedName} has been assigned to your request. Stay safe!`, 0]);
         }
 
-        broadcastToAdminAndTarget('RESCUE_REQUEST_UPDATE', { ...reqData, assignedName, assigned_phone: assignedPhone, priority: commandType }, targetUserId || targetDeviceId);
+        broadcastToAdminAndTarget('RESCUE_REQUEST_UPDATE', { ...reqData, assignedName, assigned_phone: assignedPhone, priority: commandType }, assigned_user_id || assignedDeviceId);
         
         // Fetch the full command object to broadcast to the rescuer
         if (targetCmdId) {
-            await broadcastToAdminAndTarget('NEW_COMMAND', cmdData, targetUserId || targetDeviceId);
+            const cmdData = await get(`SELECT * FROM command_queue WHERE id = ?`, [targetCmdId]);
+            await broadcastToAdminAndTarget('NEW_COMMAND', cmdData, assigned_user_id || assignedDeviceId);
         }
 
         await logCommand('RESCUE_REQUEST_ACCEPTED', 'Commander', `Request ID: ${req.params.id}`, { assigned_user_id, assigned_group_id, commandType });

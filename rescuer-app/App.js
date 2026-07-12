@@ -98,7 +98,6 @@ export default function App() {
   const [adminId, setAdminId] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [ipInput, setIpInput] = useState(SERVER_IP);
-  const [hasPermission, setHasPermission] = useState(null);
   const [serverIp, setServerIp] = useState(SERVER_IP);
   const [isConnected, setIsConnected] = useState(false);
   const soundRef = React.useRef(null);
@@ -282,8 +281,7 @@ export default function App() {
   useEffect(() => {
     let locationSubscription = null;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      setHasPermission(status === 'granted');
+      const { status } = await Location.getForegroundPermissionsAsync();
 
       if (status === 'granted') {
         try {
@@ -341,24 +339,6 @@ export default function App() {
     baseUrl: 'http://localhost:3001'
   }), []);
 
-  if (hasPermission === null) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' }}>
-        <ActivityIndicator size="large" color="#0ea5e9" />
-        <Text style={{ color: '#fff', marginTop: 10 }}>Initializing Rescuer System...</Text>
-      </View>
-    );
-  }
-
-  if (!hasPermission) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a', padding: 20 }}>
-        <Text style={{ color: '#f43f5e', fontSize: 18, textAlign: 'center' }}>
-          Location permissions are strictly required for the Field Rescuer App to function. Please enable them in your device settings.
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <View style={{ flex: 1 }}>

@@ -7508,7 +7508,7 @@ function toggleGlobalMute(muted) {
                     <td><div style="font-weight:600;">${m.name}</div></td>
                     <td>${m.phone || 'N/A'}</td>
                     <td>${m.password || '<span style="color:var(--text-muted)">Not set</span>'}</td>
-                    <td><span class="tag ${m.status === 'active' ? 'tag-green' : 'tag-gray'}">${m.status}</span></td>
+                    <td><span class="tag ${m.is_online === 1 || m.status === 'online' ? 'tag-green' : 'tag-gray'}">${m.is_online === 1 || m.status === 'online' ? 'ONLINE' : 'OFFLINE'}</span></td>
                     <td style="text-align:right;">
                         <button class="action-icon" onclick="openEditPublicModal(${m.id})" title="Edit"><i data-lucide="edit-2" style="width:14px;"></i></button>
                         <button class="action-icon danger" onclick="deleteMember(${m.id})" title="Delete"><i data-lucide="trash-2" style="width:14px;"></i></button>

@@ -4694,7 +4694,7 @@ function toggleGlobalMute(muted) {
                 const coordinatesRegistry = new Set();
 
                 rescuers.forEach(r => {
-                    if (r.lat && r.lng) {
+                    {
                         // Check if disconnected or offline
                         const isOffline = (r.status === 'offline' || r.is_online === 0);
 
@@ -4705,7 +4705,9 @@ function toggleGlobalMute(muted) {
                                 isStale = true;
                             }
                         } else if (r.location_last_updated) {
-                            const lastUpdated = new Date(r.location_last_updated.replace(' ', 'T') + 'Z').getTime();
+                            let ds = r.location_last_updated;
+                            if (!ds.includes('T')) ds = ds.replace(' ', 'T') + 'Z';
+                            const lastUpdated = new Date(ds).getTime();
                             const limit = Date.now() - 10 * 60 * 1000;
                             if (isNaN(lastUpdated) || lastUpdated < limit) {
                                 isStale = true;
@@ -4714,13 +4716,21 @@ function toggleGlobalMute(muted) {
                             isStale = true; // No location timestamp, skip
                         }
 
-                        if (isOffline || isStale) {
-                            return; // Remove/don't display old or disconnected rescuer icons in map
+                        // Always display online rescuers! Only hide if they are offline AND their location is stale, 
+                        // or if they are offline and we want to hide all offline rescuers. (Keeping original logic but protecting online ones)
+                        if (isOffline) {
+                            return; // Hide offline rescuers immediately
                         }
 
                         // Apply a tiny visual scatter (jitter) if multiple rescuers occupy the exact same spot
                         let rescuerLat = parseFloat(r.lat);
                         let rescuerLng = parseFloat(r.lng);
+                        
+                        if (isNaN(rescuerLat) || isNaN(rescuerLng)) {
+                            rescuerLat = 23.8103; // Default to Command Center if no GPS lock yet
+                            rescuerLng = 90.4125;
+                        }
+                        
                         let coordKey = `${rescuerLat.toFixed(5)},${rescuerLng.toFixed(5)}`;
                         let safetyLoop = 0;
                         while (coordinatesRegistry.has(coordKey) && safetyLoop < 10) {
@@ -6816,12 +6826,31 @@ function toggleGlobalMute(muted) {
         }
 
         async function dispatchAssignment() {
+            const btn = document.querySelector('#assignModal .btn-primary');
+            const originalText = btn ? btn.innerText : 'Dispatch';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = 'Dispatching...';
+                const pSelect = document.getElementById('assignPersonSelect');
+                const gSelect = document.getElementById('assignGroupSelect');
+                if (pSelect) pSelect.disabled = true;
+                if (gSelect) gSelect.disabled = true;
+            }
+
             const rawId = document.getElementById('assignReqId').value;
             const personId = document.getElementById('assignPersonSelect').value;
             const groupId = document.getElementById('assignGroupSelect').value;
 
             if (!personId && !groupId) {
                 alert("Please select either a Person or a Group");
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    const pSelect = document.getElementById('assignPersonSelect');
+                    const gSelect = document.getElementById('assignGroupSelect');
+                    if (pSelect) pSelect.disabled = false;
+                    if (gSelect) gSelect.disabled = false;
+                }
                 return;
             }
 
@@ -6862,6 +6891,15 @@ function toggleGlobalMute(muted) {
             } catch (e) {
                 console.error("Error dispatching assignment", e);
                 showAdminToast("Error: " + e.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    const pSelect = document.getElementById('assignPersonSelect');
+                    const gSelect = document.getElementById('assignGroupSelect');
+                    if (pSelect) pSelect.disabled = false;
+                    if (gSelect) gSelect.disabled = false;
+                }
             }
         }
 
@@ -10066,6 +10104,19 @@ function toggleGlobalMute(muted) {
 
     if (window.lucide) window.lucide.createIcons();
 }
+
+        // ─── FOREGROUND WAKE-UP SYNC (Mobile/WebView Fix) ───
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                console.log("[Admin] App returned to foreground. Forcing sync and WebSocket verification.");
+                if (typeof socket === 'undefined' || !socket || socket.readyState !== WebSocket.OPEN) {
+                    console.log("[Admin] WebSocket is dead on wake up. Reconnecting...");
+                    initWebSocket();
+                } else {
+                    refreshAllModules();
+                }
+            }
+        });
 </script>
 
 </body>

@@ -94,6 +94,10 @@ env = os.environ.copy()
 env["JAVA_HOME"] = r"C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot"
 env["ANDROID_HOME"] = r"C:\Users\Alienware\AppData\Local\Android\Sdk"
 # Clean first to prevent incremental bugs
+print("Cleaning Metro bundler caches...")
+subprocess.run(["rmdir", "/S", "/Q", ".expo"], cwd=rescuer_dir, shell=True)
+subprocess.run(["rmdir", "/S", "/Q", "node_modules\\.cache"], cwd=rescuer_dir, shell=True)
+subprocess.run(["rmdir", "/S", "/Q", r"%TMP%\metro-cache"], shell=True)
 subprocess.run([".\\gradlew.bat", "clean"], cwd=cwd, env=env, shell=True)
 result = subprocess.run([".\\gradlew.bat", "assembleRelease"], cwd=cwd, env=env, shell=True)
 
