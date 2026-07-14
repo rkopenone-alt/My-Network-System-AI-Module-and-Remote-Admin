@@ -44,3 +44,9 @@ If you are operating on a newly set up laptop or a fresh clone of this repositor
 
 ## Agent Guidelines
 - **Always Check Files**: The AI agent must always check and verify all files thoroughly whenever needed before making assumptions or modifying logic.
+
+
+## V3 UI/UX Agentic Rules (Added 14-07-2026)
+- **Web ADMIN vs raw_admin.html**: The system relies on TWO separate HTML files for the Headquarters UI. system-backend/public/Web ADMIN.html is used strictly for desktop web browser access. aw_admin.html is the source file that gets embedded into the Mobile Admin App APK via sync_apps.py. IF YOU MAKE CHANGES TO THE ADMIN UI (like map features or API payloads), YOU MUST MIRROR THOSE CHANGES IN BOTH FILES! Do NOT edit dmin-app/htmlStr.js manually, rely on sync_apps.py.
+- **Map Jittering**: When visualizing live coordinates from devices, rely on .toFixed(4) and a 30-meter randomized scatter logic in a loop against a coordinatesRegistry Set. This prevents markers with identical coordinates from visually stacking and hiding each other.
+- **Sync Overlapping (pendingRefresh)**: Due to heavy WebSocket traffic, auto-refresh triggers must not blindly drop requests. If isRefreshingModules is true, toggle a pendingRefresh flag and recursively call the update function via setTimeout in the inally block to guarantee the UI syncs completely without requiring a manual browser F5.

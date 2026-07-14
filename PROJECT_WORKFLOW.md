@@ -31,3 +31,7 @@ If you are an AI assistant or new developer modifying this project:
 2. Edit the HTML files (`preview-*.html` or `raw_admin.html`) and the backend logic (`server.js`) directly.
 3. **NEVER manually edit `htmlStr.js`**. Always use the Python build scripts (e.g., `python sync_apps.py`) to inject your HTML changes into the React Native shells.
 4. Adhere to the established fallback UI logic: Ensure graceful failures for GPS timeouts, WebSocket disconnects, or database lock rejections (e.g., Error 429).
+
+
+## 5. Setup & Installation
+A new INSTALLATION.md file has been added to the root directory for deploying the system on fresh computers or servers. It contains all prerequisites (Node.js, Python, Java JDK) and instructions for running the batch file.
