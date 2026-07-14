@@ -7618,8 +7618,15 @@ function toggleGlobalMute(muted) {
                 </label>
             `).join('');
 
-            if (addList) addList.innerHTML = html;
-            if (editList) editList.innerHTML = html;
+            const addModal = document.getElementById('addMemberModal');
+            if (addList && (!addModal || addModal.style.display !== 'flex')) {
+                addList.innerHTML = html;
+            }
+            
+            const editModal = document.getElementById('editMemberModal');
+            if (editList && (!editModal || editModal.style.display !== 'flex')) {
+                editList.innerHTML = html;
+            }
         }
 
         const fileToBase64 = file => new Promise((resolve, reject) => {
