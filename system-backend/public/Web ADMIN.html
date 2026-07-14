@@ -3489,19 +3489,12 @@
 
     <script>
         const PROTOCOL = (window.location.protocol === 'http:' || window.location.protocol === 'https:') ? window.location.protocol : 'http:';
-        let manualIp = localStorage.getItem('manualServerIp');
         
-        let SERVER_IP;
-        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-            SERVER_IP = window.location.hostname;
-            if (manualIp) {
-                localStorage.removeItem('manualServerIp');
-                manualIp = null;
-            }
-        } else {
-            SERVER_IP = manualIp || window.__SERVER_IP__ || '127.0.0.1';
-        }
+        // Forcefully reset the manual IP that the user got stuck with
+        localStorage.removeItem('manualServerIp');
+        const manualIp = null;
         
+        const SERVER_IP = window.__SERVER_IP__ || ((window.location.protocol === 'http:' || window.location.protocol === 'https:') ? window.location.hostname : '127.0.0.1');
         const API_BASE = `${PROTOCOL}//${SERVER_IP}:3001/api`;
 
         function formatMediaUrl(url) {
@@ -8164,8 +8157,8 @@ function toggleGlobalMute(muted) {
         // Initialize
         window.onload = () => {
             const savedManualIp = localStorage.getItem('manualServerIp');
-            if (savedManualIp && document.getElementById('manualIpInput')) {
-                document.getElementById('manualIpInput').value = savedManualIp;
+            if (document.getElementById('manualIpInput')) {
+                document.getElementById('manualIpInput').value = savedManualIp || '';
             }
 
             checkDetectedIp();
