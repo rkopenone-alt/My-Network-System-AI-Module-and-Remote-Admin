@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "ARDMS-Public Support System",
-    "slug": "public-sos-app",
+    "name": "Rescuer Field App",
+    "slug": "rescuer-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/official_rescuer_icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0284c7"
+      "backgroundColor": "#1e40af"
     },
     "android": {
-      "package": "com.rescue.sosapp",
+      "package": "com.rescue.rescuer",
       "allowBackup": false,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0284c7"
+        "foregroundImage": "./assets/official_rescuer_icon.png",
+        "backgroundColor": "#1e40af"
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
@@ -34,6 +34,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8e3880e8-4734-4691-bc3f-65beb23ed967"
+      }
+    },
+    "owner": "tmrk"
   }
 }
