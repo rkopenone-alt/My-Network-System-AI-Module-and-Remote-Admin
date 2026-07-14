@@ -1343,6 +1343,7 @@ app.put('/api/users/:id', async (req, res) => {
                 for (const gid of group_ids) {
                     await run(`INSERT OR IGNORE INTO group_members (user_id, group_id) VALUES (?, ?)`, [userId, gid]);
                 }
+                await run(`UPDATE groups SET member_count = (SELECT COUNT(*) FROM group_members WHERE group_members.group_id = groups.id)`);
             }
 
             const updatedUser = await get(`SELECT * FROM users WHERE id = ?`, [userId]);
