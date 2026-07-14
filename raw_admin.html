@@ -3727,9 +3727,12 @@ function toggleGlobalMute(muted) {
 
         // --- GLOBAL REFRESH & SYNC HUB ---
         let isRefreshingModules = false;
+        let pendingRefresh = false;
+
         async function refreshAllModules() {
             if (isRefreshingModules) {
-                console.log("[SYSTEM] Sync skipped (already in progress)...");
+                console.log("[SYSTEM] Sync skipped (already in progress)... Queuing.");
+                pendingRefresh = true;
                 return;
             }
             isRefreshingModules = true;
@@ -3748,6 +3751,10 @@ function toggleGlobalMute(muted) {
                 await Promise.allSettled(promises);
             } finally {
                 isRefreshingModules = false;
+                if (pendingRefresh) {
+                    pendingRefresh = false;
+                    setTimeout(refreshAllModules, 100);
+                }
             }
         }
 
@@ -4749,12 +4756,12 @@ function toggleGlobalMute(muted) {
                             rescuerLng = 90.4125;
                         }
                         
-                        let coordKey = `${rescuerLat.toFixed(5)},${rescuerLng.toFixed(5)}`;
+                        let coordKey = `${rescuerLat.toFixed(4)},${rescuerLng.toFixed(4)}`;
                         let safetyLoop = 0;
                         while (coordinatesRegistry.has(coordKey) && safetyLoop < 10) {
-                            rescuerLat += (Math.random() - 0.5) * 0.00008; // approx 8 meters jitter
-                            rescuerLng += (Math.random() - 0.5) * 0.00008;
-                            coordKey = `${rescuerLat.toFixed(5)},${rescuerLng.toFixed(5)}`;
+                            rescuerLat += (Math.random() - 0.5) * 0.0003; // approx 30 meters jitter
+                            rescuerLng += (Math.random() - 0.5) * 0.0003;
+                            coordKey = `${rescuerLat.toFixed(4)},${rescuerLng.toFixed(4)}`;
                             safetyLoop++;
                         }
                         coordinatesRegistry.add(coordKey);
@@ -6879,8 +6886,8 @@ function toggleGlobalMute(muted) {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            assigned_user_id: personId || null,
-                            assigned_group_id: groupId || null
+                            target_user_id: personId || null,
+                            group_id: groupId || null
                         })
                     });
                     if (!res.ok) {
