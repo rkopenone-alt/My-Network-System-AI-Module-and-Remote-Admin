@@ -3489,8 +3489,19 @@
 
     <script>
         const PROTOCOL = (window.location.protocol === 'http:' || window.location.protocol === 'https:') ? window.location.protocol : 'http:';
-        const manualIp = localStorage.getItem('manualServerIp');
-        const SERVER_IP = manualIp || window.__SERVER_IP__ || ((window.location.protocol === 'http:' || window.location.protocol === 'https:') ? window.location.hostname : '127.0.0.1');
+        let manualIp = localStorage.getItem('manualServerIp');
+        
+        let SERVER_IP;
+        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+            SERVER_IP = window.location.hostname;
+            if (manualIp) {
+                localStorage.removeItem('manualServerIp');
+                manualIp = null;
+            }
+        } else {
+            SERVER_IP = manualIp || window.__SERVER_IP__ || '127.0.0.1';
+        }
+        
         const API_BASE = `${PROTOCOL}//${SERVER_IP}:3001/api`;
 
         function formatMediaUrl(url) {
